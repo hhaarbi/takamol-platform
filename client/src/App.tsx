@@ -15,6 +15,7 @@ import OwnerTransfers from "./pages/OwnerTransfers";
 import BrokerReferrals from "./pages/BrokerReferrals";
 import SystemSettings from "./pages/SystemSettings";
 import SmartAlerts from "./pages/SmartAlerts";
+import DataExport from "./pages/DataExport";
 
 function Router() {
   return (
@@ -34,6 +35,7 @@ function Router() {
       <Route path={"/broker-referrals"} component={BrokerReferrals} />
       <Route path={"/settings"} component={SystemSettings} />
       <Route path={"/smart-alerts"} component={SmartAlerts} />
+      <Route path={"/data-export"} component={DataExport} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

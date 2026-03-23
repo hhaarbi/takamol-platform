@@ -21,7 +21,7 @@ import {
   ClipboardList, Shield, FileSearch, Receipt, ListTodo, Filter,
   Eye, Edit, Trash2, Phone, Mail, MapPin, Hash, Star,
   ArrowUpDown, ChevronDown, Printer, RefreshCw, Settings,
-  AlertTriangle, CheckSquare, XCircle, Banknote, PieChart
+  AlertTriangle, CheckSquare, XCircle, Banknote, PieChart, Archive
 } from "lucide-react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -92,6 +92,7 @@ const NAV_SECTIONS = [
   { title: "التشغيل المتقدم", items: [
     { id: "ext:smart-alerts", label: "مركز التنبيهات", icon: AlertTriangle, href: "/smart-alerts" },
     { id: "ext:contractors", label: "المقاولون", icon: Wrench, href: "/contractors" },
+    { id: "ext:data-export", label: "تصدير ونسخ احتياطي", icon: Archive, href: "/data-export" },
     { id: "ext:settings", label: "إعدادات النظام", icon: Settings, href: "/settings" },
   ]},
   { title: "أخرى", items: [

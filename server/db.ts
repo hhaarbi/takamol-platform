@@ -29,6 +29,7 @@ import {
   ownerTransfers, InsertOwnerTransfer,
   brokerReferrals, InsertBrokerReferral,
   systemSettings,
+  propertyImages, InsertPropertyImage,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1416,4 +1417,38 @@ export async function getAllPropertiesROI() {
   }));
 
   return results.sort((a, b) => b.roi - a.roi);
+}
+
+// ─── PROPERTY IMAGES (صور العقارات) ──────────────────────────────────────────
+export async function getPropertyImages(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(propertyImages)
+    .where(eq(propertyImages.propertyId, propertyId))
+    .orderBy(asc(propertyImages.sortOrder), asc(propertyImages.id));
+}
+
+export async function addPropertyImage(data: InsertPropertyImage) {
+  const db = await getDb();
+  if (!db) return;
+  // If isPrimary, unset others first
+  if (data.isPrimary) {
+    await db.update(propertyImages)
+      .set({ isPrimary: false })
+      .where(eq(propertyImages.propertyId, data.propertyId));
+  }
+  await db.insert(propertyImages).values(data);
+}
+
+export async function deletePropertyImage(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(propertyImages).where(eq(propertyImages.id, id));
+}
+
+export async function setPrimaryImage(id: number, propertyId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(propertyImages).set({ isPrimary: false }).where(eq(propertyImages.propertyId, propertyId));
+  await db.update(propertyImages).set({ isPrimary: true }).where(eq(propertyImages.id, id));
 }

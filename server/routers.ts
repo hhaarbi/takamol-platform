@@ -45,6 +45,7 @@ import {
   getKPIs, getRevenueByProperty, getCollectionRate, getMaintenanceCostByProperty,
   getBrokerPerformance, getOwnerROI,
   getPropertyROI, getSmartAlerts, getAllPropertiesROI,
+  getPropertyImages, addPropertyImage, deletePropertyImage, setPrimaryImage,
 } from "./db";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
@@ -269,6 +270,26 @@ export const appRouter = router({
       return { success: true };
     }),
     delete: adminProcedure.input(z.number()).mutation(async ({ input }) => { await deleteProperty(input); return { success: true }; }),
+    images: router({
+      list: publicProcedure.input(z.number()).query(({ input }) => getPropertyImages(input)),
+      add: adminProcedure.input(z.object({
+        propertyId: z.number(), url: z.string(), fileKey: z.string(),
+        caption: z.string().optional(), isPrimary: z.boolean().default(false), sortOrder: z.number().default(0),
+      })).mutation(async ({ input }) => { await addPropertyImage(input as any); return { success: true }; }),
+      delete: adminProcedure.input(z.number()).mutation(async ({ input }) => { await deletePropertyImage(input); return { success: true }; }),
+      setPrimary: adminProcedure.input(z.object({ id: z.number(), propertyId: z.number() }))
+        .mutation(async ({ input }) => { await setPrimaryImage(input.id, input.propertyId); return { success: true }; }),
+      upload: protectedProcedure.input(z.object({
+        propertyId: z.number(), base64: z.string(), filename: z.string(),
+        mimeType: z.string().default("image/jpeg"), caption: z.string().optional(), isPrimary: z.boolean().default(false),
+      })).mutation(async ({ input }) => {
+        const buffer = Buffer.from(input.base64, "base64");
+        const key = `properties/${input.propertyId}/${nanoid()}-${input.filename}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        await addPropertyImage({ propertyId: input.propertyId, url, fileKey: key, caption: input.caption, isPrimary: input.isPrimary, sortOrder: 0 });
+        return { url, key };
+      }),
+    }),
     uploadImage: protectedProcedure.input(z.object({
       base64: z.string(), filename: z.string(), mimeType: z.string().default("image/jpeg"),
     })).mutation(async ({ input }) => {
@@ -946,9 +967,83 @@ export const appRouter = router({
     allPropertiesROI: adminProcedure.query(() => getAllPropertiesROI()),
   }),
 
-  // ─── SMART ALERTS (التنبيهات الذكية) ──────────────────────────────────────────────
-  smartAlerts: router({
-    get: adminProcedure.query(() => getSmartAlerts()),
+  // ─── BACKUP & EXPORT (نسخ احتياطي وتصدير) ────────────────────────────────────────────────
+  backup: router({
+    exportData: adminProcedure.input(z.object({
+      tables: z.array(z.enum(["properties", "tenants", "contracts", "payments", "owners", "brokers", "maintenance"])),
+    })).query(async ({ input }) => {
+      const result: Record<string, unknown[]> = {};
+      const db = await import("./db");
+      if (input.tables.includes("properties")) result.properties = await db.getProperties({});
+      if (input.tables.includes("tenants")) result.tenants = await db.getTenants({});
+      if (input.tables.includes("contracts")) result.contracts = await db.getContracts({});
+      if (input.tables.includes("payments")) result.payments = await db.getPayments({});
+      if (input.tables.includes("owners")) result.owners = await db.getOwners({});
+      if (input.tables.includes("brokers")) result.brokers = await db.getBrokers({});
+      if (input.tables.includes("maintenance")) result.maintenance = await db.getMaintenanceRequests({});
+      return { data: result, exportedAt: new Date().toISOString(), version: "1.0" };
+    }),
+  }),
+
+  // ─── ACCOUNTING EXPORT (تصدير محاسبي) ────────────────────────────────────────────────
+  accounting: router({
+    journalEntries: adminProcedure.input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    })).query(async ({ input }) => {
+      const payments = await import("./db").then(db => db.getPayments({ status: "paid" }));
+      const expenses = await import("./db").then(db => db.getExpenses({}));
+      const entries: Array<{
+        date: string; ref: string; description: string;
+        debit: number; credit: number; account: string; type: string;
+      }> = [];
+      payments.forEach((p: any) => {
+        if (input.startDate && p.paidDate < input.startDate) return;
+        if (input.endDate && p.paidDate > input.endDate) return;
+        entries.push({
+          date: p.paidDate ?? p.dueDate, ref: `INV-${p.id}`,
+          description: `إيجار - ${p.tenantName ?? "مستأجر"}`,
+          debit: Number(p.paidAmount ?? p.amount), credit: 0,
+          account: "1100 - النقدية", type: "revenue",
+        });
+      });
+      expenses.forEach((e: any) => {
+        if (input.startDate && e.expenseDate < input.startDate) return;
+        if (input.endDate && e.expenseDate > input.endDate) return;
+        entries.push({
+          date: e.expenseDate, ref: `EXP-${e.id}`,
+          description: e.description ?? "مصروف",
+          debit: 0, credit: Number(e.amount),
+          account: "5000 - المصاريف", type: "expense",
+        });
+      });
+      return entries.sort((a, b) => a.date.localeCompare(b.date));
+    }),
+    summary: adminProcedure.input(z.object({
+      year: z.number().default(new Date().getFullYear()),
+    })).query(async ({ input }) => {
+      const db = await import("./db");
+      const payments = await db.getPayments({ status: "paid" });
+      const expenses = await db.getExpenses({});
+      const months: Record<number, { revenue: number; expenses: number; net: number }> = {};
+      for (let m = 1; m <= 12; m++) months[m] = { revenue: 0, expenses: 0, net: 0 };
+      payments.forEach((p: any) => {
+        const d = new Date(p.paidDate ?? p.dueDate);
+        if (d.getFullYear() !== input.year) return;
+        months[d.getMonth() + 1].revenue += Number(p.paidAmount ?? p.amount);
+      });
+      expenses.forEach((e: any) => {
+        const d = new Date(e.expenseDate);
+        if (d.getFullYear() !== input.year) return;
+        months[d.getMonth() + 1].expenses += Number(e.amount);
+      });
+      Object.values(months).forEach(m => { m.net = m.revenue - m.expenses; });
+      return { year: input.year, months };
+    }),
+  }),
+
+  // ─── SMART ALERTS (التنبيهات الذكية) ────────────────────────────────────────────────────────
+  smartAlerts: router({get: adminProcedure.query(() => getSmartAlerts()),
     sendDailyReport: adminProcedure.mutation(async () => {
       const alerts = await getSmartAlerts();
       const kpisData = await getKPIs();
