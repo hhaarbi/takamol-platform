@@ -1,4 +1,5 @@
 import { trpc } from "@/lib/trpc";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
@@ -13,6 +14,7 @@ export default function Analytics() {
   const { data: collectionData = [] } = trpc.analytics.collectionRate.useQuery(6);
   const { data: maintenanceCost = [] } = trpc.analytics.maintenanceCost.useQuery();
   const { data: brokerPerf = [] } = trpc.analytics.brokerPerformance.useQuery();
+  const { data: allROI = [] } = trpc.analytics.allPropertiesROI.useQuery();
 
   const kpiCards = kpis ? [
     { label: "معدل الإشغال", value: `${(kpis.occupancyRate ?? 0).toFixed(1)}%`, icon: <Building2 className="h-5 w-5" />, color: "text-blue-600", bg: "bg-blue-50", trend: (kpis.occupancyRate ?? 0) >= 80 ? "up" : "down" },
@@ -206,6 +208,59 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ROI Comparison Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-4 w-4 text-amber-600" />
+            مقارنة العائد على الاستثمار (ROI) لجميع العقارات
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {allROI.length > 0 ? (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-right p-3 font-medium text-gray-600">العقار</th>
+                  <th className="text-right p-3 font-medium text-gray-600">المدينة</th>
+                  <th className="text-right p-3 font-medium text-gray-600">الإيرادات</th>
+                  <th className="text-right p-3 font-medium text-gray-600">المصاريف</th>
+                  <th className="text-right p-3 font-medium text-gray-600">صافي الربح</th>
+                  <th className="text-right p-3 font-medium text-gray-600">ROI</th>
+                  <th className="text-right p-3 font-medium text-gray-600">التقييم</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {allROI.map((item, i) => {
+                  const roiVal = item.roi;
+                  const roiColor = roiVal >= 6 ? "bg-green-100 text-green-700" : roiVal >= 3 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700";
+                  const roiLabel = roiVal >= 6 ? "ممتاز" : roiVal >= 3 ? "متوسط" : "ضعيف";
+                  return (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="p-3 font-medium text-gray-900">{item.titleAr ?? `عقار #${item.id}`}</td>
+                      <td className="p-3 text-gray-500 text-xs">{item.city ?? "—"}{item.district ? ` / ${item.district}` : ""}</td>
+                      <td className="p-3 text-green-700 font-medium">{Number(item.totalRevenue).toLocaleString("ar-SA")} ر.س</td>
+                      <td className="p-3 text-red-600">{Number(item.totalExpenses).toLocaleString("ar-SA")} ر.س</td>
+                      <td className={`p-3 font-bold ${item.netProfit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                        {Number(item.netProfit).toLocaleString("ar-SA")} ر.س
+                      </td>
+                      <td className="p-3">
+                        <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${roiColor}`}>{roiVal.toFixed(1)}%</span>
+                      </td>
+                      <td className="p-3">
+                        <Badge className={roiColor}>{roiLabel}</Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-8 text-center text-gray-400 text-sm">لا توجد بيانات عقارات كافية لحساب ROI</div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Summary Table */}
       {revenueByProperty.length > 0 && (

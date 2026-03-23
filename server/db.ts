@@ -1373,3 +1373,47 @@ export async function getSmartAlerts() {
 
   return { expiringContracts, overduePayments, pendingMaintenance, vacantUnits };
 }
+
+// ─── ALL PROPERTIES ROI COMPARISON ────────────────────────────────────────────
+export async function getAllPropertiesROI() {
+  const db = await getDb();
+  if (!db) return [];
+  const allProperties = await db.select({
+    id: properties.id,
+    titleAr: properties.titleAr,
+    price: properties.price,
+    type: properties.type,
+    status: properties.status,
+    city: properties.city,
+    district: properties.district,
+  }).from(properties).limit(100);
+
+  const results = await Promise.all(allProperties.map(async (prop) => {
+    const [revenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` })
+      .from(payments).where(and(eq(payments.propertyId, prop.id), eq(payments.status, "paid")));
+    const [expensesTotal] = await db.select({ total: sql<number>`coalesce(sum(amount), 0)` })
+      .from(expenses).where(eq(expenses.propertyId, prop.id));
+    const [maintenanceCosts] = await db.select({ total: sql<number>`coalesce(sum(cost), 0)` })
+      .from(maintenanceRequests).where(and(eq(maintenanceRequests.propertyId, prop.id), eq(maintenanceRequests.status, "completed")));
+    const totalRevenue = Number(revenue.total);
+    const totalExpenses = Number(expensesTotal.total) + Number(maintenanceCosts.total);
+    const netProfit = totalRevenue - totalExpenses;
+    const propertyPrice = Number(prop.price);
+    const roi = propertyPrice > 0 ? (netProfit / propertyPrice) * 100 : 0;
+    return {
+      id: prop.id,
+      titleAr: prop.titleAr,
+      price: propertyPrice,
+      type: prop.type,
+      status: prop.status ?? "available",
+      city: prop.city,
+      district: prop.district,
+      totalRevenue,
+      totalExpenses,
+      netProfit,
+      roi: Math.round(roi * 100) / 100,
+    };
+  }));
+
+  return results.sort((a, b) => b.roi - a.roi);
+}

@@ -44,7 +44,7 @@ import {
   getSystemSettings, getSystemSetting, upsertSystemSetting,
   getKPIs, getRevenueByProperty, getCollectionRate, getMaintenanceCostByProperty,
   getBrokerPerformance, getOwnerROI,
-  getPropertyROI, getSmartAlerts,
+  getPropertyROI, getSmartAlerts, getAllPropertiesROI,
 } from "./db";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
@@ -943,6 +943,7 @@ export const appRouter = router({
     brokerPerformance: adminProcedure.query(() => getBrokerPerformance()),
     ownerROI: protectedProcedure.input(z.number()).query(({ input }) => getOwnerROI(input)),
     propertyROI: adminProcedure.input(z.number()).query(({ input }) => getPropertyROI(input)),
+    allPropertiesROI: adminProcedure.query(() => getAllPropertiesROI()),
   }),
 
   // ─── SMART ALERTS (التنبيهات الذكية) ──────────────────────────────────────────────
