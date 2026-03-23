@@ -117,7 +117,7 @@ export const properties = mysqlTable("properties", {
   brokerCommissionAmount: decimal("brokerCommissionAmount", { precision: 15, scale: 2 }),
   maintenanceBudget: decimal("maintenanceBudget", { precision: 15, scale: 2 }).default("0"),
   maintenanceSpent: decimal("maintenanceSpent", { precision: 15, scale: 2 }).default("0"),
-  vacantSince: date("vacantSince"),
+  vacantSince: timestamp("vacantSince"),
   vacancyReason: mysqlEnum("vacancyReason", ["new", "eviction", "maintenance", "end_of_contract", "other"]),
   viewCount: int("viewCount").default(0),
   // أعمدة إضافية

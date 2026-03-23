@@ -17,9 +17,10 @@ import { toast } from "sonner";
 
 const WHATSAPP = "966558018151";
 
-function formatDate(ts: number | string | null | undefined) {
+function formatDate(ts: number | string | Date | null | undefined) {
   if (!ts) return "—";
-  return new Date(Number(ts)).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+  const d = ts instanceof Date ? ts : new Date(Number(ts));
+  return d.toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
 }
 
 function formatAmount(amount: number | string) {
@@ -231,21 +232,7 @@ export default function TenantPortal() {
                   ))}
                 </div>
 
-                {/* Unit info */}
-                {data.unit && (
-                  <div className="mt-4 p-4 rounded-xl bg-amber-500/8 border border-amber-500/20">
-                    <div className="flex items-center gap-2 text-amber-400 text-sm font-bold mb-2">
-                      <MapPin size={14} />الوحدة السكنية
-                    </div>
-                    <p className="text-white font-medium">{data.unit.unitNumber}</p>
-                    {data.property && (
-                      <p className="text-white/50 text-xs mt-1 flex items-center gap-1">
-                        <Building2 size={11} />{data.property.titleAr}
-                        {data.property.district ? ` — ${data.property.district}` : ""}
-                      </p>
-                    )}
-                  </div>
-                )}
+
               </CardContent>
             </Card>
 
