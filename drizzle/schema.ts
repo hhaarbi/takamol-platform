@@ -751,3 +751,109 @@ export const accountingExports = mysqlTable("accounting_exports", {
   createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
 });
 export type AccountingExport = typeof accountingExports.$inferSelect;
+
+// ─── STAFF & ROLES (الموظفون والأدوار) ────────────────────────────────────────
+export const staff = mysqlTable("staff", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id"),
+  name: varchar("name", { length: 200 }).notNull(),
+  email: varchar("email", { length: 200 }),
+  phone: varchar("phone", { length: 50 }),
+  role: mysqlEnum("role", ["admin", "accountant", "property_manager", "maintenance_supervisor", "leasing_agent", "receptionist"]).notNull().default("receptionist"),
+  department: varchar("department", { length: 100 }),
+  isActive: boolean("is_active").notNull().default(true),
+  notes: text("notes"),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type Staff = typeof staff.$inferSelect;
+
+// ─── ROLE PERMISSIONS (صلاحيات الأدوار) ──────────────────────────────────────
+export const rolePermissions = mysqlTable("role_permissions", {
+  id: int("id").autoincrement().primaryKey(),
+  role: varchar("role", { length: 50 }).notNull(),
+  module: varchar("module", { length: 100 }).notNull(),
+  canView: boolean("can_view").notNull().default(false),
+  canCreate: boolean("can_create").notNull().default(false),
+  canEdit: boolean("can_edit").notNull().default(false),
+  canDelete: boolean("can_delete").notNull().default(false),
+  canExport: boolean("can_export").notNull().default(false),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type RolePermission = typeof rolePermissions.$inferSelect;
+
+// ─── LOGIN LOG (سجل الدخول) ───────────────────────────────────────────────────
+export const loginLog = mysqlTable("login_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id"),
+  email: varchar("email", { length: 200 }),
+  ipAddress: varchar("ip_address", { length: 100 }),
+  userAgent: text("user_agent"),
+  status: mysqlEnum("status", ["success", "failed"]).notNull().default("success"),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type LoginLog = typeof loginLog.$inferSelect;
+
+// ─── INTERNAL MESSAGES (الرسائل الداخلية) ────────────────────────────────────
+export const internalMessages = mysqlTable("internal_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  fromUserId: int("from_user_id").notNull(),
+  toUserId: int("to_user_id").notNull(),
+  subject: varchar("subject", { length: 300 }),
+  body: text("body").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  parentId: int("parent_id"),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type InternalMessage = typeof internalMessages.$inferSelect;
+
+// ─── WEBHOOKS (نقاط Webhook) ──────────────────────────────────────────────────
+export const webhooks = mysqlTable("webhooks", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  url: text("url").notNull(),
+  secret: varchar("secret", { length: 200 }),
+  events: text("events").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  lastTriggeredAt: bigint("last_triggered_at", { mode: "number" }),
+  failureCount: int("failure_count").notNull().default(0),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type Webhook = typeof webhooks.$inferSelect;
+
+// ─── API USAGE LOG (سجل استخدام API) ─────────────────────────────────────────
+export const apiUsageLog = mysqlTable("api_usage_log", {
+  id: int("id").autoincrement().primaryKey(),
+  apiKeyId: int("api_key_id").notNull(),
+  endpoint: varchar("endpoint", { length: 300 }).notNull(),
+  method: varchar("method", { length: 10 }).notNull(),
+  statusCode: int("status_code"),
+  ipAddress: varchar("ip_address", { length: 100 }),
+  responseTimeMs: int("response_time_ms"),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type ApiUsageLog = typeof apiUsageLog.$inferSelect;
+
+// ─── LISTING VIEWS (مشاهدات الإعلانات) ───────────────────────────────────────
+export const listingViews = mysqlTable("listing_views", {
+  id: int("id").autoincrement().primaryKey(),
+  listingId: int("listing_id").notNull(),
+  ipAddress: varchar("ip_address", { length: 100 }),
+  source: varchar("source", { length: 100 }),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type ListingView = typeof listingViews.$inferSelect;
+
+// ─── CONTRACT RENEWAL REQUESTS (طلبات تجديد العقود) ──────────────────────────
+export const contractRenewalRequests = mysqlTable("contract_renewal_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  contractId: int("contract_id").notNull(),
+  tenantId: int("tenant_id").notNull(),
+  requestedRentAmount: decimal("requested_rent_amount", { precision: 12, scale: 2 }),
+  notes: text("notes"),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).notNull().default("pending"),
+  reviewedBy: int("reviewed_by"),
+  reviewedAt: bigint("reviewed_at", { mode: "number" }),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type ContractRenewalRequest = typeof contractRenewalRequests.$inferSelect;

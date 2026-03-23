@@ -54,9 +54,10 @@ import {
 import { createHash, randomBytes } from "crypto";
 import { getDb } from "./db";
 import {
-  tenantDocuments, apiKeys, propertyListings, accountingExports
+  tenantDocuments, apiKeys, propertyListings, accountingExports,
+  staff, rolePermissions, loginLog, internalMessages, webhooks, apiUsageLog, listingViews, contractRenewalRequests
 } from "../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, sql } from "drizzle-orm";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1399,4 +1400,367 @@ export const appRouter = router({
   }),
 });
 
-export type AppRouter = typeof appRouter;
+// ─── Extend appRouter with batch-10 routers ───────────────────────────────────
+// Note: We extend by re-exporting a merged router
+export const batch10Router = router({
+
+  // ─── STAFF MANAGEMENT (إدارة الموظفين) ─────────────────────────────────────
+  staff: router({
+    list: adminProcedure.query(async () => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(staff).orderBy(desc(staff.createdAt));
+    }),
+    get: adminProcedure.input(z.number()).query(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return null;
+      const [row] = await drizzle.select().from(staff).where(eq(staff.id, input));
+      return row ?? null;
+    }),
+    create: adminProcedure.input(z.object({
+      name: z.string().min(2),
+      email: z.string().email().optional(),
+      phone: z.string().optional(),
+      role: z.enum(["admin","accountant","property_manager","maintenance_supervisor","leasing_agent","receptionist"]),
+      department: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.insert(staff).values({ ...input, createdAt: Date.now(), updatedAt: Date.now() });
+      return { success: true };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      data: z.object({
+        name: z.string().optional(),
+        email: z.string().optional(),
+        phone: z.string().optional(),
+        role: z.enum(["admin","accountant","property_manager","maintenance_supervisor","leasing_agent","receptionist"]).optional(),
+        department: z.string().optional(),
+        isActive: z.boolean().optional(),
+        notes: z.string().optional(),
+      }),
+    })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.update(staff).set({ ...input.data, updatedAt: Date.now() }).where(eq(staff.id, input.id));
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.delete(staff).where(eq(staff.id, input));
+      return { success: true };
+    }),
+  }),
+
+  // ─── ROLE PERMISSIONS (صلاحيات الأدوار) ────────────────────────────────────
+  permissions: router({
+    getByRole: adminProcedure.input(z.string()).query(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(rolePermissions).where(eq(rolePermissions.role, input));
+    }),
+    getAll: adminProcedure.query(async () => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(rolePermissions);
+    }),
+    upsert: adminProcedure.input(z.object({
+      role: z.string(),
+      module: z.string(),
+      canView: z.boolean().default(false),
+      canCreate: z.boolean().default(false),
+      canEdit: z.boolean().default(false),
+      canDelete: z.boolean().default(false),
+      canExport: z.boolean().default(false),
+    })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const existing = await drizzle.select().from(rolePermissions)
+        .where(and(eq(rolePermissions.role, input.role), eq(rolePermissions.module, input.module)));
+      if (existing.length > 0) {
+        await drizzle.update(rolePermissions).set({
+          canView: input.canView, canCreate: input.canCreate, canEdit: input.canEdit,
+          canDelete: input.canDelete, canExport: input.canExport,
+        }).where(and(eq(rolePermissions.role, input.role), eq(rolePermissions.module, input.module)));
+      } else {
+        await drizzle.insert(rolePermissions).values({ ...input, createdAt: Date.now() });
+      }
+      return { success: true };
+    }),
+    seedDefaults: adminProcedure.mutation(async () => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const defaults = [
+        // admin - full access
+        ...(["properties","tenants","contracts","payments","maintenance","reports","staff","owners","brokers","settings","export"]).map(m => ({
+          role: "admin", module: m, canView: true, canCreate: true, canEdit: true, canDelete: true, canExport: true, createdAt: Date.now()
+        })),
+        // accountant - finance only
+        ...(["payments","reports","export"]).map(m => ({
+          role: "accountant", module: m, canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: true, createdAt: Date.now()
+        })),
+        ...(["properties","tenants","contracts"]).map(m => ({
+          role: "accountant", module: m, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: false, createdAt: Date.now()
+        })),
+        // property_manager - properties & tenants
+        ...(["properties","tenants","contracts","payments","owners"]).map(m => ({
+          role: "property_manager", module: m, canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: true, createdAt: Date.now()
+        })),
+        ...(["maintenance","reports"]).map(m => ({
+          role: "property_manager", module: m, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: false, createdAt: Date.now()
+        })),
+        // maintenance_supervisor - maintenance only
+        ...(["maintenance","properties"]).map(m => ({
+          role: "maintenance_supervisor", module: m, canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: false, createdAt: Date.now()
+        })),
+        // leasing_agent - listings & leads
+        ...(["properties","tenants","contracts"]).map(m => ({
+          role: "leasing_agent", module: m, canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: false, createdAt: Date.now()
+        })),
+        // receptionist - view only
+        ...(["properties","tenants","maintenance"]).map(m => ({
+          role: "receptionist", module: m, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: false, createdAt: Date.now()
+        })),
+      ];
+      // Clear existing and re-seed
+      await drizzle.delete(rolePermissions);
+      await drizzle.insert(rolePermissions).values(defaults);
+      return { success: true, count: defaults.length };
+    }),
+  }),
+
+  // ─── LOGIN LOG (سجل الدخول) ─────────────────────────────────────────────────
+  loginLog: router({
+    list: adminProcedure.input(z.object({
+      limit: z.number().default(50),
+      userId: z.number().optional(),
+    }).optional()).query(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(loginLog).orderBy(desc(loginLog.createdAt)).limit(input?.limit ?? 50);
+    }),
+  }),
+
+  // ─── INTERNAL MESSAGES (الرسائل الداخلية) ──────────────────────────────────
+  messages: router({
+    inbox: protectedProcedure.query(async ({ ctx }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(internalMessages)
+        .where(eq(internalMessages.toUserId, ctx.user.id))
+        .orderBy(desc(internalMessages.createdAt)).limit(50);
+    }),
+    sent: protectedProcedure.query(async ({ ctx }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(internalMessages)
+        .where(eq(internalMessages.fromUserId, ctx.user.id))
+        .orderBy(desc(internalMessages.createdAt)).limit(50);
+    }),
+    send: protectedProcedure.input(z.object({
+      toUserId: z.number(),
+      subject: z.string().optional(),
+      body: z.string().min(1),
+    })).mutation(async ({ ctx, input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.insert(internalMessages).values({
+        fromUserId: ctx.user.id,
+        toUserId: input.toUserId,
+        subject: input.subject,
+        body: input.body,
+        createdAt: Date.now(),
+      });
+      return { success: true };
+    }),
+    markRead: protectedProcedure.input(z.number()).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.update(internalMessages).set({ isRead: true }).where(eq(internalMessages.id, input));
+      return { success: true };
+    }),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return 0;
+      const rows = await drizzle.select({ count: sql<number>`count(*)` }).from(internalMessages)
+        .where(and(eq(internalMessages.toUserId, ctx.user.id), eq(internalMessages.isRead, false)));
+      return Number(rows[0]?.count ?? 0);
+    }),
+  }),
+
+  // ─── WEBHOOKS (نقاط Webhook) ────────────────────────────────────────────────
+  webhooks: router({
+    list: adminProcedure.query(async () => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(webhooks).orderBy(desc(webhooks.createdAt));
+    }),
+    create: adminProcedure.input(z.object({
+      name: z.string().min(2),
+      url: z.string().url(),
+      secret: z.string().optional(),
+      events: z.array(z.string()).min(1),
+    })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.insert(webhooks).values({
+        name: input.name,
+        url: input.url,
+        secret: input.secret,
+        events: JSON.stringify(input.events),
+        createdAt: Date.now(),
+      });
+      return { success: true };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      isActive: z.boolean().optional(),
+      name: z.string().optional(),
+      url: z.string().optional(),
+      events: z.array(z.string()).optional(),
+    })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const updateData: Record<string, unknown> = {};
+      if (input.isActive !== undefined) updateData.isActive = input.isActive;
+      if (input.name) updateData.name = input.name;
+      if (input.url) updateData.url = input.url;
+      if (input.events) updateData.events = JSON.stringify(input.events);
+      await drizzle.update(webhooks).set(updateData).where(eq(webhooks.id, input.id));
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.delete(webhooks).where(eq(webhooks.id, input));
+      return { success: true };
+    }),
+  }),
+
+  // ─── API USAGE STATS (إحصائيات API) ────────────────────────────────────────
+  apiStats: router({
+    getUsage: adminProcedure.input(z.object({
+      apiKeyId: z.number().optional(),
+      days: z.number().default(30),
+    }).optional()).query(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return { total: 0, byDay: [], byEndpoint: [] };
+      const since = Date.now() - (input?.days ?? 30) * 24 * 60 * 60 * 1000;
+      let query = drizzle.select().from(apiUsageLog).where(gte(apiUsageLog.createdAt, since));
+      const rows = await query.orderBy(desc(apiUsageLog.createdAt)).limit(1000);
+      // Group by day
+      const byDayMap = new Map<string, number>();
+      const byEndpointMap = new Map<string, number>();
+      for (const row of rows) {
+        const day = new Date(row.createdAt).toISOString().split("T")[0];
+        byDayMap.set(day, (byDayMap.get(day) ?? 0) + 1);
+        byEndpointMap.set(row.endpoint, (byEndpointMap.get(row.endpoint) ?? 0) + 1);
+      }
+      return {
+        total: rows.length,
+        byDay: Array.from(byDayMap.entries()).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date)),
+        byEndpoint: Array.from(byEndpointMap.entries()).map(([endpoint, count]) => ({ endpoint, count })).sort((a, b) => b.count - a.count).slice(0, 10),
+      };
+    }),
+  }),
+
+  // ─── LISTING VIEWS (مشاهدات الإعلانات) ─────────────────────────────────────
+  listingViews: router({
+    track: publicProcedure.input(z.object({
+      listingId: z.number(),
+      source: z.string().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return { success: false };
+      const ip = (ctx.req as any).ip ?? (ctx.req as any).socket?.remoteAddress ?? "unknown";
+      await drizzle.insert(listingViews).values({
+        listingId: input.listingId,
+        ipAddress: ip,
+        source: input.source,
+        createdAt: Date.now(),
+      });
+      // Update counter in property_listings
+      await drizzle.update(propertyListings)
+        .set({ viewsCount: sql`${propertyListings.viewsCount} + 1` })
+        .where(eq(propertyListings.id, input.listingId));
+      return { success: true };
+    }),
+    getStats: adminProcedure.input(z.number()).query(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return { total: 0, byDay: [] };
+      const rows = await drizzle.select().from(listingViews)
+        .where(eq(listingViews.listingId, input))
+        .orderBy(desc(listingViews.createdAt)).limit(500);
+      const byDayMap = new Map<string, number>();
+      for (const row of rows) {
+        const day = new Date(row.createdAt).toISOString().split("T")[0];
+        byDayMap.set(day, (byDayMap.get(day) ?? 0) + 1);
+      }
+      return {
+        total: rows.length,
+        byDay: Array.from(byDayMap.entries()).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date)),
+      };
+    }),
+  }),
+
+  // ─── CONTRACT RENEWAL REQUESTS (طلبات تجديد العقود) ────────────────────────
+  renewalRequests: router({
+    list: adminProcedure.query(async () => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(contractRenewalRequests).orderBy(desc(contractRenewalRequests.createdAt));
+    }),
+    submit: publicProcedure.input(z.object({
+      contractNumber: z.string(),
+      phone: z.string(),
+      requestedRentAmount: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      // Find contract by number
+      const { contracts, tenants } = await import("../drizzle/schema");
+      const [contract] = await drizzle.select().from(contracts).where(eq(contracts.contractNumber, input.contractNumber));
+      if (!contract) throw new TRPCError({ code: "NOT_FOUND", message: "رقم العقد غير صحيح" });
+      // Verify phone matches tenant
+      if (contract.tenantId) {
+        const [tenant] = await drizzle.select().from(tenants).where(eq(tenants.id, contract.tenantId));
+        if (tenant && tenant.phone !== input.phone) throw new TRPCError({ code: "UNAUTHORIZED", message: "رقم الهاتف غير مطابق" });
+      }
+      await drizzle.insert(contractRenewalRequests).values({
+        contractId: contract.id,
+        tenantId: contract.tenantId!,
+        requestedRentAmount: input.requestedRentAmount,
+        notes: input.notes,
+        createdAt: Date.now(),
+      });
+      // Notify admin
+      await notifyOwner({ title: "طلب تجديد عقد جديد", content: `العقد رقم ${input.contractNumber} - طلب تجديد من المستأجر` });
+      return { success: true };
+    }),
+    review: adminProcedure.input(z.object({
+      id: z.number(),
+      status: z.enum(["approved","rejected"]),
+    })).mutation(async ({ ctx, input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.update(contractRenewalRequests).set({
+        status: input.status,
+        reviewedBy: ctx.user.id,
+        reviewedAt: Date.now(),
+      }).where(eq(contractRenewalRequests.id, input.id));
+      return { success: true };
+    }),
+  }),
+});
+
+// Merge batch10Router into appRouter
+export const mergedRouter = router({
+  ...appRouter._def.record,
+  ...batch10Router._def.record,
+});
+export type AppRouter = typeof mergedRouter;
+export type Batch10Router = typeof batch10Router;

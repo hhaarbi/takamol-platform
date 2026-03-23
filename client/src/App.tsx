@@ -25,6 +25,12 @@ import TenantPortalFull from "./pages/TenantPortalFull";
 import PropertyListings from "./pages/PropertyListings";
 import OpenAPI from "./pages/OpenAPI";
 import AccountingIntegration from "./pages/AccountingIntegration";
+import StaffManagement from "./pages/StaffManagement";
+import InternalMessages from "./pages/InternalMessages";
+import SecurityLog from "./pages/SecurityLog";
+import RenewalRequests from "./pages/RenewalRequests";
+import ApiStats from "./pages/ApiStats";
+import PublicListings from "./pages/PublicListings";
 
 function Router() {
   return (
@@ -54,6 +60,12 @@ function Router() {
       <Route path={"/listings"} component={PropertyListings} />
       <Route path={"/open-api"} component={OpenAPI} />
       <Route path={"/accounting"} component={AccountingIntegration} />
+      <Route path={"/staff"} component={StaffManagement} />
+      <Route path={"/messages"} component={InternalMessages} />
+      <Route path={"/security"} component={SecurityLog} />
+      <Route path={"/renewal-requests"} component={RenewalRequests} />
+      <Route path={"/api-stats"} component={ApiStats} />
+      <Route path={"/listings/public"} component={PublicListings} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

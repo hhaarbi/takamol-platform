@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2 } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2, Shield, Mail, RefreshCw, Activity, UserCog } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -43,6 +43,11 @@ const menuItems = [
   { icon: Download, label: "تصدير البيانات", path: "/data-export" },
   { icon: Globe, label: "مقارنة السوق", path: "/market-comparison" },
   { icon: Star, label: "تقييم المستأجرين", path: "/tenant-ratings" },
+  { icon: UserCog, label: "إدارة الموظفين", path: "/staff" },
+  { icon: Mail, label: "الرسائل الداخلية", path: "/messages" },
+  { icon: Shield, label: "سجل الدخول والأمان", path: "/security" },
+  { icon: RefreshCw, label: "طلبات التجديد", path: "/renewal-requests" },
+  { icon: Activity, label: "إحصائيات API", path: "/api-stats" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
