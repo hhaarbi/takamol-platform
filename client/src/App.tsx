@@ -33,6 +33,8 @@ import ApiStats from "./pages/ApiStats";
 import PublicListings from "./pages/PublicListings";
 import ArrearsHeatmap from "./pages/ArrearsHeatmap";
 import CashflowForecast from "./pages/CashflowForecast";
+import VacantUnits from "./pages/VacantUnits";
+import ArchivedContracts from "./pages/ArchivedContracts";
 
 function Router() {
   return (
@@ -70,6 +72,8 @@ function Router() {
       <Route path={"/listings/public"} component={PublicListings} />
       <Route path={"/arrears-heatmap"} component={ArrearsHeatmap} />
       <Route path={"/cashflow-forecast"} component={CashflowForecast} />
+      <Route path={"/vacant-units"} component={VacantUnits} />
+      <Route path={"/archived-contracts"} component={ArchivedContracts} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

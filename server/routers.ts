@@ -56,7 +56,8 @@ import { getDb } from "./db";
 import {
   tenantDocuments, apiKeys, propertyListings, accountingExports,
   staff, rolePermissions, loginLog, internalMessages, webhooks, apiUsageLog, listingViews, contractRenewalRequests,
-  properties, contracts, payments
+  properties, contracts, payments,
+  units, expenses, maintenanceRequests, tenants
 } from "../drizzle/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 
@@ -1890,11 +1891,152 @@ const batch11Router = router({
   }),
 });
 
+// ─── BATCH 12: أرشفة العقود + الوحدات الشاغرة + النسخ الاحتياطي ─────────────
+const batch12Router = router({
+
+  // ─── أرشفة العقود ─────────────────────────────────────────────────────────
+  archiveContract: protectedProcedure
+    .input(z.object({ contractId: z.number(), reason: z.string().optional() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      await db.update(contracts)
+        .set({ archived: true, archivedAt: new Date(), archivedReason: input.reason ?? null })
+        .where(eq(contracts.id, input.contractId));
+      return { success: true };
+    }),
+
+  unarchiveContract: protectedProcedure
+    .input(z.object({ contractId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      await db.update(contracts)
+        .set({ archived: false, archivedAt: null, archivedReason: null })
+        .where(eq(contracts.id, input.contractId));
+      return { success: true };
+    }),
+
+  getArchivedContracts: protectedProcedure
+    .input(z.object({ page: z.number().default(1), limit: z.number().default(20) }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const page = input?.page ?? 1;
+      const limit = input?.limit ?? 20;
+      const offset = (page - 1) * limit;
+      const rows = await db
+        .select({
+          id: contracts.id,
+          contractNumber: contracts.contractNumber,
+          type: contracts.type,
+          status: contracts.status,
+          startDate: contracts.startDate,
+          endDate: contracts.endDate,
+          rentAmount: contracts.rentAmount,
+          archivedAt: contracts.archivedAt,
+          archivedReason: contracts.archivedReason,
+          propertyId: contracts.propertyId,
+          tenantId: contracts.tenantId,
+        })
+        .from(contracts)
+        .where(eq(contracts.archived, true))
+        .orderBy(desc(contracts.archivedAt))
+        .limit(limit)
+        .offset(offset);
+      return { contracts: rows, page, limit };
+    }),
+
+  // ─── تقرير الوحدات الشاغرة ────────────────────────────────────────────────
+  vacantUnitsReport: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+    const today = new Date();
+    const vacantRows = await db
+      .select({
+        id: units.id,
+        unitNumber: units.unitNumber,
+        type: units.type,
+        floor: units.floor,
+        area: units.area,
+        rentPrice: units.rentPrice,
+        vacantSince: units.vacantSince,
+        vacancyReason: units.vacancyReason,
+        propertyId: units.propertyId,
+        propertyTitle: properties.titleAr,
+        propertyType: properties.type,
+        district: properties.district,
+      })
+      .from(units)
+      .leftJoin(properties, eq(units.propertyId, properties.id))
+      .where(eq(units.status, 'vacant'))
+      .orderBy(units.vacantSince);
+
+    const enriched = vacantRows.map(u => {
+      const vacantSince = u.vacantSince ? new Date(String(u.vacantSince)) : null;
+      const vacancyDays = vacantSince
+        ? Math.floor((today.getTime() - vacantSince.getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+      const dailyLoss = u.rentPrice ? Number(u.rentPrice) / 365 : 0;
+      const totalLoss = vacancyDays !== null ? Math.round(dailyLoss * vacancyDays) : 0;
+      return { ...u, vacancyDays, dailyLoss: Math.round(dailyLoss), totalLoss };
+    });
+
+    const totalLoss = enriched.reduce((s, u) => s + u.totalLoss, 0);
+    const avgDays = enriched.length
+      ? Math.round(enriched.reduce((s, u) => s + (u.vacancyDays ?? 0), 0) / enriched.length)
+      : 0;
+    const byReason = enriched.reduce((acc, u) => {
+      const r = u.vacancyReason ?? 'other';
+      acc[r] = (acc[r] ?? 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return { units: enriched, totalLoss, avgDays, byReason, count: enriched.length };
+  }),
+
+  // ─── النسخ الاحتياطي ──────────────────────────────────────────────────────
+  exportBackup: protectedProcedure.mutation(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+    const [allProperties, allContracts, allTenants, allPayments, allExpenses, allMaintenance] = await Promise.all([
+      db.select().from(properties).limit(5000),
+      db.select().from(contracts).limit(5000),
+      db.select().from(tenants).limit(5000),
+      db.select().from(payments).limit(10000),
+      db.select({ id: expenses.id, amount: expenses.amount, category: expenses.category, expenseDate: expenses.expenseDate, propertyId: expenses.propertyId }).from(expenses).limit(5000),
+      db.select({ id: maintenanceRequests.id, status: maintenanceRequests.status, priority: maintenanceRequests.priority, cost: maintenanceRequests.cost, propertyId: maintenanceRequests.propertyId }).from(maintenanceRequests).limit(5000),
+    ]);
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+      counts: {
+        properties: allProperties.length,
+        contracts: allContracts.length,
+        tenants: allTenants.length,
+        payments: allPayments.length,
+        expenses: allExpenses.length,
+        maintenance: allMaintenance.length,
+      },
+      data: { properties: allProperties, contracts: allContracts, tenants: allTenants, payments: allPayments, expenses: allExpenses, maintenance: allMaintenance },
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const { url } = await storagePut(`backups/backup-${Date.now()}.json`, Buffer.from(json), 'application/json');
+    await notifyOwner({
+      title: '💾 نسخة احتياطية جديدة',
+      content: `تم إنشاء نسخة احتياطية بتاريخ ${new Date().toLocaleDateString('ar-SA')}\n📊 الإحصائيات:\n- العقارات: ${allProperties.length}\n- العقود: ${allContracts.length}\n- المستأجرون: ${allTenants.length}\n- المدفوعات: ${allPayments.length}`,
+    });
+    return { url, counts: backup.counts, exportedAt: backup.exportedAt };
+  }),
+
+});
+
 // Merge all routers
 export const mergedRouter = router({
   ...appRouter._def.record,
   ...batch10Router._def.record,
   ...batch11Router._def.record,
+  ...batch12Router._def.record,
 });
 export type AppRouter = typeof mergedRouter;
 export type Batch10Router = typeof batch10Router;

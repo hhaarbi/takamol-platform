@@ -397,3 +397,19 @@
 ### توقع التدفق النقدي
 - [x] API cashflowForecast (توقع 3 أشهر قادمة من العقود الحالية + تاريخ 6 أشهر)
 - [x] صفحة /cashflow-forecast برسم بياني شريطي مقارن
+
+## الدفعة الثانية عشرة — أرشفة + وحدات شاغرة + نسخ احتياطي
+
+### أرشفة العقود المنتهية
+- [x] عمود archived في جدول contracts (boolean + archivedAt + archivedReason)
+- [x] API archiveContract / unarchiveContract / getArchivedContracts
+- [x] صفحة /archived-contracts لعرض العقود المؤرشفة مع إمكانية إلغاء الأرشفة
+
+### تقرير الوحدات الشاغرة
+- [x] API vacantUnitsReport (مدة الشغور بالأيام + خسارة الإيراد + توزيع الأسباب)
+- [x] صفحة /vacant-units بجدول تفصيلي وإحصائيات وفلاتر
+
+### النسخ الاحتياطي الأسبوعي التلقائي
+- [x] API exportBackup (تصدير JSON شامل لجميع البيانات + رفع S3 + إشعار تيليغرام)
+- [ ] cron job أسبوعي تلقائي (متبقي)
+- [ ] زر "نسخ احتياطي الآن" في صفحة /data-export (متبقي)
