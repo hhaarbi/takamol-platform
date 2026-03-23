@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2, Shield, Mail, RefreshCw, Activity, UserCog, Flame, TrendingUp, DoorOpen, Archive } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2, Shield, Mail, RefreshCw, Activity, UserCog, Flame, TrendingUp, DoorOpen, Archive, CheckCircle, MapPin, BarChart3, ClipboardCheck } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -52,6 +52,11 @@ const menuItems = [
   { icon: TrendingUp, label: "توقع التدق النقدي", path: "/cashflow-forecast" },
   { icon: DoorOpen, label: "الوحدات الشاغرة", path: "/vacant-units" },
   { icon: Archive, label: "أرشيف العقود", path: "/archived-contracts" },
+  { icon: ClipboardCheck, label: "امتثال فال", path: "/fal-compliance" },
+  { icon: CheckCircle, label: "نظام الموافقات", path: "/approvals" },
+  { icon: BarChart3, label: "المقارنة السنوية", path: "/yearly-comparison" },
+  { icon: MapPin, label: "الإحصائيات الجغرافية", path: "/geo-stats" },
+  { icon: Building, label: "لوحة تحكم المالك", path: "/owner-dashboard" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

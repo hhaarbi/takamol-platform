@@ -413,3 +413,35 @@
 - [x] API exportBackup (تصدير JSON شامل لجميع البيانات + رفع S3 + إشعار تيليغرام)
 - [ ] cron job أسبوعي تلقائي (متبقي)
 - [ ] زر "نسخ احتياطي الآن" في صفحة /data-export (متبقي)
+
+## الدفعة الثالثة عشرة — ميزات متقدمة
+
+### زر الأرشفة المباشر في العقود
+- [x] API archiveContract متاح من صفحة /archived-contracts
+
+### النسخ الاحتياطي
+- [ ] cron job أسبوعي تلقائي (كل أحد 7 صباحاً) (متبقي)
+- [ ] زر "نسخ احتياطي الآن" في صفحة /data-export (متبقي)
+
+### تقرير امتثال فال
+- [x] جدول fal_licenses في قاعدة البيانات
+- [x] API falCompliance.list / create / update / delete
+- [x] صفحة /fal-compliance مع تنبيهات الانتهاء (30 يوم)
+
+### لوحة المالك المحسّنة
+- [x] API ownerMonthlyReport (إيرادات + مصروفات + صافي + شاغرة)
+- [x] API sendOwnerMonthlyReport (إرسال تيليغرام فوري)
+- [x] صفحة /owner-dashboard بإحصائيات مفصّلة + زر إرسال تيليغرام
+
+### نظام الموافقات الداخلية
+- [x] جدول approvals في قاعدة البيانات
+- [x] API approvals.list / create / approve / reject / updateStatus
+- [x] صفحة /approvals لإدارة الموافقات
+
+### تقرير المقارنة السنوية
+- [x] API yearlyComparison (مقارنة هذا العام بالماضي شهرياً)
+- [x] صفحة /yearly-comparison برسم بياني شريطي مقارن
+
+### الخريطة الجغرافية
+- [x] API geoStats (إحصائيات العقارات حسب الحي)
+- [x] صفحة /geo-stats بخريطة Google Maps مع مؤشرات الأداء

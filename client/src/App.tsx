@@ -35,6 +35,11 @@ import ArrearsHeatmap from "./pages/ArrearsHeatmap";
 import CashflowForecast from "./pages/CashflowForecast";
 import VacantUnits from "./pages/VacantUnits";
 import ArchivedContracts from "./pages/ArchivedContracts";
+import FalCompliance from "./pages/FalCompliance";
+import Approvals from "./pages/Approvals";
+import YearlyComparison from "./pages/YearlyComparison";
+import GeoStats from "./pages/GeoStats";
+import OwnerDashboard from "./pages/OwnerDashboard";
 
 function Router() {
   return (
@@ -74,6 +79,11 @@ function Router() {
       <Route path={"/cashflow-forecast"} component={CashflowForecast} />
       <Route path={"/vacant-units"} component={VacantUnits} />
       <Route path={"/archived-contracts"} component={ArchivedContracts} />
+      <Route path={"/fal-compliance"} component={FalCompliance} />
+      <Route path={"/approvals"} component={Approvals} />
+      <Route path={"/yearly-comparison"} component={YearlyComparison} />
+      <Route path={"/geo-stats"} component={GeoStats} />
+      <Route path={"/owner-dashboard"} component={OwnerDashboard} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

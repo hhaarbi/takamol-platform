@@ -57,7 +57,8 @@ import {
   tenantDocuments, apiKeys, propertyListings, accountingExports,
   staff, rolePermissions, loginLog, internalMessages, webhooks, apiUsageLog, listingViews, contractRenewalRequests,
   properties, contracts, payments,
-  units, expenses, maintenanceRequests, tenants
+  units, expenses, maintenanceRequests, tenants,
+  falLicenses, approvals
 } from "../drizzle/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 
@@ -2031,12 +2032,345 @@ const batch12Router = router({
 
 });
 
+// ─── BATCH 13 ROUTER ─────────────────────────────────────────────────────────
+export const batch13Router = router({
+
+  // ─── FAL COMPLIANCE (تراخيص فال) ─────────────────────────────────────────
+  falCompliance: router({
+    list: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      return db.select().from(falLicenses).orderBy(desc(falLicenses.expiryDate));
+    }),
+    create: protectedProcedure.input(z.object({
+      licenseNumber: z.string().min(1),
+      holderName: z.string().min(2),
+      holderType: z.enum(['broker', 'company', 'agent']).default('broker'),
+      brokerId: z.number().optional(),
+      licenseType: z.string().default('وسيط عقاري'),
+      issueDate: z.string().optional(),
+      expiryDate: z.string(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.insert(falLicenses).values({
+        ...input,
+        issueDate: input.issueDate ? new Date(input.issueDate) : undefined,
+        expiryDate: new Date(input.expiryDate),
+        status: 'active',
+      } as any);
+      return { success: true };
+    }),
+    update: protectedProcedure.input(z.object({
+      id: z.number(),
+      data: z.object({
+        licenseNumber: z.string().optional(),
+        holderName: z.string().optional(),
+        holderType: z.enum(['broker', 'company', 'agent']).optional(),
+        licenseType: z.string().optional(),
+        issueDate: z.string().optional(),
+        expiryDate: z.string().optional(),
+        status: z.enum(['active', 'expired', 'suspended', 'pending_renewal']).optional(),
+        notes: z.string().optional(),
+      }),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const updateData: any = { ...input.data, updatedAt: new Date() };
+      if (input.data.expiryDate) updateData.expiryDate = new Date(input.data.expiryDate);
+      if (input.data.issueDate) updateData.issueDate = new Date(input.data.issueDate);
+      await db.update(falLicenses).set(updateData).where(eq(falLicenses.id, input.id));
+      return { success: true };
+    }),
+    delete: protectedProcedure.input(z.number()).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.delete(falLicenses).where(eq(falLicenses.id, input));
+      return { success: true };
+    }),
+    checkExpiring: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const all = await db.select().from(falLicenses);
+      const now = new Date();
+      const expiring30: typeof all = [];
+      const expiring7: typeof all = [];
+      const expired: typeof all = [];
+      for (const lic of all) {
+        const expiry = new Date(String(lic.expiryDate));
+        const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysLeft < 0) expired.push(lic);
+        else if (daysLeft <= 7) expiring7.push(lic);
+        else if (daysLeft <= 30) expiring30.push(lic);
+      }
+      return { expiring30, expiring7, expired };
+    }),
+  }),
+
+  // ─── APPROVALS (الموافقات الداخلية) ────────────────────────────────────────
+  approvals: router({
+    list: protectedProcedure.input(z.object({
+      status: z.enum(['pending', 'approved', 'rejected', 'cancelled', 'all']).default('all'),
+      requestType: z.enum(['maintenance', 'expense', 'contract', 'transfer', 'other', 'all']).default('all'),
+    }).optional()).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const rows = await db.select().from(approvals).orderBy(desc(approvals.createdAt));
+      return rows.filter(r => {
+        if (input?.status && input.status !== 'all' && r.status !== input.status) return false;
+        if (input?.requestType && input.requestType !== 'all' && r.requestType !== input.requestType) return false;
+        return true;
+      });
+    }),
+    create: protectedProcedure.input(z.object({
+      requestType: z.enum(['maintenance', 'expense', 'contract', 'transfer', 'other']),
+      referenceId: z.number().optional(),
+      referenceType: z.string().optional(),
+      title: z.string().min(2),
+      description: z.string().optional(),
+      amount: z.string().optional(),
+      priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.insert(approvals).values({
+        ...input,
+        requestedBy: ctx.user.name ?? ctx.user.email ?? 'مستخدم',
+        status: 'pending',
+      } as any);
+      await notifyOwner({
+        title: `⚠️ طلب موافقة جديد: ${input.title}`,
+        content: `النوع: ${input.requestType}\nالأولوية: ${input.priority}\nالمبلغ: ${input.amount ?? 'غير محدد'}\n${input.description ?? ''}`,
+      });
+      return { success: true };
+    }),
+    approve: protectedProcedure.input(z.number()).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(approvals).set({
+        status: 'approved',
+        approvedBy: ctx.user.name ?? ctx.user.email ?? 'مدير',
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      } as any).where(eq(approvals.id, input));
+      return { success: true };
+    }),
+    reject: protectedProcedure.input(z.object({
+      id: z.number(),
+      reason: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(approvals).set({
+        status: 'rejected',
+        rejectedBy: ctx.user.name ?? ctx.user.email ?? 'مدير',
+        rejectedAt: new Date(),
+        rejectionReason: input.reason,
+        updatedAt: new Date(),
+      } as any).where(eq(approvals.id, input.id));
+      return { success: true };
+    }),
+    stats: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const all = await db.select().from(approvals);
+      return {
+        total: all.length,
+        pending: all.filter(a => a.status === 'pending').length,
+        approved: all.filter(a => a.status === 'approved').length,
+        rejected: all.filter(a => a.status === 'rejected').length,
+        urgent: all.filter(a => a.priority === 'urgent' && a.status === 'pending').length,
+      };
+    }),
+  }),
+
+  // ─── YEARLY COMPARISON (مقارنة سنوية) ────────────────────────────────────
+  yearlyComparison: protectedProcedure.input(z.object({
+    year: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const currentYear = input?.year ?? new Date().getFullYear();
+    const prevYear = currentYear - 1;
+    // جلب المدفوعات للسنتين
+    const allPayments = await db.select().from(payments);
+    const currentYearPayments = allPayments.filter(p => {
+      const d = p.createdAt ? new Date(p.createdAt) : null;
+      return d && d.getFullYear() === currentYear && p.status === 'paid';
+    });
+    const prevYearPayments = allPayments.filter(p => {
+      const d = p.createdAt ? new Date(p.createdAt) : null;
+      return d && d.getFullYear() === prevYear && p.status === 'paid';
+    });
+    // تجميع شهري
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    const monthlyData = months.map(month => {
+      const curMonthPayments = currentYearPayments.filter(p => new Date(p.createdAt!).getMonth() + 1 === month);
+      const prevMonthPayments = prevYearPayments.filter(p => new Date(p.createdAt!).getMonth() + 1 === month);
+      const curRevenue = curMonthPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+      const prevRevenue = prevMonthPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+      return { month, curRevenue, prevRevenue, change: curRevenue - prevRevenue, changePercent: prevRevenue > 0 ? ((curRevenue - prevRevenue) / prevRevenue * 100).toFixed(1) : null };
+    });
+    // إجماليات
+    const curTotal = currentYearPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    const prevTotal = prevYearPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    // جلب العقارات مع إيراداتها
+    const allProperties = await db.select().from(properties);
+    const propertyStats = allProperties.map(prop => {
+      const curPropPayments = currentYearPayments.filter(p => p.propertyId === prop.id);
+      const prevPropPayments = prevYearPayments.filter(p => p.propertyId === prop.id);
+      const curRev = curPropPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+      const prevRev = prevPropPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+      return { id: prop.id, title: prop.titleAr, curRevenue: curRev, prevRevenue: prevRev, change: curRev - prevRev };
+    }).filter(p => p.curRevenue > 0 || p.prevRevenue > 0);
+    return { currentYear, prevYear, monthlyData, curTotal, prevTotal, totalChange: curTotal - prevTotal, totalChangePercent: prevTotal > 0 ? ((curTotal - prevTotal) / prevTotal * 100).toFixed(1) : null, propertyStats };
+  }),
+
+  // ─── GEO STATS (إحصائيات جغرافية) ────────────────────────────────────────
+  geoStats: protectedProcedure.query(async () => {
+    const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const allProperties = await db.select().from(properties);
+    const allPayments = await db.select().from(payments);
+    // تجميع حسب الحي
+    const districtMap: Record<string, { count: number; revenue: number; vacant: number; rented: number; lat: number | null; lng: number | null }> = {};
+    for (const prop of allProperties) {
+      const district = prop.district ?? 'غير محدد';
+      if (!districtMap[district]) districtMap[district] = { count: 0, revenue: 0, vacant: 0, rented: 0, lat: null, lng: null };
+      districtMap[district].count++;
+      if (prop.status === 'available') districtMap[district].vacant++;
+      if (prop.status === 'rented') districtMap[district].rented++;
+      if (prop.latitude && !districtMap[district].lat) {
+        districtMap[district].lat = Number(prop.latitude);
+        districtMap[district].lng = Number(prop.longitude);
+      }
+    }
+    // إضافة الإيرادات
+    for (const payment of allPayments) {
+      if (payment.status !== 'paid' || !payment.propertyId) continue;
+      const prop = allProperties.find(p => p.id === payment.propertyId);
+      if (!prop) continue;
+      const district = prop.district ?? 'غير محدد';
+      if (districtMap[district]) districtMap[district].revenue += Number(payment.amount ?? 0);
+    }
+    // تحويل لمصفوفة
+    const districts = Object.entries(districtMap).map(([name, stats]) => ({ name, ...stats })).sort((a, b) => b.revenue - a.revenue);
+    // العقارات مع إحداثيات
+    const propertiesWithCoords = allProperties
+      .filter(p => p.latitude && p.longitude)
+      .map(p => ({
+        id: p.id, title: p.titleAr, district: p.district, status: p.status, type: p.type,
+        lat: Number(p.latitude), lng: Number(p.longitude),
+        price: Number(p.price ?? 0),
+      }));
+    return { districts, propertiesWithCoords, totalProperties: allProperties.length };
+  }),
+
+  // ─── OWNER MONTHLY REPORT (تقرير المالك الشهري) ──────────────────────────
+  ownerMonthlyReport: protectedProcedure.input(z.object({
+    ownerId: z.number().optional(),
+    month: z.number().min(1).max(12).optional(),
+    year: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const now = new Date();
+    const targetMonth = input?.month ?? now.getMonth() + 1;
+    const targetYear = input?.year ?? now.getFullYear();
+    // جلب العقارات
+    const allProperties = await db.select().from(properties);
+    const ownerProperties = input?.ownerId ? allProperties.filter(p => p.ownerId === input.ownerId) : allProperties;
+    const propIds = ownerProperties.map(p => p.id);
+    // جلب المدفوعات للشهر
+    const allPayments = await db.select().from(payments);
+    const monthPayments = allPayments.filter(p => {
+      const d = p.createdAt ? new Date(p.createdAt) : null;
+      return d && d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth && p.status === 'paid' && propIds.includes(p.propertyId ?? 0);
+    });
+    // جلب المصروفات
+    const allExpenses = await db.select().from(expenses);
+    const monthExpenses = allExpenses.filter(e => {
+      const d = e.createdAt ? new Date(e.createdAt) : null;
+      return d && d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth && propIds.includes(e.propertyId ?? 0);
+    });
+    const totalRevenue = monthPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    const totalExpenses = monthExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+    const netIncome = totalRevenue - totalExpenses;
+    const vacantCount = ownerProperties.filter(p => p.status === 'available').length;
+    const rentedCount = ownerProperties.filter(p => p.status === 'rented').length;
+    return {
+      month: targetMonth, year: targetYear,
+      totalProperties: ownerProperties.length, rentedCount, vacantCount,
+      totalRevenue, totalExpenses, netIncome,
+      paymentsCount: monthPayments.length,
+      expensesCount: monthExpenses.length,
+      propertyBreakdown: ownerProperties.map(prop => ({
+        id: prop.id, title: prop.titleAr, status: prop.status,
+        revenue: monthPayments.filter(p => p.propertyId === prop.id).reduce((s, p) => s + Number(p.amount ?? 0), 0),
+        expenses: monthExpenses.filter(e => e.propertyId === prop.id).reduce((s, e) => s + Number(e.amount ?? 0), 0),
+      })),
+    };
+  }),
+
+  sendOwnerMonthlyReport: protectedProcedure.input(z.object({
+    ownerId: z.number().optional(),
+    month: z.number().min(1).max(12).optional(),
+    year: z.number().optional(),
+  }).optional()).mutation(async ({ input }) => {
+    const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const now = new Date();
+    const targetMonth = input?.month ?? now.getMonth() + 1;
+    const targetYear = input?.year ?? now.getFullYear();
+    const allProperties = await db.select().from(properties);
+    const ownerProperties = input?.ownerId ? allProperties.filter(p => p.ownerId === input.ownerId) : allProperties;
+    const propIds = ownerProperties.map(p => p.id);
+    const allPayments = await db.select().from(payments);
+    const monthPayments = allPayments.filter(p => {
+      const d = p.createdAt ? new Date(p.createdAt) : null;
+      return d && d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth && p.status === 'paid' && propIds.includes(p.propertyId ?? 0);
+    });
+    const allExpenses = await db.select().from(expenses);
+    const monthExpenses = allExpenses.filter(e => {
+      const d = e.createdAt ? new Date(e.createdAt) : null;
+      return d && d.getFullYear() === targetYear && d.getMonth() + 1 === targetMonth && propIds.includes(e.propertyId ?? 0);
+    });
+    const totalRevenue = monthPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    const totalExpenses = monthExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+    const netIncome = totalRevenue - totalExpenses;
+    const vacantCount = ownerProperties.filter(p => p.status === 'available').length;
+    const monthNames = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    await notifyOwner({
+      title: `📊 تقرير شهر ${monthNames[targetMonth - 1]} ${targetYear}`,
+      content: `🏢 إجمالي العقارات: ${ownerProperties.length}\n✅ مؤجرة: ${ownerProperties.length - vacantCount} | 🔴 شاغرة: ${vacantCount}\n\n💰 الإيرادات: ${totalRevenue.toLocaleString('ar-SA')} ر.س\n💸 المصروفات: ${totalExpenses.toLocaleString('ar-SA')} ر.س\n📊 الصافي: ${netIncome.toLocaleString('ar-SA')} ر.س`,
+    });
+    return { success: true, totalRevenue, totalExpenses, netIncome };
+  }),
+
+});
+
 // Merge all routers
 export const mergedRouter = router({
   ...appRouter._def.record,
   ...batch10Router._def.record,
   ...batch11Router._def.record,
   ...batch12Router._def.record,
+  ...batch13Router._def.record,
 });
 export type AppRouter = typeof mergedRouter;
 export type Batch10Router = typeof batch10Router;

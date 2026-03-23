@@ -860,3 +860,47 @@ export const contractRenewalRequests = mysqlTable("contract_renewal_requests", {
   createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
 });
 export type ContractRenewalRequest = typeof contractRenewalRequests.$inferSelect;
+
+// ─── FAL LICENSES (تراخيص فال) ───────────────────────────────────────────────
+export const falLicenses = mysqlTable("fal_licenses", {
+  id: int("id").autoincrement().primaryKey(),
+  licenseNumber: varchar("licenseNumber", { length: 100 }).notNull(),
+  holderName: varchar("holderName", { length: 255 }).notNull(),
+  holderType: mysqlEnum("holderType", ["broker", "company", "agent"]).default("broker").notNull(),
+  brokerId: int("brokerId"),
+  licenseType: varchar("licenseType", { length: 100 }).default("وسيط عقاري"),
+  issueDate: date("issueDate"),
+  expiryDate: date("expiryDate").notNull(),
+  status: mysqlEnum("status", ["active", "expired", "suspended", "pending_renewal"]).default("active").notNull(),
+  reminderSent30: boolean("reminderSent30").default(false).notNull(),
+  reminderSent7: boolean("reminderSent7").default(false).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type FalLicense = typeof falLicenses.$inferSelect;
+export type InsertFalLicense = typeof falLicenses.$inferInsert;
+
+// ─── APPROVALS (الموافقات الداخلية) ──────────────────────────────────────────
+export const approvals = mysqlTable("approvals", {
+  id: int("id").autoincrement().primaryKey(),
+  requestType: mysqlEnum("requestType", ["maintenance", "expense", "contract", "transfer", "other"]).default("maintenance").notNull(),
+  referenceId: int("referenceId"),
+  referenceType: varchar("referenceType", { length: 50 }),
+  requestedBy: varchar("requestedBy", { length: 255 }),
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  amount: decimal("amount", { precision: 15, scale: 2 }),
+  status: mysqlEnum("status", ["pending", "approved", "rejected", "cancelled"]).default("pending").notNull(),
+  approvedBy: varchar("approvedBy", { length: 255 }),
+  approvedAt: timestamp("approvedAt"),
+  rejectedBy: varchar("rejectedBy", { length: 255 }),
+  rejectedAt: timestamp("rejectedAt"),
+  rejectionReason: text("rejectionReason"),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Approval = typeof approvals.$inferSelect;
+export type InsertApproval = typeof approvals.$inferInsert;
