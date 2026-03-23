@@ -84,6 +84,15 @@ const NAV_SECTIONS = [
     { id: "handover", label: "محاضر التسليم", icon: ClipboardList },
     { id: "vacancy", label: "إدارة الشاغر", icon: Building2 },
   ]},
+  { title: "المالية المتقدمة", items: [
+    { id: "ext:analytics", label: "التحليلات المتقدمة", icon: BarChart3, href: "/analytics" },
+    { id: "ext:owner-transfers", label: "تحويلات الملاك", icon: Banknote, href: "/owner-transfers" },
+    { id: "ext:broker-referrals", label: "إحالات الوسطاء", icon: ArrowUpDown, href: "/broker-referrals" },
+  ]},
+  { title: "التشغيل المتقدم", items: [
+    { id: "ext:contractors", label: "المقاولون", icon: Wrench, href: "/contractors" },
+    { id: "ext:settings", label: "إعدادات النظام", icon: Settings, href: "/settings" },
+  ]},
   { title: "أخرى", items: [
     { id: "chats", label: "المحادثات", icon: MessageSquare },
     { id: "activity", label: "سجل النشاطات", icon: FileSearch },
@@ -291,13 +300,19 @@ export default function Dashboard() {
               {section.items.map(item => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    if ((item as any).href) { navigate((item as any).href); }
+                    else { setActiveTab(item.id); }
+                  }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg mb-0.5 text-sm transition-colors ${activeTab === item.id ? "bg-amber-500/20 text-amber-400 font-medium" : "text-slate-300 hover:bg-slate-800"}`}
                 >
                   <item.icon size={17} className="shrink-0" />
                   {sidebarOpen && <span>{item.label}</span>}
                   {item.id === "collection" && overdue.length > 0 && sidebarOpen && (
                     <span className="mr-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{overdue.length}</span>
+                  )}
+                  {(item as any).href && sidebarOpen && (
+                    <span className="mr-auto text-slate-500 text-xs">↗</span>
                   )}
                 </button>
               ))}

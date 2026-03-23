@@ -548,3 +548,71 @@ export const documents = mysqlTable("documents", {
 });
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = typeof documents.$inferInsert;
+
+// ─── CONTRACTORS (المقاولون والموردون) ────────────────────────────────────────
+export const contractors = mysqlTable("contractors", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  specialty: mysqlEnum("specialty", ["plumbing", "electrical", "hvac", "painting", "carpentry", "cleaning", "security", "general", "other"]).default("general").notNull(),
+  phone: varchar("phone", { length: 30 }).notNull(),
+  phone2: varchar("phone2", { length: 30 }),
+  email: varchar("email", { length: 320 }),
+  company: varchar("company", { length: 255 }),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("5.00"),
+  totalJobs: int("totalJobs").default(0).notNull(),
+  totalCost: decimal("totalCost", { precision: 15, scale: 2 }).default("0").notNull(),
+  notes: text("notes"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Contractor = typeof contractors.$inferSelect;
+export type InsertContractor = typeof contractors.$inferInsert;
+
+// ─── OWNER TRANSFERS (تحويلات الملاك) ────────────────────────────────────────
+export const ownerTransfers = mysqlTable("owner_transfers", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  statementId: int("statementId"),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  transferDate: date("transferDate").notNull(),
+  bankName: varchar("bankName", { length: 100 }),
+  ibanLast4: varchar("ibanLast4", { length: 10 }),
+  referenceNumber: varchar("referenceNumber", { length: 100 }),
+  receiptUrl: varchar("receiptUrl", { length: 500 }),
+  status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type OwnerTransfer = typeof ownerTransfers.$inferSelect;
+export type InsertOwnerTransfer = typeof ownerTransfers.$inferInsert;
+
+// ─── BROKER REFERRALS (إحالات الوسطاء) ───────────────────────────────────────
+export const brokerReferrals = mysqlTable("broker_referrals", {
+  id: int("id").autoincrement().primaryKey(),
+  referringBrokerId: int("referringBrokerId").notNull(),
+  receivingBrokerId: int("receivingBrokerId"),
+  propertyId: int("propertyId"),
+  clientName: varchar("clientName", { length: 255 }).notNull(),
+  clientPhone: varchar("clientPhone", { length: 30 }).notNull(),
+  serviceType: mysqlEnum("serviceType", ["buy", "sell", "rent", "management"]).notNull(),
+  status: mysqlEnum("status", ["pending", "contacted", "deal_closed", "cancelled"]).default("pending").notNull(),
+  referralCommission: decimal("referralCommission", { precision: 8, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type BrokerReferral = typeof brokerReferrals.$inferSelect;
+export type InsertBrokerReferral = typeof brokerReferrals.$inferInsert;
+
+// ─── SYSTEM SETTINGS (إعدادات النظام) ────────────────────────────────────────
+export const systemSettings = mysqlTable("system_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  settingKey: varchar("settingKey", { length: 100 }).notNull().unique(),
+  settingValue: text("settingValue").notNull(),
+  description: text("description"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SystemSetting = typeof systemSettings.$inferSelect;
+export type InsertSystemSetting = typeof systemSettings.$inferInsert;

@@ -1,4 +1,4 @@
-import { eq, and, or, like, desc, lte, gte, sql, asc, between, count as drizzleCount, isNull, ne } from "drizzle-orm";
+import { eq, and, or, like, desc, lte, gte, sql, asc, between, count as drizzleCount, isNull, ne, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -25,6 +25,10 @@ import {
   leads, InsertLead,
   chatSessions, chatMessages,
   notifications,
+  contractors, InsertContractor,
+  ownerTransfers, InsertOwnerTransfer,
+  brokerReferrals, InsertBrokerReferral,
+  systemSettings,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1023,4 +1027,241 @@ export async function markAllNotificationsRead(userId: number) {
   const db = await getDb();
   if (!db) return;
   await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, userId));
+}
+
+// ─── CONTRACTORS (المقاولون) ──────────────────────────────────────────────────
+export async function getContractors(filters?: { specialty?: string; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.isActive !== undefined) conditions.push(eq(contractors.isActive, filters.isActive));
+  if (filters?.specialty) conditions.push(eq(contractors.specialty, filters.specialty as typeof contractors.specialty._.data));
+  const q = db.select().from(contractors).orderBy(desc(contractors.rating));
+  return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+export async function getContractorById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(contractors).where(eq(contractors.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createContractor(data: InsertContractor) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(contractors).values(data);
+  const id = (result as unknown as { insertId: number }).insertId;
+  const created = await db.select().from(contractors).where(eq(contractors.id, id)).limit(1);
+  return created[0];
+}
+
+export async function updateContractor(id: number, data: Partial<InsertContractor>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(contractors).set(data).where(eq(contractors.id, id));
+  const updated = await db.select().from(contractors).where(eq(contractors.id, id)).limit(1);
+  return updated[0];
+}
+
+export async function rateContractor(id: number, rating: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const contractor = await getContractorById(id);
+  if (!contractor) throw new Error("Contractor not found");
+  const newRating = ((Number(contractor.rating) * contractor.totalJobs) + rating) / (contractor.totalJobs + 1);
+  await db.update(contractors).set({
+    rating: String(Math.min(5, Math.max(1, newRating)).toFixed(2)),
+    totalJobs: contractor.totalJobs + 1,
+  }).where(eq(contractors.id, id));
+}
+
+// ─── OWNER TRANSFERS (تحويلات الملاك) ────────────────────────────────────────
+export async function getOwnerTransfers(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const q = db.select().from(ownerTransfers).orderBy(desc(ownerTransfers.createdAt));
+  return ownerId ? q.where(eq(ownerTransfers.ownerId, ownerId)) : q;
+}
+
+export async function createOwnerTransfer(data: InsertOwnerTransfer) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(ownerTransfers).values(data);
+  const id = (result as unknown as { insertId: number }).insertId;
+  const created = await db.select().from(ownerTransfers).where(eq(ownerTransfers.id, id)).limit(1);
+  return created[0];
+}
+
+export async function updateOwnerTransfer(id: number, data: Partial<InsertOwnerTransfer>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(ownerTransfers).set(data).where(eq(ownerTransfers.id, id));
+}
+
+// ─── BROKER REFERRALS (إحالات الوسطاء) ───────────────────────────────────────
+export async function getBrokerReferrals(brokerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const q = db.select().from(brokerReferrals).orderBy(desc(brokerReferrals.createdAt));
+  return brokerId ? q.where(eq(brokerReferrals.referringBrokerId, brokerId)) : q;
+}
+
+export async function createBrokerReferral(data: InsertBrokerReferral) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(brokerReferrals).values(data);
+  const id = (result as unknown as { insertId: number }).insertId;
+  const created = await db.select().from(brokerReferrals).where(eq(brokerReferrals.id, id)).limit(1);
+  return created[0];
+}
+
+export async function updateBrokerReferral(id: number, data: Partial<InsertBrokerReferral>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(brokerReferrals).set(data).where(eq(brokerReferrals.id, id));
+}
+
+// ─── SYSTEM SETTINGS (إعدادات النظام) ────────────────────────────────────────
+export async function getSystemSettings() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(systemSettings).orderBy(systemSettings.settingKey);
+}
+
+export async function getSystemSetting(key: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(systemSettings).where(eq(systemSettings.settingKey, key)).limit(1);
+  return result[0]?.settingValue ?? null;
+}
+
+export async function upsertSystemSetting(key: string, value: string, description?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(systemSettings).values({ settingKey: key, settingValue: value, description })
+    .onDuplicateKeyUpdate({ set: { settingValue: value } });
+}
+
+// ─── ADVANCED ANALYTICS ───────────────────────────────────────────────────────
+export async function getKPIs() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const now = new Date();
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  const [totalProps] = await db.select({ count: sql<number>`count(*)` }).from(properties);
+  const [vacantUnitsCount] = await db.select({ count: sql<number>`count(*)` }).from(units).where(eq(units.status, "vacant"));
+  const [totalUnitsCount] = await db.select({ count: sql<number>`count(*)` }).from(units);
+  const [overduePaymentsCount] = await db.select({ count: sql<number>`count(*)` }).from(payments).where(eq(payments.status, "overdue"));
+  const [overdueAmount] = await db.select({ total: sql<number>`coalesce(sum(amount - coalesce(paidAmount, 0)), 0)` }).from(payments).where(eq(payments.status, "overdue"));
+  const [thisMonthRevenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidDate, firstOfMonth)));
+  const [lastMonthRevenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidDate, lastMonth), lte(payments.paidDate, endLastMonth)));
+  const [openMaintenance] = await db.select({ count: sql<number>`count(*)` }).from(maintenanceRequests).where(inArray(maintenanceRequests.status, ["open", "in_progress"]));
+  const [activeContracts] = await db.select({ count: sql<number>`count(*)` }).from(contracts).where(eq(contracts.status, "active"));
+  const [expiringContracts] = await db.select({ count: sql<number>`count(*)` }).from(contracts).where(and(eq(contracts.status, "active"), lte(contracts.endDate, new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000))));
+
+  const occupancyRate = totalUnitsCount.count > 0
+    ? Math.round(((totalUnitsCount.count - vacantUnitsCount.count) / totalUnitsCount.count) * 100)
+    : 0;
+
+  const revenueGrowth = lastMonthRevenue.total > 0
+    ? Math.round(((thisMonthRevenue.total - lastMonthRevenue.total) / lastMonthRevenue.total) * 100)
+    : 0;
+
+  return {
+    totalProperties: totalProps.count,
+    vacantUnits: vacantUnitsCount.count,
+    totalUnits: totalUnitsCount.count,
+    occupancyRate,
+    overduePayments: overduePaymentsCount.count,
+    overdueAmount: Number(overdueAmount.total),
+    thisMonthRevenue: Number(thisMonthRevenue.total),
+    lastMonthRevenue: Number(lastMonthRevenue.total),
+    revenueGrowth,
+    openMaintenance: openMaintenance.count,
+    activeContracts: activeContracts.count,
+    expiringContracts: expiringContracts.count,
+  };
+}
+
+export async function getRevenueByProperty(ownerId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(payments.status, "paid")];
+  if (ownerId) conditions.push(eq(payments.ownerId, ownerId));
+  return db.select({
+    propertyId: payments.propertyId,
+    total: sql<number>`sum(paidAmount)`,
+    count: sql<number>`count(*)`,
+  }).from(payments).where(and(...conditions)).groupBy(payments.propertyId).orderBy(desc(sql`sum(paidAmount)`)).limit(10);
+}
+
+export async function getCollectionRate(months = 6) {
+  const db = await getDb();
+  if (!db) return [];
+  const results = [];
+  for (let i = 0; i < months; i++) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const [total] = await db.select({ count: sql<number>`count(*)`, amount: sql<number>`sum(amount)` })
+      .from(payments)
+      .where(sql`YEAR(dueDate) = ${year} AND MONTH(dueDate) = ${month}`);
+    const [paid] = await db.select({ count: sql<number>`count(*)`, amount: sql<number>`sum(paidAmount)` })
+      .from(payments)
+      .where(and(eq(payments.status, "paid"), sql`YEAR(dueDate) = ${year} AND MONTH(dueDate) = ${month}`));
+    results.push({
+      month: `${year}-${String(month).padStart(2, "0")}`,
+      totalCount: total.count,
+      totalAmount: Number(total.amount ?? 0),
+      paidCount: paid.count,
+      paidAmount: Number(paid.amount ?? 0),
+      rate: total.count > 0 ? Math.round((paid.count / total.count) * 100) : 0,
+    });
+  }
+  return results.reverse();
+}
+
+export async function getMaintenanceCostByProperty() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    propertyId: maintenanceRequests.propertyId,
+    totalCost: sql<number>`coalesce(sum(cost), 0)`,
+    count: sql<number>`count(*)`,
+  }).from(maintenanceRequests).where(eq(maintenanceRequests.status, "completed")).groupBy(maintenanceRequests.propertyId).orderBy(desc(sql`sum(cost)`)).limit(10);
+}
+
+export async function getBrokerPerformance() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    brokerId: brokerCommissions.brokerId,
+    totalDeals: sql<number>`count(*)`,
+    totalRevenue: sql<number>`sum(commissionAmount)`,
+    avgDealSize: sql<number>`avg(transactionAmount)`,
+  }).from(brokerCommissions).where(eq(brokerCommissions.status, "paid")).groupBy(brokerCommissions.brokerId).orderBy(desc(sql`sum(commissionAmount)`));
+}
+
+export async function getOwnerROI(ownerId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [revenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` })
+    .from(payments).where(and(eq(payments.ownerId, ownerId), eq(payments.status, "paid")));
+  const [expensesTotal] = await db.select({ total: sql<number>`coalesce(sum(amount), 0)` })
+    .from(expenses).where(eq(expenses.ownerId, ownerId));
+  const [managementFees] = await db.select({ total: sql<number>`coalesce(sum(amount), 0)` })
+    .from(payments).where(and(eq(payments.ownerId, ownerId), eq(payments.type, "management_fee")));
+  const net = Number(revenue.total) - Number(expensesTotal.total) - Number(managementFees.total);
+  return {
+    totalRevenue: Number(revenue.total),
+    totalExpenses: Number(expensesTotal.total),
+    managementFees: Number(managementFees.total),
+    netProfit: net,
+  };
 }

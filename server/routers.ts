@@ -38,6 +38,12 @@ import {
   getLeads, getLeadsCount, createLead, updateLead, getLeadBySession, updateLeadBySession, linkSessionToLead,
   getOrCreateChatSession, saveChatMessage, getChatHistory,
   getNotifications, markNotificationRead, markAllNotificationsRead,
+  getContractors, getContractorById, createContractor, updateContractor, rateContractor,
+  getOwnerTransfers, createOwnerTransfer, updateOwnerTransfer,
+  getBrokerReferrals, createBrokerReferral, updateBrokerReferral,
+  getSystemSettings, getSystemSetting, upsertSystemSetting,
+  getKPIs, getRevenueByProperty, getCollectionRate, getMaintenanceCostByProperty,
+  getBrokerPerformance, getOwnerROI,
 } from "./db";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
@@ -830,6 +836,111 @@ export const appRouter = router({
       await markAllNotificationsRead(ctx.user.id);
       return { success: true };
     }),
+  }),
+
+  // ─── CONTRACTORS (المقاولون) ────────────────────────────────────────────────
+  contractors: router({
+    list: protectedProcedure.input(z.object({ specialty: z.string().optional(), isActive: z.boolean().optional() }).optional()).query(({ input }) =>
+      getContractors(input ?? {})
+    ),
+    byId: protectedProcedure.input(z.number()).query(({ input }) => getContractorById(input)),
+    create: adminProcedure.input(z.object({
+      name: z.string(),
+      specialty: z.enum(["plumbing","electrical","hvac","painting","carpentry","cleaning","security","general","other"]).default("general"),
+      phone: z.string(),
+      phone2: z.string().optional(),
+      email: z.string().optional(),
+      company: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const result = await createContractor(input);
+      await logActivity({ userId: ctx.user.id, userName: ctx.user.name ?? "", action: "create", entityType: "contractor", entityId: result?.id, entityName: input.name });
+      return result;
+    }),
+    update: adminProcedure.input(z.object({ id: z.number(), data: z.object({
+      name: z.string().optional(),
+      specialty: z.enum(["plumbing","electrical","hvac","painting","carpentry","cleaning","security","general","other"]).optional(),
+      phone: z.string().optional(),
+      phone2: z.string().optional(), email: z.string().optional(), company: z.string().optional(),
+      notes: z.string().optional(), isActive: z.boolean().optional(),
+    }) })).mutation(({ input }) => updateContractor(input.id, input.data)),
+    rate: adminProcedure.input(z.object({ id: z.number(), rating: z.number().min(1).max(5) })).mutation(({ input }) =>
+      rateContractor(input.id, input.rating)
+    ),
+  }),
+
+  // ─── OWNER TRANSFERS (تحويلات الملاك) ─────────────────────────────────────
+  ownerTransfers: router({
+    list: protectedProcedure.input(z.number().optional()).query(({ input, ctx }) => {
+      if (ctx.user.role === "owner") return getOwnerTransfers(ctx.user.id);
+      return getOwnerTransfers(input);
+    }),
+    create: adminProcedure.input(z.object({
+      ownerId: z.number(),
+      statementId: z.number().optional(),
+      amount: z.string(),
+      transferDate: z.string().transform(s => new Date(s)),
+      bankName: z.string().optional(),
+      ibanLast4: z.string().optional(),
+      referenceNumber: z.string().optional(),
+      receiptUrl: z.string().optional(),
+      status: z.enum(["pending","completed","failed"]).default("pending"),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const result = await createOwnerTransfer(input);
+      await logActivity({ userId: ctx.user.id, userName: ctx.user.name ?? "", action: "create", entityType: "owner_transfer", entityId: result?.id, entityName: `تحويل ${input.amount} ريال` });
+      return result;
+    }),
+    updateStatus: adminProcedure.input(z.object({ id: z.number(), status: z.enum(["pending","completed","failed"]) })).mutation(({ input }) =>
+      updateOwnerTransfer(input.id, { status: input.status })
+    ),
+  }),
+
+  // ─── BROKER REFERRALS (إحالات الوسطاء) ────────────────────────────────────
+  brokerReferrals: router({
+    list: protectedProcedure.query(({ ctx }) => {
+      if (ctx.user.role === "broker") return getBrokerReferrals(ctx.user.id);
+      return getBrokerReferrals();
+    }),
+    create: protectedProcedure.input(z.object({
+      referringBrokerId: z.number(),
+      receivingBrokerId: z.number().optional(),
+      propertyId: z.number().optional(),
+      clientName: z.string(),
+      clientPhone: z.string(),
+      serviceType: z.enum(["buy","sell","rent","management"]),
+      referralCommission: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(({ input }) => createBrokerReferral(input)),
+    update: protectedProcedure.input(z.object({ id: z.number(), data: z.object({
+      status: z.enum(["pending","contacted","deal_closed","cancelled"]).optional(),
+      notes: z.string().optional(),
+      referralCommission: z.string().optional(),
+    }) })).mutation(({ input }) => updateBrokerReferral(input.id, input.data)),
+  }),
+
+  // ─── SYSTEM SETTINGS (إعدادات النظام) ─────────────────────────────────────
+  settings: router({
+    list: adminProcedure.query(() => getSystemSettings()),
+    get: protectedProcedure.input(z.string()).query(({ input }) => getSystemSetting(input)),
+    set: adminProcedure.input(z.object({ key: z.string(), value: z.string(), description: z.string().optional() })).mutation(({ input }) =>
+      upsertSystemSetting(input.key, input.value, input.description)
+    ),
+  }),
+
+  // ─── ADVANCED ANALYTICS (التحليلات المتقدمة) ──────────────────────────────
+  analytics: router({
+    kpis: protectedProcedure.query(() => getKPIs()),
+    revenueByProperty: protectedProcedure.input(z.number().optional()).query(({ input, ctx }) => {
+      const ownerId = ctx.user.role === "owner" ? ctx.user.id : input;
+      return getRevenueByProperty(ownerId);
+    }),
+    collectionRate: adminProcedure.input(z.number().optional()).query(({ input }) =>
+      getCollectionRate(input ?? 6)
+    ),
+    maintenanceCost: adminProcedure.query(() => getMaintenanceCostByProperty()),
+    brokerPerformance: adminProcedure.query(() => getBrokerPerformance()),
+    ownerROI: protectedProcedure.input(z.number()).query(({ input }) => getOwnerROI(input)),
   }),
 });
 

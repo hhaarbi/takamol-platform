@@ -9,6 +9,11 @@ import Dashboard from "./pages/Dashboard";
 import OwnerPortal from "./pages/OwnerPortal";
 import BrokerPortal from "./pages/BrokerPortal";
 import Reports from "./pages/Reports";
+import Analytics from "./pages/Analytics";
+import Contractors from "./pages/Contractors";
+import OwnerTransfers from "./pages/OwnerTransfers";
+import BrokerReferrals from "./pages/BrokerReferrals";
+import SystemSettings from "./pages/SystemSettings";
 
 function Router() {
   return (
@@ -22,6 +27,11 @@ function Router() {
       <Route path={"/broker/:tab"} component={BrokerPortal} />
       <Route path={"/reports"} component={Reports} />
       <Route path={"/reports/:tab"} component={Reports} />
+      <Route path={"/analytics"} component={Analytics} />
+      <Route path={"/contractors"} component={Contractors} />
+      <Route path={"/owner-transfers"} component={OwnerTransfers} />
+      <Route path={"/broker-referrals"} component={BrokerReferrals} />
+      <Route path={"/settings"} component={SystemSettings} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
