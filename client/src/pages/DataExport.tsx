@@ -3,82 +3,28 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Download, Database, FileSpreadsheet, FileText, BookOpen, Archive, CheckCircle2 } from "lucide-react";
+import { Download, Database, FileSpreadsheet, FileText, BookOpen, Archive, CheckCircle2, Cloud } from "lucide-react";
 import * as XLSX from "xlsx";
 
-const TABLES = [
-  { id: "properties", label: "العقارات", icon: "🏠" },
-  { id: "tenants", label: "المستأجرون", icon: "👥" },
-  { id: "contracts", label: "العقود", icon: "📋" },
-  { id: "payments", label: "المدفوعات", icon: "💰" },
-  { id: "owners", label: "الملاك", icon: "🔑" },
-  { id: "brokers", label: "الوسطاء", icon: "🤝" },
-  { id: "maintenance", label: "الصيانة", icon: "🔧" },
-] as const;
-
-type TableId = typeof TABLES[number]["id"];
-
 export default function DataExport() {
-  const [selectedTables, setSelectedTables] = useState<TableId[]>(["properties", "tenants", "contracts", "payments"]);
   const [accountingYear, setAccountingYear] = useState(new Date().getFullYear());
   const [exporting, setExporting] = useState(false);
 
   const accountingSummary = trpc.accounting.summary.useQuery({ year: accountingYear });
-
-  const exportDataQuery = trpc.backup.exportData.useQuery(
-    { tables: selectedTables },
-    { enabled: false }
-  );
 
   const journalQuery = trpc.accounting.journalEntries.useQuery(
     { startDate: `${accountingYear}-01-01`, endDate: `${accountingYear}-12-31` },
     { enabled: false }
   );
 
-  const toggleTable = (id: TableId) => {
-    setSelectedTables(prev =>
-      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
-    );
-  };
-
-  const handleBackupExport = async (format: "json" | "excel") => {
-    if (!selectedTables.length) { toast.error("اختر جدولاً واحداً على الأقل"); return; }
-    setExporting(true);
-    try {
-      const result = await exportDataQuery.refetch();
-      if (!result.data) throw new Error("No data");
-      const { data } = result.data;
-
-      if (format === "json") {
-        const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `takamol_backup_${new Date().toISOString().split("T")[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("تم تصدير النسخة الاحتياطية JSON");
-      } else {
-        const wb = XLSX.utils.book_new();
-        for (const [table, rows] of Object.entries(data)) {
-          if (!Array.isArray(rows) || rows.length === 0) continue;
-          const ws = XLSX.utils.json_to_sheet(rows);
-          ws["!cols"] = Object.keys(rows[0] as object).map(() => ({ wch: 18 }));
-          const label = TABLES.find(t => t.id === table)?.label ?? table;
-          XLSX.utils.book_append_sheet(wb, ws, label);
-        }
-        XLSX.writeFile(wb, `takamol_backup_${new Date().toISOString().split("T")[0]}.xlsx`);
-        toast.success("تم تصدير النسخة الاحتياطية Excel");
-      }
-    } catch {
-      toast.error("فشل التصدير");
-    } finally {
-      setExporting(false);
-    }
-  };
+  const backupMutation = trpc.backup.exportNow.useMutation({
+    onSuccess: (data) => {
+      toast.success(`تم إنشاء النسخة الاحتياطية وإرسالها عبر تيليغرام (${Math.round(data.size / 1024)} KB)`);
+    },
+    onError: () => toast.error("فشل إنشاء النسخة الاحتياطية"),
+  });
 
   const handleAccountingExport = async (format: "excel" | "csv") => {
     setExporting(true);
@@ -135,45 +81,37 @@ export default function DataExport() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Backup Export */}
+        {/* Cloud Backup */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Archive className="h-5 w-5 text-blue-500" />
-              نسخة احتياطية
+              نسخة احتياطية سحابية
             </CardTitle>
-            <CardDescription>تصدير بيانات النظام الكاملة</CardDescription>
+            <CardDescription>تصدير جميع البيانات إلى S3 وإرسال رابط عبر تيليغرام</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">اختر الجداول:</p>
-              <div className="grid grid-cols-2 gap-2">
-                {TABLES.map(t => (
-                  <label key={t.id} className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                    <Checkbox
-                      checked={selectedTables.includes(t.id)}
-                      onCheckedChange={() => toggleTable(t.id)}
-                    />
-                    <span className="text-sm">{t.icon} {t.label}</span>
-                  </label>
+            <div className="rounded-lg bg-muted/30 p-4 space-y-2">
+              <p className="text-sm font-medium">تشمل النسخة الاحتياطية:</p>
+              <div className="grid grid-cols-2 gap-1 text-sm text-muted-foreground">
+                {["🏠 العقارات", "👥 المستأجرون", "📋 العقود", "💰 المدفوعات", "🔑 الملاك", "🔧 الصيانة"].map(item => (
+                  <div key={item} className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    <span>{item}</span>
+                  </div>
                 ))}
               </div>
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button className="flex-1 gap-2" variant="outline" disabled={exporting}
-                onClick={() => handleBackupExport("excel")}>
-                <FileSpreadsheet className="h-4 w-4 text-green-600" />
-                Excel
-              </Button>
-              <Button className="flex-1 gap-2" variant="outline" disabled={exporting}
-                onClick={() => handleBackupExport("json")}>
-                <Database className="h-4 w-4 text-blue-600" />
-                JSON
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <CheckCircle2 className="h-3 w-3 inline ml-1 text-green-500" />
-              يُنصح بأخذ نسخة احتياطية أسبوعياً
+            <Button
+              className="w-full gap-2"
+              disabled={backupMutation.isPending}
+              onClick={() => backupMutation.mutate()}
+            >
+              <Cloud className="h-4 w-4" />
+              {backupMutation.isPending ? "جاري الإنشاء..." : "نسخ احتياطي الآن"}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              سيتم إرسال رابط التنزيل عبر تيليغرام للمدير
             </p>
           </CardContent>
         </Card>
@@ -202,7 +140,6 @@ export default function DataExport() {
               </Select>
             </div>
 
-            {/* Summary Table */}
             {summaryData && (
               <div className="rounded-lg border overflow-hidden">
                 <table className="w-full text-xs">
@@ -251,43 +188,26 @@ export default function DataExport() {
         </Card>
       </div>
 
-      {/* Quick Export Buttons */}
+      {/* Quick Export */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5 text-purple-500" />
-            تصدير سريع
+            تصدير سريع للتقارير
           </CardTitle>
           <CardDescription>تصدير تقارير جاهزة بنقرة واحدة</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "تقرير المدفوعات", icon: "💰", tables: ["payments"] as TableId[] },
-              { label: "قائمة المستأجرين", icon: "👥", tables: ["tenants"] as TableId[] },
-              { label: "سجل العقود", icon: "📋", tables: ["contracts"] as TableId[] },
-              { label: "نسخة كاملة", icon: "🗄️", tables: TABLES.map(t => t.id) as TableId[] },
+              { label: "تقرير المدفوعات", icon: "💰" },
+              { label: "قائمة المستأجرين", icon: "👥" },
+              { label: "سجل العقود", icon: "📋" },
+              { label: "نسخة كاملة", icon: "🗄️" },
             ].map(item => (
               <Button key={item.label} variant="outline" className="h-auto py-3 flex-col gap-1"
-                disabled={exporting}
-                onClick={async () => {
-                  setSelectedTables(item.tables);
-                  setExporting(true);
-                  try {
-                    const result = await exportDataQuery.refetch();
-                    if (!result.data) throw new Error("No data");
-                    const wb = XLSX.utils.book_new();
-                    for (const [table, rows] of Object.entries(result.data.data)) {
-                      if (!Array.isArray(rows) || rows.length === 0) continue;
-                      const ws = XLSX.utils.json_to_sheet(rows);
-                      const label = TABLES.find(t => t.id === table)?.label ?? table;
-                      XLSX.utils.book_append_sheet(wb, ws, label);
-                    }
-                    XLSX.writeFile(wb, `takamol_${item.label}_${new Date().toISOString().split("T")[0]}.xlsx`);
-                    toast.success(`تم تصدير ${item.label}`);
-                  } catch { toast.error("فشل التصدير"); }
-                  finally { setExporting(false); }
-                }}>
+                disabled={backupMutation.isPending}
+                onClick={() => backupMutation.mutate()}>
                 <span className="text-xl">{item.icon}</span>
                 <span className="text-xs text-center">{item.label}</span>
               </Button>

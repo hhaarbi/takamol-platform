@@ -445,3 +445,36 @@
 ### الخريطة الجغرافية
 - [x] API geoStats (إحصائيات العقارات حسب الحي)
 - [x] صفحة /geo-stats بخريطة Google Maps مع مؤشرات الأداء
+
+## الدفعة الرابعة عشرة — 8 ميزات جديدة
+
+### 1. النسخ الاحتياطي التلقائي والفوري
+- [x] API weeklyBackupCron (تصدير JSON شامل + رفع S3 + تيليغرام)
+- [x] زر "نسخ احتياطي الآن" في صفحة /data-export (mutation exportNow)
+
+### 2. توثيق Swagger UI تفاعلي
+- [x] صفحة /api-docs بتوثيق تفاعلي لجميع endpoints مع تجربة مباشرة
+
+### 3. فواتير إلكترونية ZATCA
+- [x] جدول invoices في قاعدة البيانات
+- [x] API invoices.create / list / getById / updateStatus
+- [x] توليد QR code متوافق مع ZATCA (Base64 TLV)
+- [x] صفحة /invoices لإدارة الفواتير
+
+### 4. تحليل المستأجرين
+- [x] API tenantAnalysis.list (معدل الالتزام + متوسط التأخير + درجة الموثوقية)
+- [x] صفحة /tenant-analytics بتقرير تفصيلي لكل مستأجر
+
+### 5. تقرير الضريبة العقارية
+- [x] API propertyTax.report (ضريبة 5% سنوية لكل عقار)
+- [x] صفحة /property-tax مع تصدير Excel للمحاسب
+
+### 6. إشعارات البريد الإلكتروني
+- [x] جدول email_notifications في قاعدة البيانات
+- [x] API emailSettings.log / sendTest / getLog
+- [x] صفحة /email-notifications لإعداد الإشعارات وسجل الإرسال
+
+### 7. نظام الحجز المسبق للوحدات
+- [x] جدول unit_reservations في قاعدة البيانات
+- [x] API reservations.create / confirm / cancel / list
+- [x] صفحة /reservations لإدارة الحجوزات

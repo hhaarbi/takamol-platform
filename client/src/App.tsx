@@ -40,6 +40,12 @@ import Approvals from "./pages/Approvals";
 import YearlyComparison from "./pages/YearlyComparison";
 import GeoStats from "./pages/GeoStats";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import Invoices from "./pages/Invoices";
+import TenantAnalytics from "./pages/TenantAnalytics";
+import PropertyTax from "./pages/PropertyTax";
+import EmailNotifications from "./pages/EmailNotifications";
+import Reservations from "./pages/Reservations";
+import SwaggerDocs from "./pages/SwaggerDocs";
 
 function Router() {
   return (
@@ -84,6 +90,12 @@ function Router() {
       <Route path={"/yearly-comparison"} component={YearlyComparison} />
       <Route path={"/geo-stats"} component={GeoStats} />
       <Route path={"/owner-dashboard"} component={OwnerDashboard} />
+      <Route path={"/invoices"} component={Invoices} />
+      <Route path={"/tenant-analytics"} component={TenantAnalytics} />
+      <Route path={"/property-tax"} component={PropertyTax} />
+      <Route path={"/email-notifications"} component={EmailNotifications} />
+      <Route path={"/reservations"} component={Reservations} />
+      <Route path={"/api-docs"} component={SwaggerDocs} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

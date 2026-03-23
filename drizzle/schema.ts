@@ -904,3 +904,85 @@ export const approvals = mysqlTable("approvals", {
 });
 export type Approval = typeof approvals.$inferSelect;
 export type InsertApproval = typeof approvals.$inferInsert;
+
+// ─── INVOICES (الفواتير الإلكترونية - ZATCA) ──────────────────────────────
+export const invoices = mysqlTable("invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  invoiceNumber: varchar("invoice_number", { length: 50 }).notNull(),
+  contractId: int("contract_id"),
+  tenantId: int("tenant_id"),
+  propertyId: int("property_id"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 12, scale: 2 }).default("0"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  issueDate: bigint("issue_date", { mode: "number" }).notNull(),
+  dueDate: bigint("due_date", { mode: "number" }).notNull(),
+  paidDate: bigint("paid_date", { mode: "number" }),
+  status: mysqlEnum("inv_status", ["draft","issued","paid","cancelled","overdue"]).default("draft"),
+  description: text("description"),
+  qrCode: text("qr_code"),
+  zatcaUuid: varchar("zatca_uuid", { length: 100 }),
+  notes: text("notes"),
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+});
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+// ─── UNIT RESERVATIONS (الحجوزات المسبقة) ─────────────────────────────────
+export const unitReservations = mysqlTable("unit_reservations", {
+  id: int("id").autoincrement().primaryKey(),
+  unitId: int("unit_id").notNull(),
+  propertyId: int("property_id").notNull(),
+  applicantName: varchar("applicant_name", { length: 200 }).notNull(),
+  applicantPhone: varchar("applicant_phone", { length: 50 }).notNull(),
+  applicantEmail: varchar("applicant_email", { length: 200 }),
+  applicantIdNumber: varchar("applicant_id_number", { length: 50 }),
+  desiredStartDate: bigint("desired_start_date", { mode: "number" }).notNull(),
+  desiredDurationMonths: int("desired_duration_months").default(12),
+  depositAmount: decimal("deposit_amount", { precision: 12, scale: 2 }).default("0"),
+  depositPaid: boolean("deposit_paid").default(false),
+  depositPaidDate: bigint("deposit_paid_date", { mode: "number" }),
+  status: mysqlEnum("res_status", ["pending","confirmed","cancelled","converted"]).default("pending"),
+  notes: text("notes"),
+  handledBy: int("handled_by"),
+  confirmedAt: bigint("confirmed_at", { mode: "number" }),
+  cancelledAt: bigint("cancelled_at", { mode: "number" }),
+  cancellationReason: text("cancellation_reason"),
+  createdAt: bigint("created_at_res", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_res", { mode: "number" }).notNull(),
+});
+export type UnitReservation = typeof unitReservations.$inferSelect;
+export type InsertUnitReservation = typeof unitReservations.$inferInsert;
+
+// ─── EMAIL NOTIFICATION SETTINGS ──────────────────────────────────────────
+export const emailNotificationSettings = mysqlTable("email_notification_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  notifyContractExpiry: boolean("notify_contract_expiry").default(true),
+  notifyPaymentReminder: boolean("notify_payment_reminder").default(true),
+  notifyPaymentReceived: boolean("notify_payment_received").default(true),
+  notifyMaintenanceUpdate: boolean("notify_maintenance_update").default(true),
+  notifyNewReservation: boolean("notify_new_reservation").default(true),
+  expiryDaysBefore: int("expiry_days_before").default(30),
+  paymentReminderDaysBefore: int("payment_reminder_days_before").default(7),
+  emailAddress: varchar("email_address", { length: 200 }),
+  createdAt: bigint("created_at_ens", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_ens", { mode: "number" }).notNull(),
+});
+export type EmailNotificationSetting = typeof emailNotificationSettings.$inferSelect;
+
+// ─── EMAIL NOTIFICATION LOG ────────────────────────────────────────────────
+export const emailNotificationLog = mysqlTable("email_notification_log", {
+  id: int("id").autoincrement().primaryKey(),
+  recipientEmail: varchar("recipient_email", { length: 200 }).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  body: text("body"),
+  notificationType: varchar("notification_type", { length: 100 }),
+  referenceId: int("reference_id"),
+  status: mysqlEnum("enl_status", ["sent","failed","pending"]).default("pending"),
+  sentAt: bigint("sent_at", { mode: "number" }),
+  errorMessage: text("error_message"),
+  createdAt: bigint("created_at_enl", { mode: "number" }).notNull(),
+});
+export type EmailNotificationLog = typeof emailNotificationLog.$inferSelect;

@@ -58,7 +58,8 @@ import {
   staff, rolePermissions, loginLog, internalMessages, webhooks, apiUsageLog, listingViews, contractRenewalRequests,
   properties, contracts, payments,
   units, expenses, maintenanceRequests, tenants,
-  falLicenses, approvals
+  falLicenses, approvals,
+  invoices, unitReservations, emailNotificationSettings, emailNotificationLog
 } from "../drizzle/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 
@@ -2364,6 +2365,359 @@ export const batch13Router = router({
 
 });
 
+// ─── BATCH 14: Invoices, Reservations, Email, Backup, Tenant Analysis ──────
+export const batch14Router = router({
+
+  // ─── INVOICES (ZATCA) ────────────────────────────────────────────────────
+  invoices: router({
+    list: protectedProcedure.input(z.object({
+      status: z.string().optional(),
+      tenantId: z.number().optional(),
+      propertyId: z.number().optional(),
+      limit: z.number().default(50),
+    }).optional()).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const conditions = [];
+      if (input?.status) conditions.push(eq(invoices.status, input.status as any));
+      if (input?.tenantId) conditions.push(eq(invoices.tenantId, input.tenantId));
+      if (input?.propertyId) conditions.push(eq(invoices.propertyId, input.propertyId));
+      const query = conditions.length > 0 ? db.select().from(invoices).where(and(...conditions)).orderBy(desc(invoices.createdAt)).limit(input?.limit ?? 50) : db.select().from(invoices).orderBy(desc(invoices.createdAt)).limit(input?.limit ?? 50);
+      return query;
+    }),
+
+    create: protectedProcedure.input(z.object({
+      contractId: z.number().optional(),
+      tenantId: z.number().optional(),
+      propertyId: z.number().optional(),
+      amount: z.string(),
+      vatRate: z.number().default(15),
+      issueDate: z.number(),
+      dueDate: z.number(),
+      description: z.string().optional(),
+      notes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const amount = parseFloat(input.amount);
+      const vatAmount = (amount * input.vatRate) / 100;
+      const totalAmount = amount + vatAmount;
+      // Generate ZATCA QR code (TLV encoded base64)
+      const sellerName = 'تكامل لإدارة الأملاك';
+      const vatNumber = '300000000000003';
+      const invoiceDate = new Date(input.issueDate).toISOString();
+      const tlv = Buffer.from(`\x01${String.fromCharCode(sellerName.length)}${sellerName}\x02${String.fromCharCode(vatNumber.length)}${vatNumber}\x03${String.fromCharCode(invoiceDate.length)}${invoiceDate}\x04${String.fromCharCode(totalAmount.toFixed(2).length)}${totalAmount.toFixed(2)}\x05${String.fromCharCode(vatAmount.toFixed(2).length)}${vatAmount.toFixed(2)}`).toString('base64');
+      const invoiceNumber = `INV-${Date.now()}`;
+      const now = Date.now();
+      await db.insert(invoices).values({
+        invoiceNumber,
+        contractId: input.contractId,
+        tenantId: input.tenantId,
+        propertyId: input.propertyId,
+        amount: input.amount,
+        vatAmount: vatAmount.toFixed(2),
+        totalAmount: totalAmount.toFixed(2),
+        issueDate: input.issueDate,
+        dueDate: input.dueDate,
+        status: 'issued',
+        description: input.description,
+        qrCode: tlv,
+        zatcaUuid: nanoid(),
+        notes: input.notes,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { success: true, invoiceNumber, qrCode: tlv };
+    }),
+
+    updateStatus: protectedProcedure.input(z.object({
+      id: z.number(),
+      status: z.enum(['draft','issued','paid','cancelled','overdue']),
+      paidDate: z.number().optional(),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      await db.update(invoices).set({ status: input.status, paidDate: input.paidDate, updatedAt: Date.now() }).where(eq(invoices.id, input.id));
+      return { success: true };
+    }),
+
+    delete: protectedProcedure.input(z.number()).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      await db.delete(invoices).where(eq(invoices.id, input));
+      return { success: true };
+    }),
+
+    stats: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const all = await db.select().from(invoices);
+      const total = all.length;
+      const paid = all.filter(i => i.status === 'paid').length;
+      const overdue = all.filter(i => i.status === 'overdue').length;
+      const totalAmount = all.reduce((s, i) => s + parseFloat(i.totalAmount || '0'), 0);
+      const paidAmount = all.filter(i => i.status === 'paid').reduce((s, i) => s + parseFloat(i.totalAmount || '0'), 0);
+      return { total, paid, overdue, pending: total - paid - overdue, totalAmount, paidAmount, unpaidAmount: totalAmount - paidAmount };
+    }),
+  }),
+
+  // ─── UNIT RESERVATIONS ────────────────────────────────────────────────────
+  reservations: router({
+    list: protectedProcedure.input(z.object({
+      status: z.string().optional(),
+      propertyId: z.number().optional(),
+    }).optional()).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const conditions = [];
+      if (input?.status) conditions.push(eq(unitReservations.status, input.status as any));
+      if (input?.propertyId) conditions.push(eq(unitReservations.propertyId, input.propertyId));
+      const query = conditions.length > 0 ? db.select().from(unitReservations).where(and(...conditions)).orderBy(desc(unitReservations.createdAt)) : db.select().from(unitReservations).orderBy(desc(unitReservations.createdAt));
+      return query;
+    }),
+
+    create: protectedProcedure.input(z.object({
+      unitId: z.number(),
+      propertyId: z.number(),
+      applicantName: z.string().min(2),
+      applicantPhone: z.string().min(9),
+      applicantEmail: z.string().email().optional(),
+      applicantIdNumber: z.string().optional(),
+      desiredStartDate: z.number(),
+      desiredDurationMonths: z.number().default(12),
+      depositAmount: z.string().default('0'),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const now = Date.now();
+      await db.insert(unitReservations).values({
+        ...input,
+        handledBy: ctx.user.id,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await notifyOwner({
+        title: '🏠 حجز مسبق جديد',
+        content: `طلب حجز جديد من: ${input.applicantName}\nالهاتف: ${input.applicantPhone}\nتاريخ البدء المطلوب: ${new Date(input.desiredStartDate).toLocaleDateString('ar-SA')}\nالمدة: ${input.desiredDurationMonths} شهر`,
+      });
+      return { success: true };
+    }),
+
+    updateStatus: protectedProcedure.input(z.object({
+      id: z.number(),
+      status: z.enum(['pending','confirmed','cancelled','converted']),
+      cancellationReason: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const now = Date.now();
+      const updates: Record<string, unknown> = { status: input.status, updatedAt: now };
+      if (input.status === 'confirmed') updates.confirmedAt = now;
+      if (input.status === 'cancelled') { updates.cancelledAt = now; updates.cancellationReason = input.cancellationReason; }
+      await db.update(unitReservations).set(updates as any).where(eq(unitReservations.id, input.id));
+      return { success: true };
+    }),
+
+    markDepositPaid: protectedProcedure.input(z.number()).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      await db.update(unitReservations).set({ depositPaid: true, depositPaidDate: Date.now(), updatedAt: Date.now() }).where(eq(unitReservations.id, input));
+      return { success: true };
+    }),
+
+    stats: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const all = await db.select().from(unitReservations);
+      return {
+        total: all.length,
+        pending: all.filter(r => r.status === 'pending').length,
+        confirmed: all.filter(r => r.status === 'confirmed').length,
+        cancelled: all.filter(r => r.status === 'cancelled').length,
+        converted: all.filter(r => r.status === 'converted').length,
+        depositsPaid: all.filter(r => r.depositPaid).length,
+      };
+    }),
+  }),
+
+  // ─── EMAIL NOTIFICATIONS ──────────────────────────────────────────────────
+  emailSettings: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const [settings] = await db.select().from(emailNotificationSettings).where(eq(emailNotificationSettings.userId, ctx.user.id));
+      return settings || null;
+    }),
+
+    upsert: protectedProcedure.input(z.object({
+      notifyContractExpiry: z.boolean().optional(),
+      notifyPaymentReminder: z.boolean().optional(),
+      notifyPaymentReceived: z.boolean().optional(),
+      notifyMaintenanceUpdate: z.boolean().optional(),
+      notifyNewReservation: z.boolean().optional(),
+      expiryDaysBefore: z.number().optional(),
+      paymentReminderDaysBefore: z.number().optional(),
+      emailAddress: z.string().email().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const now = Date.now();
+      const existing = await db.select().from(emailNotificationSettings).where(eq(emailNotificationSettings.userId, ctx.user.id));
+      if (existing.length > 0) {
+        await db.update(emailNotificationSettings).set({ ...input, updatedAt: now }).where(eq(emailNotificationSettings.userId, ctx.user.id));
+      } else {
+        await db.insert(emailNotificationSettings).values({ ...input, userId: ctx.user.id, createdAt: now, updatedAt: now });
+      }
+      return { success: true };
+    }),
+
+    log: protectedProcedure.input(z.object({ limit: z.number().default(50) }).optional()).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      return db.select().from(emailNotificationLog).orderBy(desc(emailNotificationLog.createdAt)).limit(input?.limit ?? 50);
+    }),
+
+    sendTest: protectedProcedure.input(z.object({ email: z.string().email(), type: z.string() })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const now = Date.now();
+      const subjects: Record<string, string> = {
+        contract_expiry: '⚠️ تنبيه: اقتراب انتهاء عقد إيجار',
+        payment_reminder: '💰 تذكير: موعد سداد الإيجار',
+        payment_received: '✅ تأكيد: تم استلام الدفعة',
+        maintenance_update: '🔧 تحديث: طلب صيانة',
+        new_reservation: '🏠 جديد: طلب حجز مسبق',
+      };
+      const subject = subjects[input.type] || 'إشعار من تكامل';
+      await db.insert(emailNotificationLog).values({
+        recipientEmail: input.email,
+        subject,
+        body: `هذا إشعار تجريبي من منصة تكامل لإدارة الأملاك. النوع: ${input.type}`,
+        notificationType: input.type,
+        status: 'sent',
+        sentAt: now,
+        createdAt: now,
+      });
+      return { success: true, message: `تم تسجيل الإشعار التجريبي لـ ${input.email}` };
+    }),
+  }),
+
+  // ─── TENANT ANALYSIS ──────────────────────────────────────────────────────
+  tenantAnalysis: router({
+    list: protectedProcedure.query(async () => {
+      const allTenants = await getTenants({});
+      const allPayments = await getPayments({});
+      const allContracts = await getContracts({});
+      return allTenants.map(tenant => {
+        const tenantPayments = allPayments.filter((p: any) => p.tenantId === tenant.id || allContracts.find((c: any) => c.tenantId === tenant.id && c.id === p.contractId));
+        const totalPayments = tenantPayments.length;
+        const onTimePayments = tenantPayments.filter((p: any) => !p.lateDays || p.lateDays === 0).length;
+        const latePayments = tenantPayments.filter((p: any) => p.lateDays && p.lateDays > 0);
+        const avgDelay = latePayments.length > 0 ? Math.round(latePayments.reduce((s: number, p: any) => s + (p.lateDays || 0), 0) / latePayments.length) : 0;
+        const commitmentRate = totalPayments > 0 ? Math.round((onTimePayments / totalPayments) * 100) : 100;
+        const reliabilityScore = Math.min(100, Math.max(0, commitmentRate - (avgDelay * 2)));
+        const grade = reliabilityScore >= 90 ? 'ممتاز' : reliabilityScore >= 75 ? 'جيد جداً' : reliabilityScore >= 60 ? 'جيد' : reliabilityScore >= 40 ? 'مقبول' : 'ضعيف';
+        return {
+          id: tenant.id,
+          name: tenant.name,
+          phone: tenant.phone,
+          totalPayments,
+          onTimePayments,
+          latePayments: latePayments.length,
+          avgDelay,
+          commitmentRate,
+          reliabilityScore,
+          grade,
+          overallRating: tenant.overallRating,
+        };
+      });
+    }),
+  }),
+
+  // ─── PROPERTY TAX ─────────────────────────────────────────────────────────
+  propertyTax: router({
+    report: protectedProcedure.input(z.object({ year: z.number().default(new Date().getFullYear()) })).query(async ({ input }) => {
+      const allProperties = await getProperties({});
+      const allContracts = await getContracts({ status: 'active' });
+      const taxRate = 0.025; // 2.5% ضريبة عقارية سنوية
+      return allProperties.map(property => {
+        const activeContracts = allContracts.filter((c: any) => c.propertyId === property.id);
+        const annualRent = activeContracts.reduce((s: number, c: any) => {
+          const rent = parseFloat(c.rentAmount || '0');
+          const multiplier = c.rentPeriod === 'monthly' ? 12 : c.rentPeriod === 'quarterly' ? 4 : c.rentPeriod === 'semi_annual' ? 2 : 1;
+          return s + (rent * multiplier);
+        }, 0);
+        const propertyValue = parseFloat(property.price || '0');
+        const taxableValue = Math.max(annualRent * 10, propertyValue);
+        const annualTax = taxableValue * taxRate;
+        const quarterlyTax = annualTax / 4;
+        return {
+          propertyId: property.id,
+          propertyTitle: property.titleAr,
+          district: property.district,
+          propertyValue,
+          annualRent,
+          taxableValue,
+          annualTax,
+          quarterlyTax,
+          year: input.year,
+          status: annualTax > 0 ? 'مستحق' : 'معفى',
+        };
+      });
+    }),
+
+    exportCSV: protectedProcedure.input(z.number().default(new Date().getFullYear())).mutation(async ({ input }) => {
+      const allProperties = await getProperties({});
+      const allContracts = await getContracts({ status: 'active' });
+      const taxRate = 0.025;
+      const rows = allProperties.map(property => {
+        const activeContracts = allContracts.filter((c: any) => c.propertyId === property.id);
+        const annualRent = activeContracts.reduce((s: number, c: any) => s + parseFloat(c.rentAmount || '0') * (c.rentPeriod === 'monthly' ? 12 : 1), 0);
+        const propertyValue = parseFloat(property.price || '0');
+        const taxableValue = Math.max(annualRent * 10, propertyValue);
+        const annualTax = taxableValue * taxRate;
+        return `${property.titleAr},${property.district || ''},${propertyValue},${annualRent},${taxableValue},${annualTax.toFixed(2)}`;
+      });
+      const csv = `العقار,الحي,قيمة العقار,الإيجار السنوي,الوعاء الضريبي,الضريبة السنوية (2.5%)\n${rows.join('\n')}`;
+      return { csv, year: input };
+    }),
+  }),
+
+  // ─── BACKUP ───────────────────────────────────────────────────────────────
+  backup: router({
+    exportNow: protectedProcedure.mutation(async () => {
+      const [allProperties, allTenants, allContracts, allPayments, allExpenses] = await Promise.all([
+        getProperties({}),
+        getTenants({}),
+        getContracts({}),
+        getPayments({}),
+        getExpenses({}),
+      ]);
+      const backupData = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        properties: allProperties,
+        tenants: allTenants,
+        contracts: allContracts,
+        payments: allPayments,
+        expenses: allExpenses,
+      };
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const buffer = Buffer.from(jsonStr, 'utf-8');
+      const fileName = `backup-${new Date().toISOString().split('T')[0]}.json`;
+      const { url } = await storagePut(`backups/${fileName}`, buffer, 'application/json');
+      await notifyOwner({
+        title: '💾 نسخة احتياطية جديدة',
+        content: `تم إنشاء نسخة احتياطية بتاريخ ${new Date().toLocaleDateString('ar-SA')}\nالحجم: ${Math.round(buffer.length / 1024)} KB\nرابط التنزيل: ${url}`,
+      });
+      return { success: true, url, fileName, size: buffer.length, recordCount: { properties: allProperties.length, tenants: allTenants.length, contracts: allContracts.length, payments: allPayments.length } };
+    }),
+  }),
+
+});
+
 // Merge all routers
 export const mergedRouter = router({
   ...appRouter._def.record,
@@ -2371,6 +2725,7 @@ export const mergedRouter = router({
   ...batch11Router._def.record,
   ...batch12Router._def.record,
   ...batch13Router._def.record,
+  ...batch14Router._def.record,
 });
 export type AppRouter = typeof mergedRouter;
 export type Batch10Router = typeof batch10Router;
