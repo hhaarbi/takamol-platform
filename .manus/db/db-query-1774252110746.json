@@ -1,0 +1,61 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "broker_commissions"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "brokers"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "chat_messages"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "chat_sessions"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "contracts"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "expenses"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "leads"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "maintenance_requests"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "notifications"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "owner_statements"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "payments"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "properties"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "property_owners"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "tenants"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "units"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_EGvRBfpqPGe26TFrJFv9dm\n__drizzle_migrations\nbroker_commissions\nbrokers\nchat_messages\nchat_sessions\ncontracts\nexpenses\nleads\nmaintenance_requests\nnotifications\nowner_statements\npayments\nproperties\nproperty_owners\ntenants\nunits\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1758
+}

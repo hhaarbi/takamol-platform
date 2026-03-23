@@ -20,7 +20,6 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin", "owner", "broker"]).default("user").notNull(),
-  // For owners/brokers: link to their profile
   profileId: int("profileId"),
   profileType: mysqlEnum("profileType", ["owner", "broker"]),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -33,15 +32,17 @@ export type InsertUser = typeof users.$inferInsert;
 // ─── PROPERTY OWNERS (الملاك) ─────────────────────────────────────────────────
 export const propertyOwners = mysqlTable("property_owners", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId"), // linked user account (if has portal access)
+  userId: int("userId"),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 30 }).notNull(),
   phone2: varchar("phone2", { length: 30 }),
   email: varchar("email", { length: 320 }),
   nationalId: varchar("nationalId", { length: 20 }),
+  commercialRegNo: varchar("commercialRegNo", { length: 30 }),
   bankName: varchar("bankName", { length: 100 }),
   bankIban: varchar("bankIban", { length: 50 }),
   address: text("address"),
+  nationalAddress: varchar("nationalAddress", { length: 255 }),
   notes: text("notes"),
   managementFeeType: mysqlEnum("managementFeeType", ["percentage", "fixed"]).default("percentage").notNull(),
   managementFeeValue: decimal("managementFeeValue", { precision: 8, scale: 2 }).default("5.00").notNull(),
@@ -56,16 +57,24 @@ export type InsertPropertyOwner = typeof propertyOwners.$inferInsert;
 // ─── BROKERS (الوسطاء) ───────────────────────────────────────────────────────
 export const brokers = mysqlTable("brokers", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId"), // linked user account
+  userId: int("userId"),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 30 }).notNull(),
   email: varchar("email", { length: 320 }),
-  licenseNumber: varchar("licenseNumber", { length: 50 }),
-  // Commission rates per property type (JSON: { apartment: 2.5, villa: 3, land: 2, ... })
+  nationalId: varchar("nationalId", { length: 20 }),
+  // رخصة فال
+  falLicenseNumber: varchar("falLicenseNumber", { length: 50 }),
+  falLicenseType: mysqlEnum("falLicenseType", ["brokerage", "property_management", "marketing"]),
+  falLicenseIssueDate: date("falLicenseIssueDate"),
+  falLicenseExpiryDate: date("falLicenseExpiryDate"),
+  // Commission rates per property type
   commissionRates: json("commissionRates").$type<Record<string, number>>().default({}),
   notes: text("notes"),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
+  totalDeals: int("totalDeals").default(0),
   isActive: boolean("isActive").default(true).notNull(),
   hasPortalAccess: boolean("hasPortalAccess").default(false).notNull(),
+  approvalRequired: boolean("approvalRequired").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -75,9 +84,10 @@ export type InsertBroker = typeof brokers.$inferInsert;
 // ─── PROPERTIES (العقارات) ────────────────────────────────────────────────────
 export const properties = mysqlTable("properties", {
   id: int("id").autoincrement().primaryKey(),
-  ownerId: int("ownerId"), // property owner (if managed)
-  brokerId: int("brokerId"), // broker listing (if broker-submitted)
+  ownerId: int("ownerId"),
+  brokerId: int("brokerId"),
   source: mysqlEnum("source", ["company", "broker", "owner"]).default("company").notNull(),
+  approvalStatus: mysqlEnum("approvalStatus", ["pending", "approved", "rejected"]).default("approved").notNull(),
   titleAr: varchar("titleAr", { length: 255 }).notNull(),
   descriptionAr: text("descriptionAr"),
   type: mysqlEnum("type", ["apartment", "villa", "land", "commercial", "office", "warehouse", "building", "farm"]).notNull(),
@@ -95,14 +105,20 @@ export const properties = mysqlTable("properties", {
   city: varchar("city", { length: 100 }).default("المدينة المنورة"),
   district: varchar("district", { length: 100 }),
   address: text("address"),
+  nationalAddress: varchar("nationalAddress", { length: 255 }),
+  deedNumber: varchar("deedNumber", { length: 50 }),
+  buildingPermitNo: varchar("buildingPermitNo", { length: 50 }),
   latitude: decimal("latitude", { precision: 10, scale: 7 }),
   longitude: decimal("longitude", { precision: 10, scale: 7 }),
   images: json("images").$type<string[]>().default([]),
   features: json("features").$type<string[]>().default([]),
   isFeatured: boolean("isFeatured").default(false).notNull(),
-  // Broker commission for this specific listing
   brokerCommissionRate: decimal("brokerCommissionRate", { precision: 5, scale: 2 }),
   brokerCommissionAmount: decimal("brokerCommissionAmount", { precision: 15, scale: 2 }),
+  maintenanceBudget: decimal("maintenanceBudget", { precision: 15, scale: 2 }).default("0"),
+  maintenanceSpent: decimal("maintenanceSpent", { precision: 15, scale: 2 }).default("0"),
+  vacantSince: date("vacantSince"),
+  vacancyReason: mysqlEnum("vacancyReason", ["new", "eviction", "maintenance", "end_of_contract", "other"]),
   viewCount: int("viewCount").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -122,6 +138,8 @@ export const units = mysqlTable("units", {
   bathrooms: int("bathrooms"),
   rentPrice: decimal("rentPrice", { precision: 15, scale: 2 }),
   status: mysqlEnum("status", ["vacant", "occupied", "maintenance", "reserved"]).default("vacant").notNull(),
+  vacantSince: date("vacantSince"),
+  vacancyReason: mysqlEnum("vacancyReason", ["new", "eviction", "maintenance", "end_of_contract", "other"]),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -140,6 +158,12 @@ export const tenants = mysqlTable("tenants", {
   nationality: varchar("nationality", { length: 50 }),
   occupation: varchar("occupation", { length: 100 }),
   emergencyContact: varchar("emergencyContact", { length: 30 }),
+  // تقييم المستأجر
+  paymentRating: int("paymentRating").default(5), // 1-5
+  propertyRating: int("propertyRating").default(5), // 1-5
+  cooperationRating: int("cooperationRating").default(5), // 1-5
+  overallRating: decimal("overallRating", { precision: 3, scale: 2 }).default("5.00"),
+  ratingNotes: text("ratingNotes"),
   notes: text("notes"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -157,17 +181,21 @@ export const contracts = mysqlTable("contracts", {
   unitId: int("unitId"),
   tenantId: int("tenantId"),
   ownerId: int("ownerId"),
-  // Rent contract fields
   rentAmount: decimal("rentAmount", { precision: 15, scale: 2 }),
   rentPeriod: mysqlEnum("rentPeriod", ["monthly", "quarterly", "semi_annual", "annual"]).default("annual"),
   startDate: date("startDate"),
   endDate: date("endDate"),
   depositAmount: decimal("depositAmount", { precision: 15, scale: 2 }),
-  // Sale contract fields
   salePrice: decimal("salePrice", { precision: 15, scale: 2 }),
-  // Management contract fields
   managementFeeType: mysqlEnum("managementFeeType", ["percentage", "fixed"]),
   managementFeeValue: decimal("managementFeeValue", { precision: 8, scale: 2 }),
+  // Renewal tracking
+  renewalStatus: mysqlEnum("renewalStatus", ["none", "pending", "sent", "accepted", "rejected"]).default("none"),
+  renewedFromId: int("renewedFromId"),
+  newRentAmount: decimal("newRentAmount", { precision: 15, scale: 2 }),
+  alert90Sent: boolean("alert90Sent").default(false),
+  alert60Sent: boolean("alert60Sent").default(false),
+  alert30Sent: boolean("alert30Sent").default(false),
   status: mysqlEnum("status", ["active", "expired", "terminated", "pending", "renewed"]).default("active").notNull(),
   notes: text("notes"),
   documents: json("documents").$type<string[]>().default([]),
@@ -180,6 +208,7 @@ export type InsertContract = typeof contracts.$inferInsert;
 // ─── PAYMENTS (المدفوعات / التحصيل) ──────────────────────────────────────────
 export const payments = mysqlTable("payments", {
   id: int("id").autoincrement().primaryKey(),
+  receiptNumber: varchar("receiptNumber", { length: 50 }),
   contractId: int("contractId"),
   tenantId: int("tenantId"),
   propertyId: int("propertyId"),
@@ -189,11 +218,17 @@ export const payments = mysqlTable("payments", {
   amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
   dueDate: date("dueDate").notNull(),
   paidDate: date("paidDate"),
+  paidAmount: decimal("paidAmount", { precision: 15, scale: 2 }),
   paymentMethod: mysqlEnum("paymentMethod", ["bank_transfer", "cash", "check", "online"]),
   referenceNumber: varchar("referenceNumber", { length: 100 }),
   status: mysqlEnum("status", ["pending", "paid", "overdue", "partial", "cancelled"]).default("pending").notNull(),
+  // Escalation tracking
+  escalationLevel: int("escalationLevel").default(0),
+  lastReminderSent: timestamp("lastReminderSent"),
+  daysOverdue: int("daysOverdue").default(0),
   notes: text("notes"),
   receiptUrl: varchar("receiptUrl", { length: 500 }),
+  periodCovered: varchar("periodCovered", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -229,11 +264,17 @@ export const maintenanceRequests = mysqlTable("maintenance_requests", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
-  status: mysqlEnum("status", ["open", "in_progress", "completed", "cancelled"]).default("open").notNull(),
+  status: mysqlEnum("status", ["open", "in_progress", "completed", "cancelled", "awaiting_approval"]).default("open").notNull(),
   assignedTo: varchar("assignedTo", { length: 255 }),
+  assignedPhone: varchar("assignedPhone", { length: 30 }),
   cost: decimal("cost", { precision: 15, scale: 2 }),
+  estimatedCost: decimal("estimatedCost", { precision: 15, scale: 2 }),
+  ownerApprovalRequired: boolean("ownerApprovalRequired").default(false),
+  ownerApproved: boolean("ownerApproved"),
   completedDate: date("completedDate"),
+  scheduledDate: date("scheduledDate"),
   images: json("images").$type<string[]>().default([]),
+  completionImages: json("completionImages").$type<string[]>().default([]),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -241,11 +282,30 @@ export const maintenanceRequests = mysqlTable("maintenance_requests", {
 export type MaintenanceRequest = typeof maintenanceRequests.$inferSelect;
 export type InsertMaintenanceRequest = typeof maintenanceRequests.$inferInsert;
 
+// ─── SCHEDULED MAINTENANCE (الصيانة الدورية) ─────────────────────────────────
+export const scheduledMaintenance = mysqlTable("scheduled_maintenance", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  unitId: int("unitId"),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  frequency: mysqlEnum("frequency", ["monthly", "quarterly", "semi_annual", "annual"]).notNull(),
+  lastPerformed: date("lastPerformed"),
+  nextDue: date("nextDue").notNull(),
+  estimatedCost: decimal("estimatedCost", { precision: 15, scale: 2 }),
+  assignedTo: varchar("assignedTo", { length: 255 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ScheduledMaintenance = typeof scheduledMaintenance.$inferSelect;
+export type InsertScheduledMaintenance = typeof scheduledMaintenance.$inferInsert;
+
 // ─── OWNER STATEMENTS (كشف حساب المالك) ──────────────────────────────────────
 export const ownerStatements = mysqlTable("owner_statements", {
   id: int("id").autoincrement().primaryKey(),
   ownerId: int("ownerId").notNull(),
-  period: varchar("period", { length: 7 }).notNull(), // YYYY-MM
+  period: varchar("period", { length: 7 }).notNull(),
   totalRentCollected: decimal("totalRentCollected", { precision: 15, scale: 2 }).default("0"),
   totalExpenses: decimal("totalExpenses", { precision: 15, scale: 2 }).default("0"),
   managementFee: decimal("managementFee", { precision: 15, scale: 2 }).default("0"),
@@ -274,6 +334,146 @@ export const brokerCommissions = mysqlTable("broker_commissions", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type BrokerCommission = typeof brokerCommissions.$inferSelect;
+
+// ─── DEPOSITS / GUARANTEES (الضمانات / التأمينات) ────────────────────────────
+export const deposits = mysqlTable("deposits", {
+  id: int("id").autoincrement().primaryKey(),
+  contractId: int("contractId").notNull(),
+  tenantId: int("tenantId").notNull(),
+  propertyId: int("propertyId"),
+  unitId: int("unitId"),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  paidDate: date("paidDate"),
+  status: mysqlEnum("status", ["held", "partially_returned", "fully_returned", "forfeited"]).default("held").notNull(),
+  deductions: json("deductions").$type<Array<{ reason: string; amount: number }>>().default([]),
+  totalDeducted: decimal("totalDeducted", { precision: 15, scale: 2 }).default("0"),
+  returnedAmount: decimal("returnedAmount", { precision: 15, scale: 2 }).default("0"),
+  returnedDate: date("returnedDate"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Deposit = typeof deposits.$inferSelect;
+export type InsertDeposit = typeof deposits.$inferInsert;
+
+// ─── UNIT HANDOVER (محضر تسليم واستلام الوحدات) ─────────────────────────────
+export const unitHandovers = mysqlTable("unit_handovers", {
+  id: int("id").autoincrement().primaryKey(),
+  unitId: int("unitId").notNull(),
+  propertyId: int("propertyId").notNull(),
+  tenantId: int("tenantId"),
+  contractId: int("contractId"),
+  type: mysqlEnum("type", ["check_in", "check_out"]).notNull(),
+  handoverDate: date("handoverDate").notNull(),
+  // Condition assessment
+  wallsCondition: mysqlEnum("wallsCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  floorsCondition: mysqlEnum("floorsCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  plumbingCondition: mysqlEnum("plumbingCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  electricalCondition: mysqlEnum("electricalCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  acCondition: mysqlEnum("acCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  kitchenCondition: mysqlEnum("kitchenCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  bathroomCondition: mysqlEnum("bathroomCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  overallCondition: mysqlEnum("overallCondition", ["excellent", "good", "fair", "poor"]).default("good"),
+  meterReadingElectricity: varchar("meterReadingElectricity", { length: 50 }),
+  meterReadingWater: varchar("meterReadingWater", { length: 50 }),
+  keysCount: int("keysCount"),
+  images: json("images").$type<string[]>().default([]),
+  notes: text("notes"),
+  signedByTenant: boolean("signedByTenant").default(false),
+  signedByCompany: boolean("signedByCompany").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UnitHandover = typeof unitHandovers.$inferSelect;
+export type InsertUnitHandover = typeof unitHandovers.$inferInsert;
+
+// ─── ACTIVITY LOG (سجل النشاطات) ─────────────────────────────────────────────
+export const activityLog = mysqlTable("activity_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  userName: varchar("userName", { length: 255 }),
+  action: varchar("action", { length: 100 }).notNull(),
+  entityType: varchar("entityType", { length: 50 }).notNull(),
+  entityId: int("entityId"),
+  entityName: varchar("entityName", { length: 255 }),
+  oldValues: json("oldValues").$type<Record<string, unknown>>(),
+  newValues: json("newValues").$type<Record<string, unknown>>(),
+  description: text("description"),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ActivityLog = typeof activityLog.$inferSelect;
+export type InsertActivityLog = typeof activityLog.$inferInsert;
+
+// ─── INTERNAL NOTES (الملاحظات الداخلية) ─────────────────────────────────────
+export const internalNotes = mysqlTable("internal_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  entityType: mysqlEnum("entityType", ["owner", "tenant", "property", "unit", "broker", "contract", "lead"]).notNull(),
+  entityId: int("entityId").notNull(),
+  authorId: int("authorId"),
+  authorName: varchar("authorName", { length: 255 }),
+  content: text("content").notNull(),
+  isPinned: boolean("isPinned").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type InternalNote = typeof internalNotes.$inferSelect;
+export type InsertInternalNote = typeof internalNotes.$inferInsert;
+
+// ─── MESSAGE TEMPLATES (قوالب الرسائل) ───────────────────────────────────────
+export const messageTemplates = mysqlTable("message_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: mysqlEnum("category", ["payment_reminder", "contract_renewal", "rent_increase", "eviction_notice", "welcome", "receipt", "maintenance", "general"]).notNull(),
+  subject: varchar("subject", { length: 255 }),
+  bodyAr: text("bodyAr").notNull(),
+  variables: json("variables").$type<string[]>().default([]),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MessageTemplate = typeof messageTemplates.$inferSelect;
+export type InsertMessageTemplate = typeof messageTemplates.$inferInsert;
+
+// ─── SENT MESSAGES (الرسائل المرسلة) ─────────────────────────────────────────
+export const sentMessages = mysqlTable("sent_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  templateId: int("templateId"),
+  recipientType: mysqlEnum("recipientType", ["tenant", "owner", "broker"]).notNull(),
+  recipientId: int("recipientId").notNull(),
+  recipientName: varchar("recipientName", { length: 255 }),
+  recipientPhone: varchar("recipientPhone", { length: 30 }),
+  channel: mysqlEnum("channel", ["sms", "telegram", "whatsapp", "email"]).notNull(),
+  subject: varchar("subject", { length: 255 }),
+  body: text("body").notNull(),
+  status: mysqlEnum("status", ["sent", "delivered", "failed"]).default("sent").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SentMessage = typeof sentMessages.$inferSelect;
+export type InsertSentMessage = typeof sentMessages.$inferInsert;
+
+// ─── DAILY TASKS (المهام اليومية) ────────────────────────────────────────────
+export const dailyTasks = mysqlTable("daily_tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  type: mysqlEnum("type", [
+    "payment_due", "contract_expiring", "maintenance_pending",
+    "lead_followup", "payment_overdue", "inspection_due",
+    "scheduled_maintenance", "fal_license_expiring", "custom"
+  ]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  entityType: varchar("entityType", { length: 50 }),
+  entityId: int("entityId"),
+  dueDate: date("dueDate").notNull(),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "dismissed"]).default("pending").notNull(),
+  assignedTo: int("assignedTo"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DailyTask = typeof dailyTasks.$inferSelect;
+export type InsertDailyTask = typeof dailyTasks.$inferInsert;
 
 // ─── LEADS / CUSTOMERS (العملاء المحتملون) ────────────────────────────────────
 export const leads = mysqlTable("leads", {
@@ -330,3 +530,21 @@ export const notifications = mysqlTable("notifications", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type Notification = typeof notifications.$inferSelect;
+
+// ─── DOCUMENTS (الوثائق والأرشيف) ────────────────────────────────────────────
+export const documents = mysqlTable("documents", {
+  id: int("id").autoincrement().primaryKey(),
+  entityType: mysqlEnum("entityType", ["owner", "tenant", "property", "unit", "contract", "broker"]).notNull(),
+  entityId: int("entityId").notNull(),
+  category: mysqlEnum("category", ["deed", "contract", "id_copy", "receipt", "maintenance_report", "inspection", "license", "other"]).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  fileUrl: varchar("fileUrl", { length: 500 }).notNull(),
+  fileKey: varchar("fileKey", { length: 500 }),
+  mimeType: varchar("mimeType", { length: 100 }),
+  fileSize: int("fileSize"),
+  uploadedBy: int("uploadedBy"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = typeof documents.$inferInsert;

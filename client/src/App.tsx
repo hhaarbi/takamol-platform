@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import OwnerPortal from "./pages/OwnerPortal";
 import BrokerPortal from "./pages/BrokerPortal";
+import Reports from "./pages/Reports";
 
 function Router() {
   return (
@@ -19,6 +20,8 @@ function Router() {
       <Route path={"/owner/:tab"} component={OwnerPortal} />
       <Route path={"/broker"} component={BrokerPortal} />
       <Route path={"/broker/:tab"} component={BrokerPortal} />
+      <Route path={"/reports"} component={Reports} />
+      <Route path={"/reports/:tab"} component={Reports} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

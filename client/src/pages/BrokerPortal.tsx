@@ -3,26 +3,38 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import {
   Building2, TrendingUp, LogOut, Home, BarChart3, DollarSign,
-  AlertCircle, Plus, X, Menu, Percent, Eye
+  AlertCircle, Plus, Menu, X, Percent, Eye, Star, Award,
+  CheckCircle, Clock
 } from "lucide-react";
 
 const PROPERTY_TYPES: Record<string, string> = {
   apartment: "شقة", villa: "فيلا", land: "أرض", commercial: "تجاري",
-  office: "مكتب", warehouse: "مستودع", building: "مبنى", farm: "مزرعة",
+  office: "مكتب", warehouse: "مستودع", building: "عمارة", farm: "مزرعة",
 };
+const LISTING_TYPES: Record<string, string> = { sale: "بيع", rent: "إيجار" };
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 0 }).format(amount);
+}
+function formatDate(date: string | Date | null) {
+  if (!date) return "—";
+  return new Intl.DateTimeFormat("ar-SA", { year: "numeric", month: "short", day: "numeric" }).format(new Date(date));
+}
 
 const NAV_ITEMS = [
   { id: "overview", label: "نظرة عامة", icon: BarChart3 },
-  { id: "properties", label: "عقاراتي", icon: Building2 },
-  { id: "commissions", label: "عمولاتي", icon: DollarSign },
+  { id: "listings", label: "عقاراتي", icon: Building2 },
+  { id: "add", label: "إضافة عقار", icon: Plus },
+  { id: "commissions", label: "العمولات", icon: DollarSign },
+  { id: "performance", label: "الأداء", icon: TrendingUp },
 ];
 
 export default function BrokerPortal() {
@@ -30,66 +42,57 @@ export default function BrokerPortal() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showAddProperty, setShowAddProperty] = useState(false);
+  const [propertyForm, setPropertyForm] = useState({
+    titleAr: "", type: "apartment", listingType: "sale", price: "",
+    area: "", bedrooms: "", bathrooms: "", district: "", city: "المدينة المنورة",
+    description: "", features: ""
+  });
 
   const profileQuery = trpc.brokers.myProfile.useQuery(undefined, { enabled: isAuthenticated && user?.role === "broker" });
-  const propertiesQuery = trpc.properties.list.useQuery({ brokerId: profileQuery.data?.id }, { enabled: !!profileQuery.data?.id });
-  const commissionsQuery = trpc.brokers.commissions.list.useQuery(profileQuery.data?.id, { enabled: !!profileQuery.data?.id });
+  const myListingsQuery = trpc.properties.list.useQuery({ brokerId: profileQuery.data?.id } as any, { enabled: !!profileQuery.data?.id });
+  const commissionsQuery = trpc.brokers.commissions.list.useQuery(profileQuery.data?.id ?? 0, { enabled: !!profileQuery.data?.id });
+  const createPropertyMutation = trpc.properties.create.useMutation({
+    onSuccess: () => { myListingsQuery.refetch(); toast.success("تم إضافة العقار بنجاح"); setActiveTab("listings"); setPropertyForm({ titleAr: "", type: "apartment", listingType: "sale", price: "", area: "", bedrooms: "", bathrooms: "", district: "", city: "المدينة المنورة", description: "", features: "" }); },
+    onError: () => toast.error("حدث خطأ أثناء إضافة العقار")
+  });
 
   const broker = profileQuery.data;
-  const properties = propertiesQuery.data || [];
-  const commissions = commissionsQuery.data || [];
-
-  const totalCommissions = commissions.filter(c => c.status === "paid").reduce((sum, c) => sum + Number(c.commissionAmount), 0);
-  const pendingCommissions = commissions.filter(c => c.status === "pending").reduce((sum, c) => sum + Number(c.commissionAmount), 0);
-
-  const defaultPropertyForm = {
-    titleAr: "", type: "apartment" as const, listingType: "sale" as const,
-    price: "", area: "", bedrooms: "", bathrooms: "", district: "", descriptionAr: "",
-  };
-  const [propertyForm, setPropertyForm] = useState(defaultPropertyForm);
-
-  const createPropertyMutation = trpc.properties.create.useMutation({
-    onSuccess: () => {
-      propertiesQuery.refetch();
-      toast.success("تم إضافة العقار بنجاح وسيتم مراجعته");
-      setPropertyForm(defaultPropertyForm);
-      setShowAddProperty(false);
-    },
-    onError: () => toast.error("حدث خطأ أثناء إضافة العقار"),
-  });
+  const listings = myListingsQuery.data || [];
+  const commissions = (commissionsQuery.data || []) as any[];
+  const totalCommissions = commissions.reduce((sum: number, c: any) => sum + Number(c.commissionAmount || 0), 0);
+  const paidCommissions = commissions.filter((c: any) => c.status === "paid").reduce((sum: number, c: any) => sum + Number(c.commissionAmount || 0), 0);
+  const pendingCommissions = commissions.filter((c: any) => c.status === "pending").reduce((sum: number, c: any) => sum + Number(c.commissionAmount || 0), 0);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <p className="text-slate-600">جاري التحميل...</p>
       </div>
     </div>
   );
 
   if (!isAuthenticated) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50" dir="rtl">
-      <Card className="w-full max-w-sm shadow-xl border-0">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-teal-50">
+      <Card className="w-96 border-0 shadow-xl">
         <CardContent className="p-8 text-center">
-          <Building2 size={48} className="mx-auto mb-4 text-amber-500" />
-          <h2 className="text-xl font-bold mb-2">بوابة الوسطاء</h2>
-          <p className="text-slate-500 mb-2 text-sm">شركة تكامل لإدارة الأملاك</p>
-          <p className="text-slate-400 mb-6 text-xs">يرجى تسجيل الدخول للوصول إلى حسابك</p>
-          <Button className="w-full bg-amber-500 hover:bg-amber-600" onClick={() => window.location.href = getLoginUrl()}>
-            تسجيل الدخول
-          </Button>
+          <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Building2 className="text-teal-600" size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">بوابة الوسيط</h2>
+          <p className="text-slate-500 mb-6 text-sm">سجّل دخولك لإدارة عقاراتك وعمولاتك</p>
+          <Button className="w-full bg-teal-500 hover:bg-teal-600" onClick={() => window.location.href = getLoginUrl()}>تسجيل الدخول</Button>
         </CardContent>
       </Card>
     </div>
   );
 
   if (user?.role !== "broker" && user?.role !== "admin") return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50" dir="rtl">
-      <Card className="w-full max-w-sm shadow-xl border-0">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <Card className="w-96 border-0 shadow-xl">
         <CardContent className="p-8 text-center">
-          <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
-          <h2 className="text-xl font-bold mb-2">غير مصرح</h2>
+          <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
+          <h2 className="text-xl font-bold text-slate-800 mb-2">غير مصرّح</h2>
           <p className="text-slate-500 mb-6 text-sm">هذه البوابة مخصصة للوسطاء المعتمدين فقط</p>
           <Button variant="outline" onClick={() => navigate("/")}>العودة للرئيسية</Button>
         </CardContent>
@@ -100,275 +103,237 @@ export default function BrokerPortal() {
   return (
     <div className="min-h-screen bg-slate-50 flex" dir="rtl">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "w-64" : "w-16"} bg-white border-l border-slate-200 flex flex-col transition-all duration-300 fixed h-full z-40 shadow-sm`}>
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          {sidebarOpen && (
+      <aside className={`fixed inset-y-0 right-0 z-40 w-64 bg-white border-l border-slate-200 shadow-lg transform transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "translate-x-full"} lg:translate-x-0 lg:static`}>
+        <div className="p-6 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold">
+              {broker?.name?.charAt(0) || "و"}
+            </div>
             <div>
-              <h1 className="font-bold text-amber-600 text-sm">تكامل</h1>
-              <p className="text-slate-400 text-xs">بوابة الوسطاء</p>
+              <p className="font-bold text-slate-800 text-sm">{broker?.name || "الوسيط"}</p>
+              <p className="text-xs text-slate-400">وسيط عقاري {broker?.falLicenseNumber ? `· فال: ${broker.falLicenseNumber}` : ""}</p>
+            </div>
+          </div>
+          {broker?.commissionRates && (
+            <div className="mt-3 p-2 bg-teal-50 rounded-lg">
+              <p className="text-xs text-teal-600 flex items-center gap-1"><Percent size={12} /> نسبة العمولة: <span className="font-bold">{((broker.commissionRates as any)?.default || 0)}%</span></p>
             </div>
           )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-400 hover:text-slate-600 p-1">
-            <Menu size={18} />
-          </button>
         </div>
-        {sidebarOpen && broker && (
-          <div className="p-4 border-b border-slate-100 bg-amber-50">
-            <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-sm mb-2">
-              {broker.name.charAt(0)}
-            </div>
-            <p className="font-semibold text-slate-800 text-sm">{broker.name}</p>
-            <p className="text-xs text-slate-500">{broker.phone}</p>
-            {broker.licenseNumber && (
-              <p className="text-xs text-amber-600 mt-1">ترخيص: {broker.licenseNumber}</p>
-            )}
-          </div>
-        )}
-        <nav className="flex-1 p-2">
+        <nav className="p-4 space-y-1">
           {NAV_ITEMS.map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm transition-colors ${activeTab === item.id ? "bg-amber-50 text-amber-700 font-medium" : "text-slate-600 hover:bg-slate-50"}`}>
-              <item.icon size={18} className="shrink-0" />
-              {sidebarOpen && <span>{item.label}</span>}
+            <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${activeTab === item.id ? "bg-teal-50 text-teal-700 font-semibold shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}>
+              <item.icon size={18} />
+              {item.label}
             </button>
           ))}
         </nav>
-        <div className="p-3 border-t border-slate-100">
-          <button onClick={logout} className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 text-xs px-2 py-1.5 rounded">
-            <LogOut size={14} />
-            {sidebarOpen && "تسجيل الخروج"}
+        <div className="absolute bottom-4 left-4 right-4">
+          <button onClick={() => { logout(); navigate("/"); }} className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-all">
+            <LogOut size={18} />
+            تسجيل الخروج
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className={`flex-1 ${sidebarOpen ? "mr-64" : "mr-16"} transition-all duration-300`}>
-        <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-30">
-          <h2 className="font-semibold text-slate-800 text-sm">{NAV_ITEMS.find(n => n.id === activeTab)?.label}</h2>
-          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => navigate("/")}>
-            <Home size={14} className="ml-1" /> الرئيسية
-          </Button>
+      <main className="flex-1 lg:mr-0">
+        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2 rounded-lg hover:bg-slate-100">
+              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            <h1 className="text-lg font-bold text-slate-800">{NAV_ITEMS.find(n => n.id === activeTab)?.label}</h1>
+          </div>
+          <Badge className="bg-teal-100 text-teal-700 text-xs">{listings.length} عقار</Badge>
         </header>
 
         <div className="p-6">
-          {/* ── Overview ── */}
+          {/* ─── OVERVIEW ─── */}
           {activeTab === "overview" && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: "إجمالي العقارات", value: properties.length, icon: Building2, color: "text-amber-600 bg-amber-50" },
-                  { label: "عقارات نشطة", value: properties.filter(p => p.status === "available").length, icon: Eye, color: "text-green-600 bg-green-50" },
-                  { label: "عمولات مستلمة", value: `${totalCommissions.toLocaleString("ar-SA")} ﷼`, icon: DollarSign, color: "text-blue-600 bg-blue-50" },
-                  { label: "عمولات معلقة", value: `${pendingCommissions.toLocaleString("ar-SA")} ﷼`, icon: Percent, color: "text-orange-600 bg-orange-50" },
-                ].map((s, i) => (
-                  <Card key={i} className="border-0 shadow-sm">
-                    <CardContent className="p-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>
-                        <s.icon size={20} />
-                      </div>
-                      <p className="text-xl font-bold text-slate-800">{s.value}</p>
-                      <p className="text-xs text-slate-500 mt-1">{s.label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                <Card className="border-0 shadow-sm"><CardContent className="p-4"><Building2 className="text-teal-500 mb-2" size={20} /><p className="text-2xl font-bold text-slate-800">{listings.length}</p><p className="text-xs text-slate-500">عقاراتي</p></CardContent></Card>
+                <Card className="border-0 shadow-sm"><CardContent className="p-4"><DollarSign className="text-green-500 mb-2" size={20} /><p className="text-2xl font-bold text-slate-800">{formatCurrency(totalCommissions)}</p><p className="text-xs text-slate-500">إجمالي العمولات</p></CardContent></Card>
+                <Card className="border-0 shadow-sm"><CardContent className="p-4"><CheckCircle className="text-green-500 mb-2" size={20} /><p className="text-2xl font-bold text-slate-800">{formatCurrency(paidCommissions)}</p><p className="text-xs text-slate-500">مدفوع</p></CardContent></Card>
+                <Card className="border-0 shadow-sm"><CardContent className="p-4"><Clock className="text-yellow-500 mb-2" size={20} /><p className="text-2xl font-bold text-slate-800">{formatCurrency(pendingCommissions)}</p><p className="text-xs text-slate-500">معلق</p></CardContent></Card>
               </div>
 
-              {/* Commission rates */}
-              {broker?.commissionRates && Object.keys(broker.commissionRates as object).length > 0 && (
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Percent size={16} className="text-amber-500" />
-                      نسب عمولتك على المنصة
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {Object.entries(broker.commissionRates as Record<string, number>).map(([type, rate]) => (
-                        <div key={type} className="bg-amber-50 rounded-xl p-3 text-center">
-                          <p className="text-2xl font-bold text-amber-600">{rate}%</p>
-                          <p className="text-xs text-slate-600 mt-1">{PROPERTY_TYPES[type] || type}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-3">* النسب محددة من قبل إدارة تكامل وتُطبق على كل صفقة ناجحة</p>
+              {broker?.commissionRates && (
+                <Card className="border-0 shadow-sm bg-gradient-to-l from-teal-50 to-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-3"><Award className="text-teal-500" size={24} /><h3 className="font-bold text-slate-800">نسبة عمولتك</h3></div>
+                    <p className="text-3xl font-bold text-teal-600 mb-1">{((broker.commissionRates as any)?.default || 0)}%</p>
+                    <p className="text-xs text-slate-500">تُحسب تلقائياً على كل عقار تبيعه أو تؤجره عبر المنصة. نسبة تكامل تظهر لك على كل عرض.</p>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Quick add */}
-              <Card className="border-0 shadow-sm border-dashed border-2 border-amber-200 bg-amber-50/50">
-                <CardContent className="p-6 text-center">
-                  <Building2 size={32} className="mx-auto mb-3 text-amber-400" />
-                  <h3 className="font-semibold text-slate-700 mb-1">أضف عقاراً جديداً</h3>
-                  <p className="text-xs text-slate-500 mb-4">سوّق عقاراتك عبر منصة تكامل واحصل على عمولتك</p>
-                  <Button className="bg-amber-500 hover:bg-amber-600 text-sm" onClick={() => { setActiveTab("properties"); setShowAddProperty(true); }}>
-                    <Plus size={16} className="ml-1" /> إضافة عقار
-                  </Button>
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm text-slate-600">آخر العقارات</CardTitle>
+                  <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-xs" onClick={() => setActiveTab("add")}><Plus size={14} className="ml-1" /> إضافة عقار</Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {listings.slice(0, 5).map((p: any) => (
+                      <div key={p.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50">
+                        <div><p className="text-sm font-medium text-slate-700">{p.titleAr}</p><p className="text-xs text-slate-400">{PROPERTY_TYPES[p.type] || p.type} · {p.district || "المدينة المنورة"}</p></div>
+                        <div className="text-left"><p className="text-sm font-bold text-slate-800">{formatCurrency(Number(p.price || 0))}</p><Badge className="text-xs bg-teal-100 text-teal-700">{LISTING_TYPES[p.listingType] || p.listingType}</Badge></div>
+                      </div>
+                    ))}
+                    {listings.length === 0 && <p className="text-center text-sm text-slate-400 py-6">لم تضف أي عقارات بعد</p>}
+                  </div>
                 </CardContent>
               </Card>
             </div>
           )}
 
-          {/* ── Properties ── */}
-          {activeTab === "properties" && (
+          {/* ─── LISTINGS ─── */}
+          {activeTab === "listings" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">{properties.length} عقار</p>
-                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-xs" onClick={() => setShowAddProperty(!showAddProperty)}>
-                  <Plus size={14} className="ml-1" /> إضافة عقار
-                </Button>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-teal-100 text-teal-700">{listings.filter((l: any) => l.listingType === "sale").length} بيع</Badge>
+                  <Badge className="bg-blue-100 text-blue-700">{listings.filter((l: any) => l.listingType === "rent").length} إيجار</Badge>
+                </div>
+                <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-xs" onClick={() => setActiveTab("add")}><Plus size={14} className="ml-1" /> إضافة</Button>
               </div>
-
-              {showAddProperty && (
-                <Card className="border-0 shadow-sm border-amber-100">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      إضافة عقار جديد للتسويق
-                      <button onClick={() => setShowAddProperty(false)}><X size={16} /></button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-amber-50 rounded-lg p-3 mb-4 text-xs text-amber-700">
-                      <strong>ملاحظة:</strong> سيتم مراجعة العقار من قبل فريق تكامل قبل نشره. ستُطبق نسبة العمولة المتفق عليها عند إتمام الصفقة.
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      <Input placeholder="عنوان العقار *" value={propertyForm.titleAr} onChange={e => setPropertyForm(p => ({ ...p, titleAr: e.target.value }))} className="text-sm" />
-                      <Select value={propertyForm.type} onValueChange={v => setPropertyForm(p => ({ ...p, type: v as any }))}>
-                        <SelectTrigger className="text-sm"><SelectValue placeholder="نوع العقار" /></SelectTrigger>
-                        <SelectContent>{Object.entries(PROPERTY_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Select value={propertyForm.listingType} onValueChange={v => setPropertyForm(p => ({ ...p, listingType: v as any }))}>
-                        <SelectTrigger className="text-sm"><SelectValue placeholder="نوع الإعلان" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="sale">للبيع</SelectItem>
-                          <SelectItem value="rent">للإيجار</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input placeholder="السعر المطلوب (ريال) *" value={propertyForm.price} onChange={e => setPropertyForm(p => ({ ...p, price: e.target.value }))} className="text-sm" />
-                      <Input placeholder="المساحة (م²)" value={propertyForm.area} onChange={e => setPropertyForm(p => ({ ...p, area: e.target.value }))} className="text-sm" />
-                      <Input placeholder="الحي / الموقع" value={propertyForm.district} onChange={e => setPropertyForm(p => ({ ...p, district: e.target.value }))} className="text-sm" />
-                      <Input placeholder="غرف النوم" type="number" value={propertyForm.bedrooms} onChange={e => setPropertyForm(p => ({ ...p, bedrooms: e.target.value }))} className="text-sm" />
-                      <Input placeholder="دورات المياه" type="number" value={propertyForm.bathrooms} onChange={e => setPropertyForm(p => ({ ...p, bathrooms: e.target.value }))} className="text-sm" />
-                    </div>
-                    <textarea placeholder="وصف العقار (اختياري)" value={propertyForm.descriptionAr} onChange={e => setPropertyForm(p => ({ ...p, descriptionAr: e.target.value }))} className="w-full mt-3 p-2 border rounded-md text-sm resize-none h-20" />
-
-                    {/* Commission preview */}
-                    {propertyForm.price && broker?.commissionRates && (broker.commissionRates as Record<string, number>)[propertyForm.type] && (
-                      <div className="mt-3 p-3 bg-green-50 rounded-lg text-sm">
-                        <p className="text-green-700 font-medium">
-                          عمولتك المتوقعة: {((broker.commissionRates as Record<string, number>)[propertyForm.type] / 100 * Number(propertyForm.price)).toLocaleString("ar-SA")} ﷼
-                          <span className="text-green-500 text-xs mr-2">({(broker.commissionRates as Record<string, number>)[propertyForm.type]}% من السعر)</span>
-                        </p>
-                      </div>
-                    )}
-
-                    <Button className="mt-3 bg-amber-500 hover:bg-amber-600 text-sm" onClick={() => {
-                      if (!propertyForm.titleAr || !propertyForm.price) return toast.error("يرجى ملء الحقول المطلوبة");
-                      createPropertyMutation.mutate({
-                        ...propertyForm,
-                        brokerId: broker?.id,
-                        bedrooms: propertyForm.bedrooms ? parseInt(propertyForm.bedrooms) : undefined,
-                        bathrooms: propertyForm.bathrooms ? parseInt(propertyForm.bathrooms) : undefined,
-                        area: propertyForm.area || undefined,
-                        district: propertyForm.district || undefined,
-                        descriptionAr: propertyForm.descriptionAr || undefined,
-                        features: [],
-                        source: "broker",
-                      });
-                    }} disabled={createPropertyMutation.isPending}>
-                      {createPropertyMutation.isPending ? "جاري الإرسال..." : "إرسال للمراجعة"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {properties.map(prop => (
-                  <Card key={prop.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {listings.map((p: any) => (
+                  <Card key={p.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-5">
                       <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-slate-800 text-sm">{prop.titleAr}</h3>
-                          <p className="text-xs text-slate-500">{prop.city}{prop.district ? ` • ${prop.district}` : ""}</p>
-                        </div>
-                        <Badge className={prop.status === "available" ? "bg-green-100 text-green-700" : prop.status === "sold" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}>
-                          {prop.status === "available" ? "نشط" : prop.status === "sold" ? "مباع" : prop.status === "rented" ? "مؤجر" : "معلق"}
+                        <div><h3 className="font-bold text-slate-800">{p.titleAr}</h3><p className="text-xs text-slate-400">{PROPERTY_TYPES[p.type] || p.type} · {p.district || "المدينة المنورة"}</p></div>
+                        <Badge className={p.status === "available" ? "bg-green-100 text-green-700" : p.status === "rented" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}>
+                          {p.status === "available" ? "متاح" : p.status === "rented" ? "مؤجر" : p.status === "sold" ? "مباع" : p.status}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-3">
-                        <span>🏠 {PROPERTY_TYPES[prop.type] || prop.type}</span>
-                        {prop.area && <span>📐 {prop.area} م²</span>}
-                        {prop.bedrooms && <span>🛏 {prop.bedrooms} غرف</span>}
-                        <span>{prop.listingType === "sale" ? "🔑 للبيع" : "🏠 للإيجار"}</span>
+                      <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                        <div className="p-2 bg-slate-50 rounded-lg"><p className="text-xs text-slate-400">السعر</p><p className="text-sm font-bold text-slate-700">{formatCurrency(Number(p.price || 0))}</p></div>
+                        <div className="p-2 bg-slate-50 rounded-lg"><p className="text-xs text-slate-400">المساحة</p><p className="text-sm font-bold text-slate-700">{p.area || "—"} م²</p></div>
+                        <div className="p-2 bg-slate-50 rounded-lg"><p className="text-xs text-slate-400">الغرف</p><p className="text-sm font-bold text-slate-700">{p.bedrooms || "—"}</p></div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-amber-600">{Number(prop.price).toLocaleString("ar-SA")} ﷼</span>
-                        {broker?.commissionRates && (broker.commissionRates as Record<string, number>)[prop.type] && (
-                          <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                            عمولة {(broker.commissionRates as Record<string, number>)[prop.type]}%
-                          </span>
-                        )}
-                      </div>
+                      {broker?.commissionRates && (
+                        <div className="p-2 bg-amber-50 rounded-lg flex items-center justify-between">
+                          <span className="text-xs text-amber-600">عمولة تكامل</span>
+                          <span className="text-sm font-bold text-amber-700">{formatCurrency(Number(p.price || 0) * Number(((broker.commissionRates as any)?.default || 0)) / 100)}</span>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
-                {properties.length === 0 && (
-                  <div className="col-span-3 text-center py-12 text-slate-400">
-                    <Building2 size={40} className="mx-auto mb-3 opacity-30" />
-                    <p className="mb-3">لم تضف أي عقارات بعد</p>
-                    <Button size="sm" className="bg-amber-500 hover:bg-amber-600" onClick={() => setShowAddProperty(true)}>
-                      <Plus size={14} className="ml-1" /> أضف أول عقار
-                    </Button>
-                  </div>
-                )}
               </div>
+              {listings.length === 0 && (
+                <Card className="border-0 shadow-sm"><CardContent className="p-12 text-center"><Building2 className="text-slate-300 mx-auto mb-3" size={48} /><p className="text-slate-400 mb-4">لم تضف أي عقارات بعد</p><Button className="bg-teal-500 hover:bg-teal-600" onClick={() => setActiveTab("add")}><Plus size={16} className="ml-1" /> إضافة أول عقار</Button></CardContent></Card>
+              )}
             </div>
           )}
 
-          {/* ── Commissions ── */}
+          {/* ─── ADD PROPERTY ─── */}
+          {activeTab === "add" && (
+            <Card className="border-0 shadow-sm max-w-2xl mx-auto">
+              <CardHeader><CardTitle className="text-lg text-slate-800">إضافة عقار جديد</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div><label className="text-sm text-slate-600 mb-1 block">اسم العقار *</label><Input placeholder="مثال: شقة فاخرة في حي الروضة" value={propertyForm.titleAr} onChange={e => setPropertyForm(p => ({ ...p, titleAr: e.target.value }))} /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="text-sm text-slate-600 mb-1 block">نوع العقار *</label><Select value={propertyForm.type} onValueChange={(v: string) => setPropertyForm(p => ({ ...p, type: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(PROPERTY_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
+                  <div><label className="text-sm text-slate-600 mb-1 block">نوع العرض *</label><Select value={propertyForm.listingType} onValueChange={(v: string) => setPropertyForm(p => ({ ...p, listingType: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(LISTING_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="text-sm text-slate-600 mb-1 block">السعر (ريال) *</label><Input type="number" placeholder="500000" value={propertyForm.price} onChange={e => setPropertyForm(p => ({ ...p, price: e.target.value }))} /></div>
+                  <div><label className="text-sm text-slate-600 mb-1 block">المساحة (م²)</label><Input type="number" placeholder="150" value={propertyForm.area} onChange={e => setPropertyForm(p => ({ ...p, area: e.target.value }))} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="text-sm text-slate-600 mb-1 block">غرف النوم</label><Input type="number" placeholder="3" value={propertyForm.bedrooms} onChange={e => setPropertyForm(p => ({ ...p, bedrooms: e.target.value }))} /></div>
+                  <div><label className="text-sm text-slate-600 mb-1 block">دورات المياه</label><Input type="number" placeholder="2" value={propertyForm.bathrooms} onChange={e => setPropertyForm(p => ({ ...p, bathrooms: e.target.value }))} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="text-sm text-slate-600 mb-1 block">الحي</label><Input placeholder="حي الروضة" value={propertyForm.district} onChange={e => setPropertyForm(p => ({ ...p, district: e.target.value }))} /></div>
+                  <div><label className="text-sm text-slate-600 mb-1 block">المدينة</label><Input value={propertyForm.city} onChange={e => setPropertyForm(p => ({ ...p, city: e.target.value }))} /></div>
+                </div>
+                <div><label className="text-sm text-slate-600 mb-1 block">الوصف</label><textarea className="w-full border rounded-lg p-3 text-sm min-h-[80px] focus:ring-2 focus:ring-teal-500 focus:border-teal-500" placeholder="وصف تفصيلي للعقار..." value={propertyForm.description} onChange={e => setPropertyForm(p => ({ ...p, description: e.target.value }))} /></div>
+                <div><label className="text-sm text-slate-600 mb-1 block">المميزات (مفصولة بفاصلة)</label><Input placeholder="مصعد, موقف سيارات, حديقة" value={propertyForm.features} onChange={e => setPropertyForm(p => ({ ...p, features: e.target.value }))} /></div>
+
+                {broker?.commissionRates && propertyForm.price && (
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <div className="flex items-center justify-between">
+                      <div><p className="text-sm font-medium text-amber-700">عمولة تكامل على هذا العقار</p><p className="text-xs text-amber-500">نسبة {((broker.commissionRates as any)?.default || 0)}% من سعر العقار</p></div>
+                      <p className="text-xl font-bold text-amber-700">{formatCurrency(Number(propertyForm.price) * Number(((broker.commissionRates as any)?.default || 0)) / 100)}</p>
+                    </div>
+                  </div>
+                )}
+
+                <Button className="bg-teal-500 hover:bg-teal-600 w-full" onClick={() => {
+                  if (!propertyForm.titleAr || !propertyForm.price) return toast.error("يرجى ملء الحقول المطلوبة");
+                  createPropertyMutation.mutate({
+                    titleAr: propertyForm.titleAr, type: propertyForm.type as any, listingType: propertyForm.listingType as any,
+                    price: propertyForm.price, area: propertyForm.area || undefined, bedrooms: propertyForm.bedrooms ? Number(propertyForm.bedrooms) : undefined,
+                    bathrooms: propertyForm.bathrooms ? Number(propertyForm.bathrooms) : undefined, district: propertyForm.district || undefined,
+                    city: propertyForm.city, descriptionAr: propertyForm.description || undefined,
+                    features: propertyForm.features ? propertyForm.features.split(",").map(f => f.trim()) : undefined,
+                  });
+                }} disabled={createPropertyMutation.isPending}>
+                  {createPropertyMutation.isPending ? "جاري الإضافة..." : "إضافة العقار"}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ─── COMMISSIONS ─── */}
           {activeTab === "commissions" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <Card className="border-0 shadow-sm bg-green-50">
-                  <CardContent className="p-4">
-                    <p className="text-2xl font-bold text-green-600">{totalCommissions.toLocaleString("ar-SA")} ﷼</p>
-                    <p className="text-xs text-slate-600 mt-1">إجمالي العمولات المستلمة</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm bg-orange-50">
-                  <CardContent className="p-4">
-                    <p className="text-2xl font-bold text-orange-600">{pendingCommissions.toLocaleString("ar-SA")} ﷼</p>
-                    <p className="text-xs text-slate-600 mt-1">عمولات معلقة</p>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xs text-teal-600">إجمالي</p><p className="text-xl font-bold text-teal-700">{formatCurrency(totalCommissions)}</p></CardContent></Card>
+                <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xs text-green-600">مدفوع</p><p className="text-xl font-bold text-green-700">{formatCurrency(paidCommissions)}</p></CardContent></Card>
+                <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xs text-yellow-600">معلق</p><p className="text-xl font-bold text-yellow-700">{formatCurrency(pendingCommissions)}</p></CardContent></Card>
               </div>
-              <Card className="border-0 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
-                      <tr>{["الوصف", "النسبة", "المبلغ", "التاريخ", "الحالة"].map(h => (
-                        <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
-                      ))}</tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {commissions.map(c => (
-                        <tr key={c.id} className="hover:bg-slate-50">
-                          <td className="p-3 text-sm">{c.notes || `عمولة #${c.id}`}</td>
-                          <td className="p-3 text-xs text-amber-600">{c.commissionRate}%</td>
-                          <td className="p-3 font-medium text-green-600">{Number(c.commissionAmount).toLocaleString("ar-SA")} ﷼</td>
-                          <td className="p-3 text-slate-500 text-xs">{new Date(c.createdAt).toLocaleDateString("ar-SA")}</td>
-                          <td className="p-3">
-                            <Badge className={c.status === "paid" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}>
-                              {c.status === "paid" ? "مستلمة" : "معلقة"}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {commissions.length === 0 && <p className="text-center text-slate-400 py-8">لا توجد عمولات بعد</p>}
-                </div>
+              {commissions.map((c: any) => (
+                <Card key={c.id} className="border-0 shadow-sm">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div><p className="text-sm font-medium text-slate-700">عمولة #{c.id}</p><p className="text-xs text-slate-400">{c.notes || "عمولة تسويق عقاري"} · {formatDate(c.createdAt)}</p></div>
+                    <div className="flex items-center gap-3">
+                      <Badge className={c.status === "paid" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}>{c.status === "paid" ? "مدفوع" : "معلق"}</Badge>
+                      <span className="text-sm font-bold text-slate-800">{formatCurrency(Number(c.commissionAmount || 0))}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {commissions.length === 0 && (
+                <Card className="border-0 shadow-sm"><CardContent className="p-12 text-center"><DollarSign className="text-slate-300 mx-auto mb-3" size={48} /><p className="text-slate-400">لا توجد عمولات حالياً</p></CardContent></Card>
+              )}
+            </div>
+          )}
+
+          {/* ─── PERFORMANCE ─── */}
+          {activeTab === "performance" && (
+            <div className="space-y-6">
+              <Card className="border-0 shadow-sm bg-gradient-to-l from-teal-50 to-white">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center"><Star className="text-teal-600" size={32} /></div>
+                    <div><h2 className="text-xl font-bold text-slate-800">{broker?.name || "الوسيط"}</h2><p className="text-sm text-slate-500">وسيط عقاري معتمد {broker?.falLicenseNumber ? `· رخصة فال: ${broker.falLicenseNumber}` : ""}</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-3 bg-white rounded-xl text-center shadow-sm"><p className="text-2xl font-bold text-teal-600">{listings.length}</p><p className="text-xs text-slate-500">عقار مسجّل</p></div>
+                    <div className="p-3 bg-white rounded-xl text-center shadow-sm"><p className="text-2xl font-bold text-green-600">{listings.filter((l: any) => l.status === "sold" || l.status === "rented").length}</p><p className="text-xs text-slate-500">صفقة مكتملة</p></div>
+                    <div className="p-3 bg-white rounded-xl text-center shadow-sm"><p className="text-2xl font-bold text-amber-600">{formatCurrency(totalCommissions)}</p><p className="text-xs text-slate-500">إجمالي العمولات</p></div>
+                    <div className="p-3 bg-white rounded-xl text-center shadow-sm"><p className="text-2xl font-bold text-blue-600">{((broker?.commissionRates as any)?.default || 0)}%</p><p className="text-xs text-slate-500">نسبة العمولة</p></div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-0 shadow-sm">
+                <CardHeader><CardTitle className="text-sm text-slate-600">ملخص العقارات حسب النوع</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(PROPERTY_TYPES).map(([key, label]) => {
+                      const count = listings.filter((l: any) => l.type === key).length;
+                      if (count === 0) return null;
+                      return (<div key={key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"><span className="text-sm text-slate-700">{label}</span><Badge className="bg-teal-100 text-teal-700">{count}</Badge></div>);
+                    })}
+                  </div>
+                </CardContent>
               </Card>
             </div>
           )}

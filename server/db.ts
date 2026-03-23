@@ -1,4 +1,4 @@
-import { and, desc, eq, like, lte, or, sql } from "drizzle-orm";
+import { eq, and, or, like, desc, lte, gte, sql, asc, between, count as drizzleCount, isNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -11,8 +11,17 @@ import {
   payments, InsertPayment,
   expenses, InsertExpense,
   maintenanceRequests, InsertMaintenanceRequest,
+  scheduledMaintenance, InsertScheduledMaintenance,
   ownerStatements,
   brokerCommissions,
+  deposits, InsertDeposit,
+  unitHandovers, InsertUnitHandover,
+  activityLog, InsertActivityLog,
+  internalNotes, InsertInternalNote,
+  messageTemplates, InsertMessageTemplate,
+  sentMessages, InsertSentMessage,
+  dailyTasks, InsertDailyTask,
+  documents, InsertDocument,
   leads, InsertLead,
   chatSessions, chatMessages,
   notifications,
@@ -23,11 +32,8 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
+    try { _db = drizzle(process.env.DATABASE_URL); } catch (error) {
+      console.warn("[Database] Failed to connect:", error); _db = null;
     }
   }
   return _db;
@@ -90,8 +96,7 @@ export async function getOwnerByUserId(userId: number) {
 export async function createOwner(data: InsertPropertyOwner) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  const result = await db.insert(propertyOwners).values(data);
-  return result;
+  return db.insert(propertyOwners).values(data);
 }
 
 export async function updateOwner(id: number, data: Partial<InsertPropertyOwner>) {
@@ -127,8 +132,7 @@ export async function getBrokerByUserId(userId: number) {
 export async function createBroker(data: InsertBroker) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  const result = await db.insert(brokers).values(data);
-  return result;
+  return db.insert(brokers).values(data);
 }
 
 export async function updateBroker(id: number, data: Partial<InsertBroker>) {
@@ -141,6 +145,7 @@ export async function updateBroker(id: number, data: Partial<InsertBroker>) {
 export async function getProperties(filters?: {
   listingType?: string; status?: string; type?: string; ownerId?: number;
   brokerId?: number; source?: string; search?: string; limit?: number; offset?: number;
+  approvalStatus?: string;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -151,6 +156,7 @@ export async function getProperties(filters?: {
   if (filters?.ownerId) conditions.push(eq(properties.ownerId, filters.ownerId));
   if (filters?.brokerId) conditions.push(eq(properties.brokerId, filters.brokerId));
   if (filters?.source) conditions.push(eq(properties.source, filters.source as any));
+  if (filters?.approvalStatus) conditions.push(eq(properties.approvalStatus, filters.approvalStatus as any));
   if (filters?.search) {
     conditions.push(or(
       like(properties.titleAr, `%${filters.search}%`),
@@ -160,8 +166,7 @@ export async function getProperties(filters?: {
   }
   const q = db.select().from(properties)
     .orderBy(desc(properties.isFeatured), desc(properties.createdAt))
-    .limit(filters?.limit ?? 50)
-    .offset(filters?.offset ?? 0);
+    .limit(filters?.limit ?? 50).offset(filters?.offset ?? 0);
   return conditions.length ? q.where(and(...conditions)) : q;
 }
 
@@ -196,11 +201,37 @@ export async function incrementPropertyView(id: number) {
   await db.update(properties).set({ viewCount: sql`${properties.viewCount} + 1` }).where(eq(properties.id, id));
 }
 
+export async function getVacantProperties() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(properties)
+    .where(or(eq(properties.status, "available"), eq(properties.status, "under_management")))
+    .orderBy(properties.vacantSince);
+}
+
+export async function getPendingApprovalProperties() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(properties)
+    .where(eq(properties.approvalStatus, "pending"))
+    .orderBy(desc(properties.createdAt));
+}
+
 // ─── UNITS ────────────────────────────────────────────────────────────────────
 export async function getUnitsByProperty(propertyId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(units).where(eq(units.propertyId, propertyId)).orderBy(units.unitNumber);
+}
+
+export async function getAllUnits(filters?: { status?: string; propertyId?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(units.status, filters.status as any));
+  if (filters?.propertyId) conditions.push(eq(units.propertyId, filters.propertyId));
+  const q = db.select().from(units).orderBy(units.propertyId, units.unitNumber);
+  return conditions.length ? q.where(and(...conditions)) : q;
 }
 
 export async function getUnitById(id: number) {
@@ -226,6 +257,12 @@ export async function deleteUnit(id: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   await db.delete(units).where(eq(units.id, id));
+}
+
+export async function getVacantUnits() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(units).where(eq(units.status, "vacant")).orderBy(units.vacantSince);
 }
 
 // ─── TENANTS ──────────────────────────────────────────────────────────────────
@@ -264,6 +301,19 @@ export async function updateTenant(id: number, data: Partial<InsertTenant>) {
   await db.update(tenants).set(data).where(eq(tenants.id, id));
 }
 
+export async function rateTenant(id: number, ratings: { paymentRating: number; propertyRating: number; cooperationRating: number; ratingNotes?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const overall = ((ratings.paymentRating + ratings.propertyRating + ratings.cooperationRating) / 3).toFixed(2);
+  await db.update(tenants).set({
+    paymentRating: ratings.paymentRating,
+    propertyRating: ratings.propertyRating,
+    cooperationRating: ratings.cooperationRating,
+    overallRating: overall,
+    ratingNotes: ratings.ratingNotes ?? null,
+  }).where(eq(tenants.id, id));
+}
+
 // ─── CONTRACTS ────────────────────────────────────────────────────────────────
 export async function getContracts(filters?: {
   type?: string; status?: string; ownerId?: number; tenantId?: number; propertyId?: number;
@@ -299,10 +349,34 @@ export async function updateContract(id: number, data: Partial<InsertContract>) 
   await db.update(contracts).set(data).where(eq(contracts.id, id));
 }
 
+export async function getExpiringContracts(daysAhead: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const today = new Date();
+  const futureDate = new Date(today);
+  futureDate.setDate(futureDate.getDate() + daysAhead);
+  const todayStr = today.toISOString().split("T")[0];
+  const futureStr = futureDate.toISOString().split("T")[0];
+  return db.select().from(contracts)
+    .where(and(
+      eq(contracts.status, "active"),
+      gte(contracts.endDate, todayStr as any),
+      lte(contracts.endDate, futureStr as any)
+    ))
+    .orderBy(contracts.endDate);
+}
+
+export async function renewContract(oldId: number, newData: InsertContract) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(contracts).set({ status: "renewed", renewalStatus: "accepted" }).where(eq(contracts.id, oldId));
+  return db.insert(contracts).values({ ...newData, renewedFromId: oldId });
+}
+
 // ─── PAYMENTS ─────────────────────────────────────────────────────────────────
 export async function getPayments(filters?: {
   status?: string; ownerId?: number; tenantId?: number; propertyId?: number;
-  contractId?: number; type?: string;
+  contractId?: number; type?: string; fromDate?: string; toDate?: string;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -313,6 +387,8 @@ export async function getPayments(filters?: {
   if (filters?.propertyId) conditions.push(eq(payments.propertyId, filters.propertyId));
   if (filters?.contractId) conditions.push(eq(payments.contractId, filters.contractId));
   if (filters?.type) conditions.push(eq(payments.type, filters.type as any));
+  if (filters?.fromDate) conditions.push(gte(payments.dueDate, filters.fromDate as any));
+  if (filters?.toDate) conditions.push(lte(payments.dueDate, filters.toDate as any));
   const q = db.select().from(payments).orderBy(desc(payments.dueDate));
   return conditions.length ? q.where(and(...conditions)) : q;
 }
@@ -341,13 +417,33 @@ export async function getOverduePayments() {
   if (!db) return [];
   const today = new Date().toISOString().split("T")[0];
   return db.select().from(payments)
-    .where(and(eq(payments.status, "pending"), lte(payments.dueDate, today as any)))
+    .where(and(
+      or(eq(payments.status, "pending"), eq(payments.status, "partial")),
+      lte(payments.dueDate, today as any)
+    ))
     .orderBy(payments.dueDate);
+}
+
+export async function getMonthlyCollectionSchedule(yearMonth: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payments)
+    .where(like(payments.dueDate, `${yearMonth}%` as any))
+    .orderBy(payments.dueDate);
+}
+
+export async function generateReceiptNumber() {
+  const db = await getDb();
+  if (!db) return `REC-${Date.now()}`;
+  const [result] = await db.select({ count: sql<number>`COUNT(*)` }).from(payments)
+    .where(sql`receiptNumber IS NOT NULL`);
+  const num = (Number(result?.count ?? 0) + 1).toString().padStart(6, "0");
+  return `REC-${num}`;
 }
 
 // ─── EXPENSES ─────────────────────────────────────────────────────────────────
 export async function getExpenses(filters?: {
-  propertyId?: number; ownerId?: number; category?: string;
+  propertyId?: number; ownerId?: number; category?: string; fromDate?: string; toDate?: string;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -355,6 +451,8 @@ export async function getExpenses(filters?: {
   if (filters?.propertyId) conditions.push(eq(expenses.propertyId, filters.propertyId));
   if (filters?.ownerId) conditions.push(eq(expenses.ownerId, filters.ownerId));
   if (filters?.category) conditions.push(eq(expenses.category, filters.category as any));
+  if (filters?.fromDate) conditions.push(gte(expenses.expenseDate, filters.fromDate as any));
+  if (filters?.toDate) conditions.push(lte(expenses.expenseDate, filters.toDate as any));
   const q = db.select().from(expenses).orderBy(desc(expenses.expenseDate));
   return conditions.length ? q.where(and(...conditions)) : q;
 }
@@ -373,16 +471,25 @@ export async function updateExpense(id: number, data: Partial<InsertExpense>) {
 
 // ─── MAINTENANCE ──────────────────────────────────────────────────────────────
 export async function getMaintenanceRequests(filters?: {
-  propertyId?: number; status?: string; priority?: string;
+  propertyId?: number; unitId?: number; status?: string; priority?: string; tenantId?: number;
 }) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [];
   if (filters?.propertyId) conditions.push(eq(maintenanceRequests.propertyId, filters.propertyId));
+  if (filters?.unitId) conditions.push(eq(maintenanceRequests.unitId, filters.unitId));
   if (filters?.status) conditions.push(eq(maintenanceRequests.status, filters.status as any));
   if (filters?.priority) conditions.push(eq(maintenanceRequests.priority, filters.priority as any));
+  if (filters?.tenantId) conditions.push(eq(maintenanceRequests.tenantId, filters.tenantId));
   const q = db.select().from(maintenanceRequests).orderBy(desc(maintenanceRequests.createdAt));
   return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+export async function getMaintenanceById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(maintenanceRequests).where(eq(maintenanceRequests.id, id)).limit(1);
+  return result[0] ?? null;
 }
 
 export async function createMaintenanceRequest(data: InsertMaintenanceRequest) {
@@ -397,7 +504,258 @@ export async function updateMaintenanceRequest(id: number, data: Partial<InsertM
   await db.update(maintenanceRequests).set(data).where(eq(maintenanceRequests.id, id));
 }
 
-// ─── OWNER STATEMENTS ─────────────────────────────────────────────────────────
+export async function getPropertyMaintenanceHistory(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(maintenanceRequests)
+    .where(eq(maintenanceRequests.propertyId, propertyId))
+    .orderBy(desc(maintenanceRequests.createdAt));
+}
+
+// ─── SCHEDULED MAINTENANCE ───────────────────────────────────────────────────
+export async function getScheduledMaintenance(filters?: { propertyId?: number; isActive?: boolean }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.propertyId) conditions.push(eq(scheduledMaintenance.propertyId, filters.propertyId));
+  if (filters?.isActive !== undefined) conditions.push(eq(scheduledMaintenance.isActive, filters.isActive));
+  const q = db.select().from(scheduledMaintenance).orderBy(scheduledMaintenance.nextDue);
+  return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+export async function createScheduledMaintenance(data: InsertScheduledMaintenance) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(scheduledMaintenance).values(data);
+}
+
+export async function updateScheduledMaintenance(id: number, data: Partial<InsertScheduledMaintenance>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(scheduledMaintenance).set(data).where(eq(scheduledMaintenance.id, id));
+}
+
+export async function getDueScheduledMaintenance() {
+  const db = await getDb();
+  if (!db) return [];
+  const today = new Date().toISOString().split("T")[0];
+  return db.select().from(scheduledMaintenance)
+    .where(and(eq(scheduledMaintenance.isActive, true), lte(scheduledMaintenance.nextDue, today as any)))
+    .orderBy(scheduledMaintenance.nextDue);
+}
+
+// ─── DEPOSITS / GUARANTEES ───────────────────────────────────────────────────
+export async function getDeposits(filters?: { contractId?: number; tenantId?: number; status?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.contractId) conditions.push(eq(deposits.contractId, filters.contractId));
+  if (filters?.tenantId) conditions.push(eq(deposits.tenantId, filters.tenantId));
+  if (filters?.status) conditions.push(eq(deposits.status, filters.status as any));
+  const q = db.select().from(deposits).orderBy(desc(deposits.createdAt));
+  return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+export async function createDeposit(data: InsertDeposit) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(deposits).values(data);
+}
+
+export async function updateDeposit(id: number, data: Partial<InsertDeposit>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(deposits).set(data).where(eq(deposits.id, id));
+}
+
+// ─── UNIT HANDOVERS ──────────────────────────────────────────────────────────
+export async function getHandovers(filters?: { unitId?: number; propertyId?: number; type?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.unitId) conditions.push(eq(unitHandovers.unitId, filters.unitId));
+  if (filters?.propertyId) conditions.push(eq(unitHandovers.propertyId, filters.propertyId));
+  if (filters?.type) conditions.push(eq(unitHandovers.type, filters.type as any));
+  const q = db.select().from(unitHandovers).orderBy(desc(unitHandovers.handoverDate));
+  return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+export async function createHandover(data: InsertUnitHandover) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(unitHandovers).values(data);
+}
+
+export async function getHandoverById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(unitHandovers).where(eq(unitHandovers.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+// ─── ACTIVITY LOG ─────────────────────────────────────────────────────────────
+export async function logActivity(data: InsertActivityLog) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(activityLog).values(data);
+}
+
+export async function getActivityLog(filters?: {
+  entityType?: string; entityId?: number; userId?: number; limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.entityType) conditions.push(eq(activityLog.entityType, filters.entityType));
+  if (filters?.entityId) conditions.push(eq(activityLog.entityId, filters.entityId));
+  if (filters?.userId) conditions.push(eq(activityLog.userId, filters.userId));
+  const q = db.select().from(activityLog)
+    .orderBy(desc(activityLog.createdAt))
+    .limit(filters?.limit ?? 100);
+  return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+// ─── INTERNAL NOTES ──────────────────────────────────────────────────────────
+export async function getNotes(entityType: string, entityId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(internalNotes)
+    .where(and(eq(internalNotes.entityType, entityType as any), eq(internalNotes.entityId, entityId)))
+    .orderBy(desc(internalNotes.isPinned), desc(internalNotes.createdAt));
+}
+
+export async function createNote(data: InsertInternalNote) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(internalNotes).values(data);
+}
+
+export async function updateNote(id: number, data: Partial<InsertInternalNote>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(internalNotes).set(data).where(eq(internalNotes.id, id));
+}
+
+export async function deleteNote(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(internalNotes).where(eq(internalNotes.id, id));
+}
+
+// ─── MESSAGE TEMPLATES ───────────────────────────────────────────────────────
+export async function getMessageTemplates(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const q = db.select().from(messageTemplates).orderBy(messageTemplates.category, messageTemplates.name);
+  return category ? q.where(eq(messageTemplates.category, category as any)) : q;
+}
+
+export async function getMessageTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(messageTemplates).where(eq(messageTemplates.id, id)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function createMessageTemplate(data: InsertMessageTemplate) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(messageTemplates).values(data);
+}
+
+export async function updateMessageTemplate(id: number, data: Partial<InsertMessageTemplate>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(messageTemplates).set(data).where(eq(messageTemplates.id, id));
+}
+
+export async function deleteMessageTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(messageTemplates).where(eq(messageTemplates.id, id));
+}
+
+// ─── SENT MESSAGES ───────────────────────────────────────────────────────────
+export async function createSentMessage(data: InsertSentMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(sentMessages).values(data);
+}
+
+export async function getSentMessages(filters?: { recipientType?: string; recipientId?: number; limit?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.recipientType) conditions.push(eq(sentMessages.recipientType, filters.recipientType as any));
+  if (filters?.recipientId) conditions.push(eq(sentMessages.recipientId, filters.recipientId));
+  const q = db.select().from(sentMessages)
+    .orderBy(desc(sentMessages.createdAt))
+    .limit(filters?.limit ?? 100);
+  return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+// ─── DAILY TASKS ─────────────────────────────────────────────────────────────
+export async function getDailyTasks(filters?: { status?: string; dueDate?: string; type?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(dailyTasks.status, filters.status as any));
+  if (filters?.dueDate) conditions.push(eq(dailyTasks.dueDate, filters.dueDate as any));
+  if (filters?.type) conditions.push(eq(dailyTasks.type, filters.type as any));
+  const q = db.select().from(dailyTasks).orderBy(
+    sql`FIELD(priority, 'urgent', 'high', 'medium', 'low')`,
+    dailyTasks.dueDate
+  );
+  return conditions.length ? q.where(and(...conditions)) : q;
+}
+
+export async function createDailyTask(data: InsertDailyTask) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(dailyTasks).values(data);
+}
+
+export async function updateDailyTask(id: number, data: Partial<InsertDailyTask>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(dailyTasks).set(data).where(eq(dailyTasks.id, id));
+}
+
+export async function getTodayTasks() {
+  const db = await getDb();
+  if (!db) return [];
+  const today = new Date().toISOString().split("T")[0];
+  return db.select().from(dailyTasks)
+    .where(and(
+      lte(dailyTasks.dueDate, today as any),
+      ne(dailyTasks.status, "completed"),
+      ne(dailyTasks.status, "dismissed")
+    ))
+    .orderBy(sql`FIELD(priority, 'urgent', 'high', 'medium', 'low')`, dailyTasks.dueDate);
+}
+
+// ─── DOCUMENTS ───────────────────────────────────────────────────────────────
+export async function getDocuments(entityType: string, entityId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(documents)
+    .where(and(eq(documents.entityType, entityType as any), eq(documents.entityId, entityId)))
+    .orderBy(desc(documents.createdAt));
+}
+
+export async function createDocument(data: InsertDocument) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(documents).values(data);
+}
+
+export async function deleteDocument(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(documents).where(eq(documents.id, id));
+}
+
+// ─── OWNER STATEMENTS ────────────────────────────────────────────────────────
 export async function getOwnerStatements(ownerId: number) {
   const db = await getDb();
   if (!db) return [];
@@ -412,7 +770,22 @@ export async function getAllOwnerStatements() {
   return db.select().from(ownerStatements).orderBy(desc(ownerStatements.period));
 }
 
-// ─── BROKER COMMISSIONS ───────────────────────────────────────────────────────
+export async function createOwnerStatement(data: {
+  ownerId: number; period: string; totalRentCollected: string;
+  totalExpenses: string; managementFee: string; netAmount: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  return db.insert(ownerStatements).values(data);
+}
+
+export async function updateOwnerStatement(id: number, data: { status: "draft" | "sent" | "paid"; notes?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(ownerStatements).set(data as any).where(eq(ownerStatements.id, id));
+}
+
+// ─── BROKER COMMISSIONS ──────────────────────────────────────────────────────
 export async function getBrokerCommissions(brokerId?: number) {
   const db = await getDb();
   if (!db) return [];
@@ -436,15 +809,15 @@ export async function updateBrokerCommission(id: number, data: { status: "pendin
   await db.update(brokerCommissions).set(data as any).where(eq(brokerCommissions.id, id));
 }
 
-// ─── FINANCIAL SUMMARY ────────────────────────────────────────────────────────
+// ─── FINANCIAL SUMMARY ───────────────────────────────────────────────────────
 export async function getFinancialSummary(ownerId?: number) {
   const db = await getDb();
-  if (!db) return { totalRevenue: 0, totalExpenses: 0, netProfit: 0, pendingPayments: 0 };
+  if (!db) return { totalRevenue: 0, totalExpenses: 0, netProfit: 0, pendingPayments: 0, overduePayments: 0 };
   const paymentCond = [eq(payments.status, "paid")];
   if (ownerId) paymentCond.push(eq(payments.ownerId, ownerId));
   const [paidResult] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` })
     .from(payments).where(and(...paymentCond));
-  const expCond = [];
+  const expCond: any[] = [];
   if (ownerId) expCond.push(eq(expenses.ownerId, ownerId));
   const expQ = db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` }).from(expenses);
   const [expResult] = expCond.length ? await expQ.where(and(...expCond)) : await expQ;
@@ -452,20 +825,62 @@ export async function getFinancialSummary(ownerId?: number) {
   if (ownerId) pendCond.push(eq(payments.ownerId, ownerId));
   const [pendResult] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` })
     .from(payments).where(and(...pendCond));
+  const today = new Date().toISOString().split("T")[0];
+  const overdueCond = [or(eq(payments.status, "pending"), eq(payments.status, "partial")), lte(payments.dueDate, today as any)];
+  if (ownerId) overdueCond.push(eq(payments.ownerId, ownerId));
+  const [overdueResult] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` })
+    .from(payments).where(and(...(overdueCond.filter(Boolean) as any)));
   const totalRevenue = Number(paidResult?.total ?? 0);
   const totalExp = Number(expResult?.total ?? 0);
-  return { totalRevenue, totalExpenses: totalExp, netProfit: totalRevenue - totalExp, pendingPayments: Number(pendResult?.total ?? 0) };
+  return {
+    totalRevenue, totalExpenses: totalExp,
+    netProfit: totalRevenue - totalExp,
+    pendingPayments: Number(pendResult?.total ?? 0),
+    overduePayments: Number(overdueResult?.total ?? 0),
+  };
+}
+
+export async function getMonthlyRevenue(months: number = 12) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    month: sql<string>`DATE_FORMAT(paidDate, '%Y-%m')`,
+    total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)`,
+  }).from(payments)
+    .where(and(eq(payments.status, "paid"), sql`paidDate IS NOT NULL`))
+    .groupBy(sql`DATE_FORMAT(paidDate, '%Y-%m')`)
+    .orderBy(sql`DATE_FORMAT(paidDate, '%Y-%m')`)
+    .limit(months);
+}
+
+export async function getMonthlyExpenses(months: number = 12) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    month: sql<string>`DATE_FORMAT(expenseDate, '%Y-%m')`,
+    total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)`,
+    category: expenses.category,
+  }).from(expenses)
+    .groupBy(sql`DATE_FORMAT(expenseDate, '%Y-%m')`, expenses.category)
+    .orderBy(sql`DATE_FORMAT(expenseDate, '%Y-%m')`)
+    .limit(months * 8);
 }
 
 export async function getDashboardStats() {
   const db = await getDb();
-  if (!db) return { owners: 0, properties: 0, tenants: 0, activeContracts: 0, leads: 0, brokers: 0 };
+  if (!db) return { owners: 0, properties: 0, tenants: 0, activeContracts: 0, leads: 0, brokers: 0, vacantUnits: 0, overduePayments: 0, pendingMaintenance: 0 };
   const [ownersC] = await db.select({ count: sql<number>`COUNT(*)` }).from(propertyOwners).where(eq(propertyOwners.isActive, true));
   const [propsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(properties);
   const [tenantsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(tenants).where(eq(tenants.isActive, true));
   const [contractsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(contracts).where(eq(contracts.status, "active"));
   const [leadsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(leads);
   const [brokersC] = await db.select({ count: sql<number>`COUNT(*)` }).from(brokers).where(eq(brokers.isActive, true));
+  const [vacantC] = await db.select({ count: sql<number>`COUNT(*)` }).from(units).where(eq(units.status, "vacant"));
+  const today = new Date().toISOString().split("T")[0];
+  const [overdueC] = await db.select({ count: sql<number>`COUNT(*)` }).from(payments)
+    .where(and(eq(payments.status, "pending"), lte(payments.dueDate, today as any)));
+  const [maintC] = await db.select({ count: sql<number>`COUNT(*)` }).from(maintenanceRequests)
+    .where(or(eq(maintenanceRequests.status, "open"), eq(maintenanceRequests.status, "in_progress")));
   return {
     owners: Number(ownersC?.count ?? 0),
     properties: Number(propsC?.count ?? 0),
@@ -473,7 +888,28 @@ export async function getDashboardStats() {
     activeContracts: Number(contractsC?.count ?? 0),
     leads: Number(leadsC?.count ?? 0),
     brokers: Number(brokersC?.count ?? 0),
+    vacantUnits: Number(vacantC?.count ?? 0),
+    overduePayments: Number(overdueC?.count ?? 0),
+    pendingMaintenance: Number(maintC?.count ?? 0),
   };
+}
+
+// ─── GLOBAL SEARCH ───────────────────────────────────────────────────────────
+export async function globalSearch(query: string) {
+  const db = await getDb();
+  if (!db) return { properties: [], tenants: [], owners: [], contracts: [], leads: [] };
+  const term = `%${query}%`;
+  const [propsR, tenantsR, ownersR, leadsR] = await Promise.all([
+    db.select({ id: properties.id, titleAr: properties.titleAr, type: properties.type, city: properties.city })
+      .from(properties).where(or(like(properties.titleAr, term), like(properties.district, term), like(properties.city, term))).limit(10),
+    db.select({ id: tenants.id, name: tenants.name, phone: tenants.phone })
+      .from(tenants).where(or(like(tenants.name, term), like(tenants.phone, term), like(tenants.nationalId, term))).limit(10),
+    db.select({ id: propertyOwners.id, name: propertyOwners.name, phone: propertyOwners.phone })
+      .from(propertyOwners).where(or(like(propertyOwners.name, term), like(propertyOwners.phone, term))).limit(10),
+    db.select({ id: leads.id, name: leads.name, phone: leads.phone })
+      .from(leads).where(or(like(leads.name, term), like(leads.phone, term))).limit(10),
+  ]);
+  return { properties: propsR, tenants: tenantsR, owners: ownersR, contracts: [], leads: leadsR };
 }
 
 // ─── LEADS ────────────────────────────────────────────────────────────────────
@@ -512,14 +948,9 @@ export async function getLeads(filters?: {
   if (filters?.serviceType) conditions.push(eq(leads.serviceType, filters.serviceType as any));
   if (filters?.source) conditions.push(eq(leads.source, filters.source as any));
   if (filters?.search) {
-    conditions.push(or(
-      like(leads.name, `%${filters.search}%`),
-      like(leads.phone, `%${filters.search}%`),
-      like(leads.email, `%${filters.search}%`)
-    ));
+    conditions.push(or(like(leads.name, `%${filters.search}%`), like(leads.phone, `%${filters.search}%`), like(leads.email, `%${filters.search}%`)));
   }
-  const q = db.select().from(leads).orderBy(desc(leads.createdAt))
-    .limit(filters?.limit ?? 100).offset(filters?.offset ?? 0);
+  const q = db.select().from(leads).orderBy(desc(leads.createdAt)).limit(filters?.limit ?? 100).offset(filters?.offset ?? 0);
   return conditions.length ? q.where(and(...conditions)) : q;
 }
 
@@ -550,9 +981,7 @@ export async function saveChatMessage(sessionId: string, role: "user" | "assista
 export async function getChatHistory(sessionId: string, limit = 30) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(chatMessages)
-    .where(eq(chatMessages.sessionId, sessionId))
-    .orderBy(chatMessages.createdAt).limit(limit);
+  return db.select().from(chatMessages).where(eq(chatMessages.sessionId, sessionId)).orderBy(chatMessages.createdAt).limit(limit);
 }
 
 export async function getChatSessionsByLead(leadId: number) {
@@ -588,4 +1017,10 @@ export async function markNotificationRead(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, userId));
 }
