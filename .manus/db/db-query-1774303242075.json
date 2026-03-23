@@ -1,0 +1,110 @@
+{
+  "query": "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'payments' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'payments' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id",
+      "data_type": "int"
+    },
+    {
+      "column_name": "contractId",
+      "data_type": "int"
+    },
+    {
+      "column_name": "tenantId",
+      "data_type": "int"
+    },
+    {
+      "column_name": "propertyId",
+      "data_type": "int"
+    },
+    {
+      "column_name": "unitId",
+      "data_type": "int"
+    },
+    {
+      "column_name": "ownerId",
+      "data_type": "int"
+    },
+    {
+      "column_name": "type",
+      "data_type": "enum"
+    },
+    {
+      "column_name": "amount",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "dueDate",
+      "data_type": "date"
+    },
+    {
+      "column_name": "paidDate",
+      "data_type": "date"
+    },
+    {
+      "column_name": "paymentMethod",
+      "data_type": "enum"
+    },
+    {
+      "column_name": "referenceNumber",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "status",
+      "data_type": "enum"
+    },
+    {
+      "column_name": "notes",
+      "data_type": "text"
+    },
+    {
+      "column_name": "receiptUrl",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "createdAt",
+      "data_type": "timestamp"
+    },
+    {
+      "column_name": "updatedAt",
+      "data_type": "timestamp"
+    },
+    {
+      "column_name": "receiptNumber",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "bankReference",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "installmentNumber",
+      "data_type": "int"
+    },
+    {
+      "column_name": "totalInstallments",
+      "data_type": "int"
+    },
+    {
+      "column_name": "lateFee",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "lateDays",
+      "data_type": "int"
+    },
+    {
+      "column_name": "reminderSent",
+      "data_type": "tinyint"
+    },
+    {
+      "column_name": "escalationLevel",
+      "data_type": "int"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\tdata_type\nid\tint\ncontractId\tint\ntenantId\tint\npropertyId\tint\nunitId\tint\nownerId\tint\ntype\tenum\namount\tdecimal\ndueDate\tdate\npaidDate\tdate\npaymentMethod\tenum\nreferenceNumber\tvarchar\nstatus\tenum\nnotes\ttext\nreceiptUrl\tvarchar\ncreatedAt\ttimestamp\nupdatedAt\ttimestamp\nreceiptNumber\tvarchar\nbankReference\tvarchar\ninstallmentNumber\tint\ntotalInstallments\tint\nlateFee\tdecimal\nlateDays\tint\nreminderSent\ttinyint\nescalationLevel\tint\n",
+  "stderr": "",
+  "execution_time_ms": 1576
+}

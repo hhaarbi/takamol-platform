@@ -1,0 +1,67 @@
+{
+  "query": "SELECT column_name FROM information_schema.columns WHERE table_name = 'invoices' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name FROM information_schema.columns WHERE table_name = 'invoices' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id"
+    },
+    {
+      "column_name": "invoice_number"
+    },
+    {
+      "column_name": "contract_id"
+    },
+    {
+      "column_name": "tenant_id"
+    },
+    {
+      "column_name": "property_id"
+    },
+    {
+      "column_name": "amount"
+    },
+    {
+      "column_name": "vat_amount"
+    },
+    {
+      "column_name": "total_amount"
+    },
+    {
+      "column_name": "issue_date"
+    },
+    {
+      "column_name": "due_date"
+    },
+    {
+      "column_name": "paid_date"
+    },
+    {
+      "column_name": "status"
+    },
+    {
+      "column_name": "description"
+    },
+    {
+      "column_name": "qr_code"
+    },
+    {
+      "column_name": "zatca_uuid"
+    },
+    {
+      "column_name": "zatca_hash"
+    },
+    {
+      "column_name": "notes"
+    },
+    {
+      "column_name": "created_at"
+    },
+    {
+      "column_name": "updated_at"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\nid\ninvoice_number\ncontract_id\ntenant_id\nproperty_id\namount\nvat_amount\ntotal_amount\nissue_date\ndue_date\npaid_date\nstatus\ndescription\nqr_code\nzatca_uuid\nzatca_hash\nnotes\ncreated_at\nupdated_at\n",
+  "stderr": "",
+  "execution_time_ms": 1540
+}

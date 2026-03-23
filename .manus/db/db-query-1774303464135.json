@@ -1,0 +1,61 @@
+{
+  "query": "SELECT column_name FROM information_schema.columns WHERE table_name = 'property_listings' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name FROM information_schema.columns WHERE table_name = 'property_listings' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id"
+    },
+    {
+      "column_name": "property_id"
+    },
+    {
+      "column_name": "unit_id"
+    },
+    {
+      "column_name": "title"
+    },
+    {
+      "column_name": "description"
+    },
+    {
+      "column_name": "listing_type"
+    },
+    {
+      "column_name": "price"
+    },
+    {
+      "column_name": "status"
+    },
+    {
+      "column_name": "auto_published"
+    },
+    {
+      "column_name": "contact_phone"
+    },
+    {
+      "column_name": "contact_whatsapp"
+    },
+    {
+      "column_name": "views_count"
+    },
+    {
+      "column_name": "inquiries_count"
+    },
+    {
+      "column_name": "published_at"
+    },
+    {
+      "column_name": "expires_at"
+    },
+    {
+      "column_name": "created_at"
+    },
+    {
+      "column_name": "updated_at"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\nid\nproperty_id\nunit_id\ntitle\ndescription\nlisting_type\nprice\nstatus\nauto_published\ncontact_phone\ncontact_whatsapp\nviews_count\ninquiries_count\npublished_at\nexpires_at\ncreated_at\nupdated_at\n",
+  "stderr": "",
+  "execution_time_ms": 1562
+}

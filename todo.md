@@ -478,3 +478,11 @@
 - [x] جدول unit_reservations في قاعدة البيانات
 - [x] API reservations.create / confirm / cancel / list
 - [x] صفحة /reservations لإدارة الحجوزات
+
+## تنفيذ اقتراحات Full Debug
+
+- [x] إصلاح trust proxy في Express (app.set('trust proxy', 1)) — موجود بالفعل
+- [ ] إضافة بيانات تجريبية: عقارات، مستأجرون، عقود، مدفوعات
+- [ ] اختبار وإصلاح صفحة الفواتير الإلكترونية ZATCA
+- [ ] التحقق من توليد QR code في الفواتير
+- [ ] التحقق من تصدير PDF في الفواتير

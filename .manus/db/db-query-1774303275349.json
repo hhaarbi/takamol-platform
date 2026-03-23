@@ -1,0 +1,58 @@
+{
+  "query": "SELECT column_name FROM information_schema.columns WHERE table_name = 'expenses' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name FROM information_schema.columns WHERE table_name = 'expenses' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id"
+    },
+    {
+      "column_name": "propertyId"
+    },
+    {
+      "column_name": "unitId"
+    },
+    {
+      "column_name": "ownerId"
+    },
+    {
+      "column_name": "category"
+    },
+    {
+      "column_name": "description"
+    },
+    {
+      "column_name": "amount"
+    },
+    {
+      "column_name": "expenseDate"
+    },
+    {
+      "column_name": "paidBy"
+    },
+    {
+      "column_name": "deductFromOwner"
+    },
+    {
+      "column_name": "receiptUrl"
+    },
+    {
+      "column_name": "notes"
+    },
+    {
+      "column_name": "createdAt"
+    },
+    {
+      "column_name": "updatedAt"
+    },
+    {
+      "column_name": "approvedBy"
+    },
+    {
+      "column_name": "vendor"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\nid\npropertyId\nunitId\nownerId\ncategory\ndescription\namount\nexpenseDate\npaidBy\ndeductFromOwner\nreceiptUrl\nnotes\ncreatedAt\nupdatedAt\napprovedBy\nvendor\n",
+  "stderr": "",
+  "execution_time_ms": 1570
+}

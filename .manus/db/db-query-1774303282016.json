@@ -1,0 +1,100 @@
+{
+  "query": "SELECT column_name FROM information_schema.columns WHERE table_name = 'maintenance_requests' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name FROM information_schema.columns WHERE table_name = 'maintenance_requests' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id"
+    },
+    {
+      "column_name": "propertyId"
+    },
+    {
+      "column_name": "unitId"
+    },
+    {
+      "column_name": "tenantId"
+    },
+    {
+      "column_name": "title"
+    },
+    {
+      "column_name": "description"
+    },
+    {
+      "column_name": "priority"
+    },
+    {
+      "column_name": "status"
+    },
+    {
+      "column_name": "assignedTo"
+    },
+    {
+      "column_name": "cost"
+    },
+    {
+      "column_name": "completedDate"
+    },
+    {
+      "column_name": "images"
+    },
+    {
+      "column_name": "notes"
+    },
+    {
+      "column_name": "createdAt"
+    },
+    {
+      "column_name": "updatedAt"
+    },
+    {
+      "column_name": "vendor"
+    },
+    {
+      "column_name": "vendorPhone"
+    },
+    {
+      "column_name": "actualCost"
+    },
+    {
+      "column_name": "completedAt"
+    },
+    {
+      "column_name": "photos"
+    },
+    {
+      "column_name": "assignedPhone"
+    },
+    {
+      "column_name": "estimatedCost"
+    },
+    {
+      "column_name": "scheduledDate"
+    },
+    {
+      "column_name": "ownerApproval"
+    },
+    {
+      "column_name": "contractorId"
+    },
+    {
+      "column_name": "ownerApproved"
+    },
+    {
+      "column_name": "ownerApprovalDate"
+    },
+    {
+      "column_name": "completionDate"
+    },
+    {
+      "column_name": "invoiceUrl"
+    },
+    {
+      "column_name": "rating"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\nid\npropertyId\nunitId\ntenantId\ntitle\ndescription\npriority\nstatus\nassignedTo\ncost\ncompletedDate\nimages\nnotes\ncreatedAt\nupdatedAt\nvendor\nvendorPhone\nactualCost\ncompletedAt\nphotos\nassignedPhone\nestimatedCost\nscheduledDate\nownerApproval\ncontractorId\nownerApproved\nownerApprovalDate\ncompletionDate\ninvoiceUrl\nrating\n",
+  "stderr": "",
+  "execution_time_ms": 1572
+}

@@ -1,0 +1,34 @@
+{
+  "query": "SHOW COLUMNS FROM fal_licenses WHERE Field IN ('holderType', 'licenseType', 'status');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SHOW COLUMNS FROM fal_licenses WHERE Field IN ('holderType', 'licenseType', 'status');",
+  "rows": [
+    {
+      "Field": "holderType",
+      "Type": "enum('broker','company','agent')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "broker",
+      "Extra": ""
+    },
+    {
+      "Field": "licenseType",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "وسيط عقاري",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('active','expired','suspended','pending_renewal')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "active",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nholderType\tenum('broker','company','agent')\tNO\t\tbroker\t\nlicenseType\tvarchar(100)\tYES\t\tوسيط عقاري\t\nstatus\tenum('active','expired','suspended','pending_renewal')\tNO\t\tactive\t\n",
+  "stderr": "",
+  "execution_time_ms": 1600
+}

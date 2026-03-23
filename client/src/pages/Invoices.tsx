@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, FileText, QrCode, CheckCircle2, Clock, XCircle, AlertTriangle, Download } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   draft: { label: "مسودة", color: "bg-gray-100 text-gray-700", icon: <Clock className="h-3 w-3" /> },
@@ -74,23 +75,23 @@ export default function Invoices() {
   };
 
   const downloadQR = (qrCode: string, invoiceNumber: string) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 200;
-    canvas.height = 200;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, 200, 200);
-      ctx.fillStyle = "#000";
-      ctx.font = "12px Arial";
-      ctx.fillText(`QR: ${invoiceNumber}`, 10, 100);
-      ctx.fillText(qrCode.substring(0, 30) + "...", 10, 120);
-    }
-    const a = document.createElement("a");
-    a.download = `qr_${invoiceNumber}.png`;
-    a.href = canvas.toDataURL();
-    a.click();
-    toast.success("تم تنزيل QR Code");
+    const svgEl = document.getElementById('qr-svg-container')?.querySelector('svg') as SVGElement | null;
+    if (!svgEl) { toast.error('QR Code غير موجود'); return; }
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx?.drawImage(img, 0, 0);
+      const a = document.createElement('a');
+      a.download = `qr_${invoiceNumber}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+      toast.success('تم تنزيل QR Code');
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
   const vatAmount = form.amount ? (parseFloat(form.amount) * form.vatRate) / 100 : 0;
@@ -278,8 +279,12 @@ export default function Invoices() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground font-mono">{qrDialog.number}</p>
-            <div className="bg-white p-6 rounded-xl border-2 border-dashed border-muted mx-auto w-fit">
-              <QrCode className="h-24 w-24 text-gray-800" />
+            <div id="qr-svg-container" className="bg-white p-4 rounded-xl border-2 border-dashed border-muted mx-auto w-fit">
+              {qrDialog.qr ? (
+                <QRCodeSVG value={qrDialog.qr} size={200} level="M" includeMargin />
+              ) : (
+                <QrCode className="h-24 w-24 text-gray-800" />
+              )}
             </div>
             <div className="bg-muted/30 rounded-lg p-3 text-xs font-mono break-all text-muted-foreground">
               {qrDialog.qr}
