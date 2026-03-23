@@ -117,7 +117,7 @@ async function handleMessage(msg: TelegramBot.Message) {
   // Get available properties for context
   let propertiesContext = "";
   try {
-    const props = await getProperties({ available: true, limit: 10 });
+    const props = await getProperties({ status: "available", limit: 10 });
     if (props.length > 0) {
       propertiesContext =
         "\n\n**العقارات المتاحة حالياً:**\n" +
@@ -212,7 +212,7 @@ async function handleMessage(msg: TelegramBot.Message) {
         budget: extracted.budget || null,
         preferredCity: extracted.preferredCity || null,
         sessionId,
-        source: "chat",
+        source: "telegram",
         status: "new",
       });
 
@@ -316,7 +316,7 @@ async function handleMessage(msg: TelegramBot.Message) {
 async function sendProperties(chatId: number, listingType: "sale" | "rent") {
   if (!bot) return;
   try {
-    const props = await getProperties({ listingType, available: true, limit: 5 });
+    const props = await getProperties({ listingType, status: "available", limit: 5 });
     if (props.length === 0) {
       await bot.sendMessage(
         chatId,
@@ -383,13 +383,28 @@ async function handleStart(msg: TelegramBot.Message) {
 }
 
 // ─── Initialize bot ───────────────────────────────────────────────────────────
-export function initTelegramBot() {
+export async function initTelegramBot() {
   if (!TOKEN) {
     console.warn("[Telegram] No TELEGRAM_BOT_TOKEN set, skipping bot init");
     return;
   }
 
-  bot = new TelegramBot(TOKEN, { polling: true });
+  // Stop any existing bot instance to prevent 409 conflicts
+  if (bot) {
+    try { await (bot as any).stopPolling(); } catch (_) {}
+    bot = null;
+  }
+
+  // Delete webhook to ensure polling works cleanly
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${TOKEN}/deleteWebhook?drop_pending_updates=true`);
+    const data = await res.json() as { ok: boolean };
+    if (data.ok) console.log("[Telegram] Webhook cleared");
+  } catch (_) {}
+
+  // Use polling only in development to avoid conflicts in production
+  const isProduction = process.env.NODE_ENV === "production";
+  bot = new TelegramBot(TOKEN, { polling: !isProduction });
 
   bot.onText(/\/start/, handleStart);
 
@@ -403,11 +418,16 @@ export function initTelegramBot() {
     }
   });
 
-  bot.on("polling_error", (err) => {
-    console.error("[Telegram] Polling error:", err.message);
-  });
+  if (!isProduction) {
+    bot.on("polling_error", (err) => {
+      // Suppress 409 conflict errors during hot reload
+      if (!err.message.includes("409")) {
+        console.error("[Telegram] Polling error:", err.message);
+      }
+    });
+  }
 
-  console.log(`[Telegram] Bot @Takamolestatebot started ✅`);
+  console.log(`[Telegram] Bot @Takamolestatebot started ✅ (${isProduction ? "webhook" : "polling"} mode)`);
 }
 
 export { bot };

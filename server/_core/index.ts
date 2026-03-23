@@ -63,7 +63,6 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
-
-// Initialize Telegram bot
-initTelegramBot();
+startServer()
+  .then(() => initTelegramBot())
+  .catch(console.error);

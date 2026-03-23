@@ -1,440 +1,311 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Users,
-  Building2,
-  MessageSquare,
-  BarChart3,
-  LogOut,
-  Plus,
-  Search,
-  Download,
-  Eye,
-  Trash2,
-  Edit,
-  Phone,
-  Star,
-  Home,
-  TrendingUp,
-  Menu,
-  X,
+  LayoutDashboard, Users, Building2, FileText, CreditCard, Wrench,
+  TrendingUp, LogOut, Search, Plus, Download, Bell, ChevronRight,
+  MessageSquare, UserCheck, Briefcase, Home, RefreshCw, CheckCircle,
+  AlertCircle, Clock, X, Menu, DollarSign, BarChart3
 } from "lucide-react";
 
-type Tab = "overview" | "leads" | "properties" | "chats";
-
-const SERVICE_LABELS: Record<string, string> = {
-  buy: "شراء عقار",
-  sell: "بيع عقار",
-  rent_looking: "البحث عن إيجار",
-  rent_listing: "تأجير عقار",
-  property_management: "إدارة أملاك",
-  unknown: "غير محدد",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  new: "bg-blue-100 text-blue-800",
-  contacted: "bg-yellow-100 text-yellow-800",
-  qualified: "bg-green-100 text-green-800",
-  closed: "bg-gray-100 text-gray-800",
-  lost: "bg-red-100 text-red-800",
-};
-
 const STATUS_LABELS: Record<string, string> = {
-  new: "جديد",
-  contacted: "تم التواصل",
-  qualified: "مؤهل",
-  closed: "مغلق",
-  lost: "خسارة",
+  new: "جديد", contacted: "تم التواصل", qualified: "مؤهل", closed: "مغلق", lost: "خسارة",
+};
+const STATUS_COLORS: Record<string, string> = {
+  new: "bg-blue-100 text-blue-700", contacted: "bg-yellow-100 text-yellow-700",
+  qualified: "bg-green-100 text-green-700", closed: "bg-gray-100 text-gray-700",
+  lost: "bg-red-100 text-red-700",
+};
+const SERVICE_LABELS: Record<string, string> = {
+  buy: "شراء", sell: "بيع", rent_looking: "إيجار (باحث)", rent_listing: "إيجار (معروض)",
+  property_management: "إدارة أملاك", unknown: "غير محدد",
+};
+const PROPERTY_TYPES: Record<string, string> = {
+  apartment: "شقة", villa: "فيلا", land: "أرض", commercial: "تجاري",
+  office: "مكتب", warehouse: "مستودع", building: "مبنى", farm: "مزرعة",
 };
 
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  apartment: "شقة",
-  villa: "فيلا",
-  land: "أرض",
-  commercial: "تجاري",
-  office: "مكتب",
-  warehouse: "مستودع",
-};
+const NAV_ITEMS = [
+  { id: "overview", label: "نظرة عامة", icon: LayoutDashboard },
+  { id: "leads", label: "العملاء المحتملون", icon: Users },
+  { id: "properties", label: "العقارات", icon: Building2 },
+  { id: "owners", label: "الملاك", icon: UserCheck },
+  { id: "brokers", label: "الوسطاء", icon: Briefcase },
+  { id: "tenants", label: "المستأجرون", icon: Users },
+  { id: "contracts", label: "العقود", icon: FileText },
+  { id: "payments", label: "التحصيل", icon: CreditCard },
+  { id: "expenses", label: "المصاريف", icon: TrendingUp },
+  { id: "maintenance", label: "الصيانة", icon: Wrench },
+  { id: "chats", label: "المحادثات", icon: MessageSquare },
+];
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [serviceFilter, setServiceFilter] = useState<string>("all");
-  const [selectedLead, setSelectedLead] = useState<number | null>(null);
-  const [selectedLeadSession, setSelectedLeadSession] = useState<string | null>(null);
-  const [showAddProperty, setShowAddProperty] = useState(false);
   const [, navigate] = useLocation();
+  const { user, loading, isAuthenticated, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedLeadSession, setSelectedLeadSession] = useState<string | null>(null);
 
-  const { user, loading, isAuthenticated } = useAuth();
+  // Queries
+  const statsQuery = trpc.financial.dashboardStats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const financialQuery = trpc.financial.summary.useQuery(undefined as any, { enabled: isAuthenticated && user?.role === "admin" });
+  const leadsQuery = trpc.leads.list.useQuery({ limit: 200 }, { enabled: isAuthenticated && user?.role === "admin" });
+  const propertiesQuery = trpc.properties.list.useQuery({ limit: 100 }, { enabled: isAuthenticated && user?.role === "admin" });
+  const ownersQuery = trpc.owners.list.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" });
+  const brokersQuery = trpc.brokers.list.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" });
+  const tenantsQuery = trpc.tenants.list.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" });
+  const contractsQuery = trpc.contracts.list.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" });
+  const paymentsQuery = trpc.payments.list.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" });
+  const overdueQuery = trpc.payments.overdue.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const expensesQuery = trpc.expenses.list.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" });
+  const maintenanceQuery = trpc.maintenance.list.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" });
+  const chatHistoryQuery = trpc.chat.getHistory.useQuery(selectedLeadSession!, { enabled: !!selectedLeadSession });
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      window.location.href = getLoginUrl();
-    }
-  }, [loading, isAuthenticated]);
+  // Mutations
+  const updateLeadMutation = trpc.leads.update.useMutation({ onSuccess: () => { leadsQuery.refetch(); toast.success("تم التحديث"); } });
+  const createPropertyMutation = trpc.properties.create.useMutation({ onSuccess: () => { propertiesQuery.refetch(); toast.success("تم إضافة العقار"); setPropertyForm(defaultPropertyForm); } });
+  const deletePropertyMutation = trpc.properties.delete.useMutation({ onSuccess: () => { propertiesQuery.refetch(); toast.success("تم الحذف"); } });
+  const createOwnerMutation = trpc.owners.create.useMutation({ onSuccess: () => { ownersQuery.refetch(); toast.success("تم إضافة المالك"); setOwnerForm(defaultOwnerForm); } });
+  const createTenantMutation = trpc.tenants.create.useMutation({ onSuccess: () => { tenantsQuery.refetch(); toast.success("تم إضافة المستأجر"); } });
+  const markPaidMutation = trpc.payments.markPaid.useMutation({ onSuccess: () => { paymentsQuery.refetch(); overdueQuery.refetch(); toast.success("تم تسجيل الدفع"); } });
+  const createPaymentMutation = trpc.payments.create.useMutation({ onSuccess: () => { paymentsQuery.refetch(); toast.success("تم إضافة الدفعة"); } });
 
-  // Data queries
-  const leadsQuery = trpc.leads.list.useQuery({
-    search: searchQuery || undefined,
-    status: statusFilter !== "all" ? statusFilter : undefined,
-    serviceType: serviceFilter !== "all" ? serviceFilter : undefined,
-    limit: 200,
-  });
-
-  const leadsCountQuery = trpc.leads.count.useQuery();
-
-  const propertiesQuery = trpc.properties.list.useQuery({ limit: 100 });
-
-  const chatHistoryQuery = trpc.leads.getChatHistory.useQuery(
-    { sessionId: selectedLeadSession! },
-    { enabled: !!selectedLeadSession }
-  );
-
-  const updateStatusMutation = trpc.leads.updateStatus.useMutation({
-    onSuccess: () => {
-      leadsQuery.refetch();
-      toast.success("تم تحديث الحالة");
-    },
-  });
-
-  const deletePropertyMutation = trpc.properties.delete.useMutation({
-    onSuccess: () => {
-      propertiesQuery.refetch();
-      toast.success("تم حذف العقار");
-    },
-  });
-
-  // Add property form state
-  const [propertyForm, setPropertyForm] = useState({
-    titleAr: "",
-    title: "",
-    type: "apartment" as const,
-    listingType: "sale" as const,
-    price: "",
-    priceUnit: "total" as const,
-    area: "",
-    bedrooms: "",
-    bathrooms: "",
-    city: "المدينة المنورة",
-    district: "",
-    descriptionAr: "",
-    featuresAr: "",
-    negotiable: true,
-    isFeatured: false,
-    images: [] as string[],
-  });
-
-  const createPropertyMutation = trpc.properties.create.useMutation({
-    onSuccess: () => {
-      propertiesQuery.refetch();
-      setShowAddProperty(false);
-      toast.success("تم إضافة العقار بنجاح");
-      setPropertyForm({
-        titleAr: "",
-        title: "",
-        type: "apartment",
-        listingType: "sale",
-        price: "",
-        priceUnit: "total",
-        area: "",
-        bedrooms: "",
-        bathrooms: "",
-        city: "المدينة المنورة",
-        district: "",
-        descriptionAr: "",
-        featuresAr: "",
-        negotiable: true,
-        isFeatured: false,
-        images: [],
-      });
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
-  const uploadImageMutation = trpc.properties.uploadImage.useMutation();
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    for (const file of Array.from(files)) {
-      const reader = new FileReader();
-      reader.onload = async (ev) => {
-        const base64 = (ev.target?.result as string).split(",")[1];
-        try {
-          const { url } = await uploadImageMutation.mutateAsync({
-            base64,
-            filename: file.name,
-            mimeType: file.type,
-          });
-          setPropertyForm((prev) => ({ ...prev, images: [...prev.images, url] }));
-          toast.success("تم رفع الصورة");
-        } catch (e) {
-          toast.error("فشل رفع الصورة");
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAddProperty = () => {
-    createPropertyMutation.mutate({
-      ...propertyForm,
-      title: propertyForm.titleAr,
-      bedrooms: propertyForm.bedrooms ? parseInt(propertyForm.bedrooms) : undefined,
-      bathrooms: propertyForm.bathrooms ? parseInt(propertyForm.bathrooms) : undefined,
-      area: propertyForm.area || undefined,
-      district: propertyForm.district || undefined,
-      descriptionAr: propertyForm.descriptionAr || undefined,
-      featuresAr: propertyForm.featuresAr
-        ? propertyForm.featuresAr.split("\n").filter(Boolean)
-        : [],
-    });
-  };
-
-  const exportLeads = () => {
-    const leads = leadsQuery.data || [];
-    const csv = [
-      ["الاسم", "الجوال", "الخدمة", "الميزانية", "المدينة", "الحالة", "التاريخ"].join(","),
-      ...leads.map((l) =>
-        [
-          l.name || "",
-          l.phone || "",
-          SERVICE_LABELS[l.serviceType || "unknown"] || "",
-          l.budget || "",
-          l.preferredCity || "",
-          STATUS_LABELS[l.status] || "",
-          new Date(l.createdAt).toLocaleDateString("ar-SA"),
-        ].join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `عملاء-تكامل-${new Date().toLocaleDateString("ar-SA")}.csv`;
-    a.click();
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">جاري التحميل...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) return null;
+  const defaultPropertyForm = { titleAr: "", type: "apartment" as const, listingType: "rent" as const, price: "", area: "", bedrooms: "", bathrooms: "", district: "", descriptionAr: "", featuresAr: "" };
+  const defaultOwnerForm = { name: "", phone: "", email: "", nationalId: "", managementFeeType: "percentage" as const, managementFeeValue: "5.00", notes: "" };
+  const [propertyForm, setPropertyForm] = useState(defaultPropertyForm);
+  const [ownerForm, setOwnerForm] = useState(defaultOwnerForm);
+  const [showAddProperty, setShowAddProperty] = useState(false);
+  const [showAddOwner, setShowAddOwner] = useState(false);
 
   const leads = leadsQuery.data || [];
   const properties = propertiesQuery.data || [];
-  const totalLeads = leadsCountQuery.data || 0;
-  const newLeads = leads.filter((l) => l.status === "new").length;
-  const saleProps = properties.filter((p) => p.listingType === "sale").length;
-  const rentProps = properties.filter((p) => p.listingType === "rent").length;
+  const owners = ownersQuery.data || [];
+  const brokers = brokersQuery.data || [];
+  const tenants = tenantsQuery.data || [];
+  const contracts = contractsQuery.data || [];
+  const payments = paymentsQuery.data || [];
+  const overdue = overdueQuery.data || [];
+  const expenses = expensesQuery.data || [];
+  const maintenance = maintenanceQuery.data || [];
+  const stats = statsQuery.data;
+  const financial = financialQuery.data;
 
-  const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "overview", label: "نظرة عامة", icon: <BarChart3 size={18} /> },
-    { id: "leads", label: "العملاء", icon: <Users size={18} /> },
-    { id: "properties", label: "العقارات", icon: <Building2 size={18} /> },
-    { id: "chats", label: "المحادثات", icon: <MessageSquare size={18} /> },
-  ];
+  const filteredLeads = leads.filter(l =>
+    !search || l.name?.includes(search) || l.phone?.includes(search)
+  );
+
+  const exportLeads = () => {
+    const csv = [
+      ["الاسم", "الجوال", "الخدمة", "الميزانية", "الحالة", "المصدر", "التاريخ"].join(","),
+      ...leads.map(l => [l.name || "", l.phone || "", SERVICE_LABELS[l.serviceType || "unknown"], l.budget || "", STATUS_LABELS[l.status || "new"], l.source || "", new Date(l.createdAt).toLocaleDateString("ar-SA")].join(","))
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "leads.csv"; a.click();
+  };
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-slate-600">جاري التحميل...</p>
+      </div>
+    </div>
+  );
+
+  if (!isAuthenticated) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50" dir="rtl">
+      <Card className="w-full max-w-sm shadow-xl">
+        <CardContent className="p-8 text-center">
+          <Building2 size={48} className="mx-auto mb-4 text-amber-500" />
+          <h2 className="text-xl font-bold mb-2">لوحة تحكم تكامل</h2>
+          <p className="text-slate-500 mb-6 text-sm">يرجى تسجيل الدخول للوصول</p>
+          <Button className="w-full bg-amber-500 hover:bg-amber-600" onClick={() => window.location.href = getLoginUrl()}>
+            تسجيل الدخول
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  if (user?.role !== "admin") return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50" dir="rtl">
+      <Card className="w-full max-w-sm shadow-xl">
+        <CardContent className="p-8 text-center">
+          <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
+          <h2 className="text-xl font-bold mb-2">غير مصرح</h2>
+          <p className="text-slate-500 mb-6 text-sm">هذه الصفحة للمدير فقط</p>
+          <Button variant="outline" onClick={() => navigate("/")}>العودة للرئيسية</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen flex bg-background" dir="rtl">
+    <div className="min-h-screen bg-slate-50 flex" dir="rtl">
       {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 right-0 z-50 w-64 bg-sidebar text-sidebar-foreground flex flex-col transition-transform duration-300 lg:static lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Logo */}
-        <div className="p-6 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center">
-              <Building2 size={20} className="text-white" />
-            </div>
+      <aside className={`${sidebarOpen ? "w-64" : "w-16"} bg-slate-900 text-white flex flex-col transition-all duration-300 fixed h-full z-40`}>
+        <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+          {sidebarOpen && (
             <div>
-              <p className="font-bold text-sm text-sidebar-foreground">تكامل</p>
-              <p className="text-xs text-sidebar-foreground/60">لوحة التحكم</p>
+              <h1 className="font-bold text-amber-400 text-sm">تكامل</h1>
+              <p className="text-slate-400 text-xs">لوحة الإدارة</p>
             </div>
-          </div>
+          )}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-400 hover:text-white p-1">
+            <Menu size={18} />
+          </button>
         </div>
-
-        {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => (
+        <nav className="flex-1 p-2 overflow-y-auto">
+          {NAV_ITEMS.map(item => (
             <button
               key={item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                setSidebarOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                activeTab === item.id
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 text-sm transition-colors ${activeTab === item.id ? "bg-amber-500 text-white" : "text-slate-300 hover:bg-slate-800"}`}
             >
-              {item.icon}
-              {item.label}
+              <item.icon size={18} className="shrink-0" />
+              {sidebarOpen && <span>{item.label}</span>}
             </button>
           ))}
         </nav>
-
-        {/* User */}
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-xs font-bold text-white">
-              {user?.name?.charAt(0) || "م"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-sidebar-foreground">{user?.name || "المالك"}</p>
-              <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email || ""}</p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-sidebar-foreground border-sidebar-border hover:bg-sidebar-accent"
-            onClick={() => navigate("/")}
-          >
-            <Home size={14} className="ml-2" />
-            الصفحة الرئيسية
-          </Button>
+        <div className="p-3 border-t border-slate-700">
+          {sidebarOpen && <p className="text-xs text-slate-400 mb-2 truncate">{user?.name}</p>}
+          <button onClick={logout} className="w-full flex items-center gap-2 text-slate-400 hover:text-red-400 text-xs px-2 py-1.5 rounded">
+            <LogOut size={14} />
+            {sidebarOpen && "خروج"}
+          </button>
         </div>
       </aside>
 
-      {/* Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main content */}
+      <main className={`flex-1 ${sidebarOpen ? "mr-64" : "mr-16"} transition-all duration-300`}>
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-          <button
-            className="lg:hidden p-2 rounded-lg hover:bg-muted"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-          <h1 className="text-lg font-bold text-foreground">
-            {navItems.find((n) => n.id === activeTab)?.label}
-          </h1>
+        <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold text-slate-800 text-sm">
+              {NAV_ITEMS.find(n => n.id === activeTab)?.label}
+            </h2>
+            {overdue.length > 0 && (
+              <Badge variant="destructive" className="text-xs">{overdue.length} متأخر</Badge>
+            )}
+          </div>
           <div className="flex items-center gap-2">
-            {activeTab === "leads" && (
-              <Button size="sm" variant="outline" onClick={exportLeads}>
-                <Download size={14} className="ml-1" />
-                تصدير
-              </Button>
-            )}
-            {activeTab === "properties" && (
-              <Button size="sm" className="gold-gradient text-white" onClick={() => setShowAddProperty(true)}>
-                <Plus size={14} className="ml-1" />
-                إضافة عقار
-              </Button>
-            )}
+            <div className="relative">
+              <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..." className="h-8 text-xs pr-8 w-48" />
+            </div>
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => navigate("/")}>
+              <Home size={14} className="ml-1" /> الموقع
+            </Button>
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <div className="p-6">
           {/* ── Overview ── */}
           {activeTab === "overview" && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Stats grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {[
-                  { label: "إجمالي العملاء", value: totalLeads, icon: <Users size={20} />, color: "text-blue-600" },
-                  { label: "عملاء جدد", value: newLeads, icon: <TrendingUp size={20} />, color: "text-green-600" },
-                  { label: "عقارات للبيع", value: saleProps, icon: <Building2 size={20} />, color: "text-amber-600" },
-                  { label: "عقارات للإيجار", value: rentProps, icon: <Home size={20} />, color: "text-purple-600" },
-                ].map((stat) => (
-                  <Card key={stat.label} className="border-border">
+                  { label: "الملاك", value: stats?.owners ?? 0, icon: UserCheck, color: "text-blue-600 bg-blue-50" },
+                  { label: "العقارات", value: stats?.properties ?? 0, icon: Building2, color: "text-amber-600 bg-amber-50" },
+                  { label: "المستأجرون", value: stats?.tenants ?? 0, icon: Users, color: "text-green-600 bg-green-50" },
+                  { label: "العقود النشطة", value: stats?.activeContracts ?? 0, icon: FileText, color: "text-purple-600 bg-purple-50" },
+                  { label: "العملاء المحتملون", value: stats?.leads ?? 0, icon: Users, color: "text-orange-600 bg-orange-50" },
+                  { label: "الوسطاء", value: stats?.brokers ?? 0, icon: Briefcase, color: "text-teal-600 bg-teal-50" },
+                ].map((s, i) => (
+                  <Card key={i} className="border-0 shadow-sm">
                     <CardContent className="p-4">
-                      <div className={`${stat.color} mb-2`}>{stat.icon}</div>
-                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>
+                        <s.icon size={20} />
+                      </div>
+                      <p className="text-2xl font-bold text-slate-800">{s.value}</p>
+                      <p className="text-xs text-slate-500 mt-1">{s.label}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
 
-              {/* Recent leads */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">آخر العملاء</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {leads.slice(0, 5).length === 0 ? (
-                    <p className="text-muted-foreground text-sm text-center py-4">لا يوجد عملاء بعد</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {leads.slice(0, 5).map((lead) => (
-                        <div key={lead.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                          <div>
-                            <p className="font-medium text-sm">{lead.name || "غير محدد"}</p>
-                            <p className="text-xs text-muted-foreground">{SERVICE_LABELS[lead.serviceType || "unknown"]}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {lead.phone && (
-                              <a href={`tel:${lead.phone}`} className="text-primary hover:underline text-xs">
-                                {lead.phone}
-                              </a>
-                            )}
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[lead.status]}`}>
-                              {STATUS_LABELS[lead.status]}
-                            </span>
+              {/* Financial summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { label: "إجمالي الإيرادات", value: financial?.totalRevenue ?? 0, icon: TrendingUp, color: "text-green-600", bg: "bg-green-50" },
+                  { label: "إجمالي المصاريف", value: financial?.totalExpenses ?? 0, icon: DollarSign, color: "text-red-600", bg: "bg-red-50" },
+                  { label: "صافي الربح", value: financial?.netProfit ?? 0, icon: BarChart3, color: "text-blue-600", bg: "bg-blue-50" },
+                ].map((f, i) => (
+                  <Card key={i} className="border-0 shadow-sm">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${f.bg}`}>
+                        <f.icon size={22} className={f.color} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">{f.label}</p>
+                        <p className={`text-xl font-bold ${f.color}`}>{Number(f.value).toLocaleString("ar-SA")} ﷼</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Overdue payments alert */}
+              {overdue.length > 0 && (
+                <Card className="border-red-200 bg-red-50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-red-700 flex items-center gap-2">
+                      <AlertCircle size={16} /> دفعات متأخرة ({overdue.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {overdue.slice(0, 5).map(p => (
+                        <div key={p.id} className="flex items-center justify-between bg-white rounded-lg p-3 text-sm">
+                          <span className="text-slate-700">{p.notes || `دفعة #${p.id}`}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-red-600 font-medium">{Number(p.amount).toLocaleString("ar-SA")} ﷼</span>
+                            <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                              onClick={() => markPaidMutation.mutate({ id: p.id, paymentMethod: "bank_transfer" })}>
+                              <CheckCircle size={12} className="ml-1" /> تسجيل دفع
+                            </Button>
                           </div>
                         </div>
                       ))}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
-              {/* Service breakdown */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">توزيع الخدمات المطلوبة</CardTitle>
+              {/* Recent leads */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm">آخر العملاء المحتملين</CardTitle>
+                  <Button size="sm" variant="ghost" className="text-xs" onClick={() => setActiveTab("leads")}>
+                    عرض الكل <ChevronRight size={14} className="mr-1" />
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {Object.entries(SERVICE_LABELS).map(([key, label]) => {
-                      const count = leads.filter((l) => l.serviceType === key).length;
-                      const pct = leads.length > 0 ? Math.round((count / leads.length) * 100) : 0;
-                      return (
-                        <div key={key} className="p-3 rounded-lg border border-border">
-                          <p className="text-xs text-muted-foreground">{label}</p>
-                          <p className="text-xl font-bold text-foreground">{count}</p>
-                          <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full gold-gradient rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
+                  <div className="space-y-2">
+                    {leads.slice(0, 5).map(lead => (
+                      <div key={lead.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <div>
+                          <p className="font-medium text-sm text-slate-800">{lead.name || "غير محدد"}</p>
+                          <p className="text-xs text-slate-500">{lead.phone || ""} • {SERVICE_LABELS[lead.serviceType || "unknown"]}</p>
                         </div>
-                      );
-                    })}
+                        <Badge className={`text-xs ${STATUS_COLORS[lead.status || "new"]}`}>
+                          {STATUS_LABELS[lead.status || "new"]}
+                        </Badge>
+                      </div>
+                    ))}
+                    {leads.length === 0 && <p className="text-center text-slate-400 text-sm py-4">لا يوجد عملاء بعد</p>}
                   </div>
                 </CardContent>
               </Card>
@@ -444,130 +315,49 @@ export default function Dashboard() {
           {/* ── Leads ── */}
           {activeTab === "leads" && (
             <div className="space-y-4">
-              {/* Filters */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="بحث بالاسم أو الجوال..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pr-9"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="الحالة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">كل الحالات</SelectItem>
-                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={serviceFilter} onValueChange={setServiceFilter}>
-                  <SelectTrigger className="w-full sm:w-44">
-                    <SelectValue placeholder="الخدمة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">كل الخدمات</SelectItem>
-                    {Object.entries(SERVICE_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">{leads.length} عميل محتمل</p>
+                <Button size="sm" variant="outline" className="text-xs" onClick={exportLeads}>
+                  <Download size={14} className="ml-1" /> تصدير CSV
+                </Button>
               </div>
-
-              {/* Table */}
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-muted/50">
-                          <th className="text-right p-3 font-medium text-muted-foreground">الاسم</th>
-                          <th className="text-right p-3 font-medium text-muted-foreground">الجوال</th>
-                          <th className="text-right p-3 font-medium text-muted-foreground">الخدمة</th>
-                          <th className="text-right p-3 font-medium text-muted-foreground">الميزانية</th>
-                          <th className="text-right p-3 font-medium text-muted-foreground">الحالة</th>
-                          <th className="text-right p-3 font-medium text-muted-foreground">التاريخ</th>
-                          <th className="text-right p-3 font-medium text-muted-foreground">إجراءات</th>
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>
+                        {["الاسم", "الجوال", "الخدمة", "الميزانية", "المصدر", "الحالة", "التاريخ"].map(h => (
+                          <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredLeads.map(lead => (
+                        <tr key={lead.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-medium text-slate-800">{lead.name || "—"}</td>
+                          <td className="p-3 text-slate-600 font-mono text-xs">{lead.phone || "—"}</td>
+                          <td className="p-3">
+                            <Badge variant="outline" className="text-xs">{SERVICE_LABELS[lead.serviceType || "unknown"]}</Badge>
+                          </td>
+                          <td className="p-3 text-slate-500 text-xs">{lead.budget || "—"}</td>
+                          <td className="p-3 text-slate-500 text-xs">{lead.source || "—"}</td>
+                          <td className="p-3">
+                            <Select value={lead.status || "new"} onValueChange={v => updateLeadMutation.mutate({ id: lead.id, data: { status: v } })}>
+                              <SelectTrigger className={`h-7 text-xs w-28 border-0 ${STATUS_COLORS[lead.status || "new"]}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-3 text-slate-400 text-xs">{new Date(lead.createdAt).toLocaleDateString("ar-SA")}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {leads.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="text-center py-8 text-muted-foreground">
-                              لا يوجد عملاء
-                            </td>
-                          </tr>
-                        ) : (
-                          leads.map((lead) => (
-                            <tr key={lead.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                              <td className="p-3 font-medium">{lead.name || "—"}</td>
-                              <td className="p-3">
-                                {lead.phone ? (
-                                  <a
-                                    href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-green-600 hover:underline flex items-center gap-1"
-                                  >
-                                    <Phone size={12} />
-                                    {lead.phone}
-                                  </a>
-                                ) : (
-                                  "—"
-                                )}
-                              </td>
-                              <td className="p-3">
-                                <Badge variant="secondary" className="text-xs">
-                                  {SERVICE_LABELS[lead.serviceType || "unknown"]}
-                                </Badge>
-                              </td>
-                              <td className="p-3 text-muted-foreground">{lead.budget || "—"}</td>
-                              <td className="p-3">
-                                <Select
-                                  value={lead.status}
-                                  onValueChange={(v) =>
-                                    updateStatusMutation.mutate({ id: lead.id, status: v as any })
-                                  }
-                                >
-                                  <SelectTrigger className={`h-7 text-xs w-28 ${STATUS_COLORS[lead.status]}`}>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </td>
-                              <td className="p-3 text-muted-foreground text-xs">
-                                {new Date(lead.createdAt).toLocaleDateString("ar-SA")}
-                              </td>
-                              <td className="p-3">
-                                {lead.sessionId && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setSelectedLeadSession(lead.sessionId!);
-                                      setActiveTab("chats");
-                                    }}
-                                  >
-                                    <Eye size={14} />
-                                  </Button>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
+                      ))}
+                    </tbody>
+                  </table>
+                  {filteredLeads.length === 0 && <p className="text-center text-slate-400 py-8">لا توجد نتائج</p>}
+                </div>
               </Card>
             </div>
           )}
@@ -575,65 +365,372 @@ export default function Dashboard() {
           {/* ── Properties ── */}
           {activeTab === "properties" && (
             <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">{properties.length} عقار</p>
+                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-xs" onClick={() => setShowAddProperty(!showAddProperty)}>
+                  <Plus size={14} className="ml-1" /> إضافة عقار
+                </Button>
+              </div>
+
+              {showAddProperty && (
+                <Card className="border-amber-200 border-0 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      إضافة عقار جديد
+                      <button onClick={() => setShowAddProperty(false)}><X size={16} /></button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <Input placeholder="عنوان العقار *" value={propertyForm.titleAr} onChange={e => setPropertyForm(p => ({ ...p, titleAr: e.target.value }))} className="text-sm" />
+                      <Select value={propertyForm.type} onValueChange={v => setPropertyForm(p => ({ ...p, type: v as any }))}>
+                        <SelectTrigger className="text-sm"><SelectValue placeholder="نوع العقار" /></SelectTrigger>
+                        <SelectContent>{Object.entries(PROPERTY_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={propertyForm.listingType} onValueChange={v => setPropertyForm(p => ({ ...p, listingType: v as any }))}>
+                        <SelectTrigger className="text-sm"><SelectValue placeholder="نوع الإعلان" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sale">للبيع</SelectItem>
+                          <SelectItem value="rent">للإيجار</SelectItem>
+                          <SelectItem value="managed">مُدار</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input placeholder="السعر (ريال) *" value={propertyForm.price} onChange={e => setPropertyForm(p => ({ ...p, price: e.target.value }))} className="text-sm" />
+                      <Input placeholder="المساحة (م²)" value={propertyForm.area} onChange={e => setPropertyForm(p => ({ ...p, area: e.target.value }))} className="text-sm" />
+                      <Input placeholder="الحي / الموقع" value={propertyForm.district} onChange={e => setPropertyForm(p => ({ ...p, district: e.target.value }))} className="text-sm" />
+                      <Input placeholder="غرف النوم" type="number" value={propertyForm.bedrooms} onChange={e => setPropertyForm(p => ({ ...p, bedrooms: e.target.value }))} className="text-sm" />
+                      <Input placeholder="دورات المياه" type="number" value={propertyForm.bathrooms} onChange={e => setPropertyForm(p => ({ ...p, bathrooms: e.target.value }))} className="text-sm" />
+                    </div>
+                    <textarea placeholder="وصف العقار" value={propertyForm.descriptionAr} onChange={e => setPropertyForm(p => ({ ...p, descriptionAr: e.target.value }))} className="w-full mt-3 p-2 border rounded-md text-sm resize-none h-20" />
+                    <Button className="mt-3 bg-amber-500 hover:bg-amber-600 text-sm" onClick={() => {
+                      if (!propertyForm.titleAr || !propertyForm.price) return toast.error("يرجى ملء الحقول المطلوبة");
+                      createPropertyMutation.mutate({ ...propertyForm, bedrooms: propertyForm.bedrooms ? parseInt(propertyForm.bedrooms) : undefined, bathrooms: propertyForm.bathrooms ? parseInt(propertyForm.bathrooms) : undefined, area: propertyForm.area || undefined, district: propertyForm.district || undefined, descriptionAr: propertyForm.descriptionAr || undefined, features: [] });
+                    }} disabled={createPropertyMutation.isPending}>
+                      {createPropertyMutation.isPending ? "جاري الحفظ..." : "حفظ العقار"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {properties.length === 0 ? (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                {properties.map(prop => (
+                  <Card key={prop.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-slate-800 text-sm">{prop.titleAr}</h3>
+                          <p className="text-xs text-slate-500">{prop.city} {prop.district ? `• ${prop.district}` : ""}</p>
+                        </div>
+                        <Badge className={`text-xs ${prop.listingType === "sale" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                          {prop.listingType === "sale" ? "بيع" : prop.listingType === "rent" ? "إيجار" : "مُدار"}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mb-3">
+                        <span>🏠 {PROPERTY_TYPES[prop.type] || prop.type}</span>
+                        {prop.area && <span>📐 {prop.area} م²</span>}
+                        {prop.bedrooms && <span>🛏 {prop.bedrooms} غرف</span>}
+                        {prop.bathrooms && <span>🚿 {prop.bathrooms} حمام</span>}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-600">{Number(prop.price).toLocaleString("ar-SA")} ﷼</span>
+                        <Button size="sm" variant="outline" className="text-xs h-7 text-red-500 hover:text-red-700"
+                          onClick={() => { if (confirm("حذف هذا العقار؟")) deletePropertyMutation.mutate(prop.id); }}>
+                          حذف
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {properties.length === 0 && (
+                  <div className="col-span-3 text-center py-12 text-slate-400">
                     <Building2 size={40} className="mx-auto mb-3 opacity-30" />
-                    <p>لا توجد عقارات. أضف عقاراً جديداً.</p>
+                    <p>لا توجد عقارات بعد</p>
                   </div>
-                ) : (
-                  properties.map((prop) => (
-                    <Card key={prop.id} className="overflow-hidden border-border">
-                      {(prop.images as string[])?.length > 0 ? (
-                        <img
-                          src={(prop.images as string[])[0]}
-                          alt={prop.titleAr}
-                          className="w-full h-40 object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-40 bg-muted flex items-center justify-center">
-                          <Building2 size={32} className="text-muted-foreground" />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Owners ── */}
+          {activeTab === "owners" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">{owners.length} مالك</p>
+                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-xs" onClick={() => setShowAddOwner(!showAddOwner)}>
+                  <Plus size={14} className="ml-1" /> إضافة مالك
+                </Button>
+              </div>
+              {showAddOwner && (
+                <Card className="border-0 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      إضافة مالك جديد
+                      <button onClick={() => setShowAddOwner(false)}><X size={16} /></button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <Input placeholder="الاسم *" value={ownerForm.name} onChange={e => setOwnerForm(p => ({ ...p, name: e.target.value }))} className="text-sm" />
+                      <Input placeholder="الجوال *" value={ownerForm.phone} onChange={e => setOwnerForm(p => ({ ...p, phone: e.target.value }))} className="text-sm" />
+                      <Input placeholder="البريد الإلكتروني" value={ownerForm.email} onChange={e => setOwnerForm(p => ({ ...p, email: e.target.value }))} className="text-sm" />
+                      <Input placeholder="رقم الهوية" value={ownerForm.nationalId} onChange={e => setOwnerForm(p => ({ ...p, nationalId: e.target.value }))} className="text-sm" />
+                      <Select value={ownerForm.managementFeeType} onValueChange={v => setOwnerForm(p => ({ ...p, managementFeeType: v as any }))}>
+                        <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">نسبة مئوية</SelectItem>
+                          <SelectItem value="fixed">مبلغ ثابت</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input placeholder="قيمة رسوم الإدارة" value={ownerForm.managementFeeValue} onChange={e => setOwnerForm(p => ({ ...p, managementFeeValue: e.target.value }))} className="text-sm" />
+                    </div>
+                    <Button className="mt-3 bg-amber-500 hover:bg-amber-600 text-sm" onClick={() => {
+                      if (!ownerForm.name || !ownerForm.phone) return toast.error("يرجى ملء الحقول المطلوبة");
+                      createOwnerMutation.mutate(ownerForm);
+                    }} disabled={createOwnerMutation.isPending}>
+                      {createOwnerMutation.isPending ? "جاري الحفظ..." : "حفظ المالك"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>{["الاسم", "الجوال", "رسوم الإدارة", "الحالة", "تاريخ الإضافة"].map(h => (
+                        <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {owners.map(o => (
+                        <tr key={o.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-medium">{o.name}</td>
+                          <td className="p-3 text-slate-500 font-mono text-xs">{o.phone}</td>
+                          <td className="p-3 text-slate-500 text-xs">{o.managementFeeValue}{o.managementFeeType === "percentage" ? "%" : " ﷼"}</td>
+                          <td className="p-3"><Badge className={o.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>{o.isActive ? "نشط" : "غير نشط"}</Badge></td>
+                          <td className="p-3 text-slate-400 text-xs">{new Date(o.createdAt).toLocaleDateString("ar-SA")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {owners.length === 0 && <p className="text-center text-slate-400 py-8">لا يوجد ملاك بعد</p>}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ── Brokers ── */}
+          {activeTab === "brokers" && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">{brokers.length} وسيط</p>
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>{["الاسم", "الجوال", "رقم الترخيص", "الحالة", "تاريخ الإضافة"].map(h => (
+                        <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {brokers.map(b => (
+                        <tr key={b.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-medium">{b.name}</td>
+                          <td className="p-3 text-slate-500 font-mono text-xs">{b.phone}</td>
+                          <td className="p-3 text-slate-500 text-xs">{b.licenseNumber || "—"}</td>
+                          <td className="p-3"><Badge className={b.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>{b.isActive ? "نشط" : "غير نشط"}</Badge></td>
+                          <td className="p-3 text-slate-400 text-xs">{new Date(b.createdAt).toLocaleDateString("ar-SA")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {brokers.length === 0 && <p className="text-center text-slate-400 py-8">لا يوجد وسطاء بعد</p>}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ── Tenants ── */}
+          {activeTab === "tenants" && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">{tenants.length} مستأجر</p>
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>{["الاسم", "الجوال", "الهوية", "الجنسية", "الحالة"].map(h => (
+                        <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {tenants.map(t => (
+                        <tr key={t.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-medium">{t.name}</td>
+                          <td className="p-3 text-slate-500 font-mono text-xs">{t.phone}</td>
+                          <td className="p-3 text-slate-500 text-xs">{t.nationalId || "—"}</td>
+                          <td className="p-3 text-slate-500 text-xs">{t.nationality || "—"}</td>
+                          <td className="p-3"><Badge className={t.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>{t.isActive ? "نشط" : "منتهي"}</Badge></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {tenants.length === 0 && <p className="text-center text-slate-400 py-8">لا يوجد مستأجرون بعد</p>}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ── Contracts ── */}
+          {activeTab === "contracts" && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">{contracts.length} عقد</p>
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>{["رقم العقد", "النوع", "المبلغ", "تاريخ البداية", "تاريخ النهاية", "الحالة"].map(h => (
+                        <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {contracts.map(c => (
+                        <tr key={c.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-mono text-xs">{c.contractNumber}</td>
+                          <td className="p-3 text-xs">{c.type === "rent" ? "إيجار" : c.type === "sale" ? "بيع" : "إدارة"}</td>
+                          <td className="p-3 text-amber-600 font-medium text-xs">{c.rentAmount ? `${Number(c.rentAmount).toLocaleString("ar-SA")} ﷼` : c.salePrice ? `${Number(c.salePrice).toLocaleString("ar-SA")} ﷼` : "—"}</td>
+                          <td className="p-3 text-slate-500 text-xs">{c.startDate ? new Date(c.startDate).toLocaleDateString("ar-SA") : "—"}</td>
+                          <td className="p-3 text-slate-500 text-xs">{c.endDate ? new Date(c.endDate).toLocaleDateString("ar-SA") : "—"}</td>
+                          <td className="p-3"><Badge className={c.status === "active" ? "bg-green-100 text-green-700" : c.status === "expired" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"}>{c.status === "active" ? "نشط" : c.status === "expired" ? "منتهي" : c.status}</Badge></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {contracts.length === 0 && <p className="text-center text-slate-400 py-8">لا توجد عقود بعد</p>}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ── Payments ── */}
+          {activeTab === "payments" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">{payments.length} دفعة • {overdue.length} متأخرة</p>
+              </div>
+              {overdue.length > 0 && (
+                <Card className="border-red-200 bg-red-50 border-0 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-red-700 flex items-center gap-2">
+                      <AlertCircle size={16} /> دفعات متأخرة ({overdue.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {overdue.map(p => (
+                      <div key={p.id} className="flex items-center justify-between bg-white rounded-lg p-3">
+                        <div>
+                          <p className="text-sm font-medium">{p.notes || `دفعة #${p.id}`}</p>
+                          <p className="text-xs text-slate-500">استحقاق: {new Date(p.dueDate).toLocaleDateString("ar-SA")}</p>
                         </div>
-                      )}
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-sm truncate">{prop.titleAr}</h3>
-                            <p className="text-xs text-muted-foreground">{prop.city} {prop.district ? `- ${prop.district}` : ""}</p>
-                          </div>
-                          {prop.isFeatured && <Star size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <Badge variant={prop.listingType === "sale" ? "default" : "secondary"} className="text-xs ml-1">
-                              {prop.listingType === "sale" ? "للبيع" : "للإيجار"}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {PROPERTY_TYPE_LABELS[prop.type]}
-                            </Badge>
-                          </div>
-                          <p className="text-sm font-bold text-primary">
-                            {Number(prop.price).toLocaleString("ar-SA")} ر.س
-                          </p>
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 text-xs"
-                            onClick={() => {
-                              if (confirm("هل تريد حذف هذا العقار؟")) {
-                                deletePropertyMutation.mutate({ id: prop.id });
-                              }
-                            }}
-                          >
-                            <Trash2 size={12} className="ml-1" />
-                            حذف
+                        <div className="flex items-center gap-3">
+                          <span className="text-red-600 font-bold">{Number(p.amount).toLocaleString("ar-SA")} ﷼</span>
+                          <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                            onClick={() => markPaidMutation.mutate({ id: p.id, paymentMethod: "bank_transfer" })}>
+                            تسجيل دفع
                           </Button>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>{["النوع", "المبلغ", "تاريخ الاستحقاق", "تاريخ الدفع", "طريقة الدفع", "الحالة"].map(h => (
+                        <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {payments.map(p => (
+                        <tr key={p.id} className="hover:bg-slate-50">
+                          <td className="p-3 text-xs">{p.type === "rent" ? "إيجار" : p.type === "deposit" ? "وديعة" : p.type === "management_fee" ? "رسوم إدارة" : p.type}</td>
+                          <td className="p-3 font-medium text-amber-600">{Number(p.amount).toLocaleString("ar-SA")} ﷼</td>
+                          <td className="p-3 text-slate-500 text-xs">{new Date(p.dueDate).toLocaleDateString("ar-SA")}</td>
+                          <td className="p-3 text-slate-500 text-xs">{p.paidDate ? new Date(p.paidDate).toLocaleDateString("ar-SA") : "—"}</td>
+                          <td className="p-3 text-slate-500 text-xs">{p.paymentMethod || "—"}</td>
+                          <td className="p-3">
+                            <Badge className={p.status === "paid" ? "bg-green-100 text-green-700" : p.status === "overdue" ? "bg-red-100 text-red-700" : p.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700"}>
+                              {p.status === "paid" ? "مدفوع" : p.status === "overdue" ? "متأخر" : p.status === "pending" ? "معلق" : p.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {payments.length === 0 && <p className="text-center text-slate-400 py-8">لا توجد دفعات بعد</p>}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ── Expenses ── */}
+          {activeTab === "expenses" && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">{expenses.length} مصروف</p>
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>{["الوصف", "الفئة", "المبلغ", "التاريخ", "دفع من"].map(h => (
+                        <th key={h} className="text-right p-3 font-medium text-slate-600 text-xs">{h}</th>
+                      ))}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {expenses.map(e => (
+                        <tr key={e.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-medium text-sm">{e.description}</td>
+                          <td className="p-3 text-xs"><Badge variant="outline">{e.category}</Badge></td>
+                          <td className="p-3 text-red-600 font-medium">{Number(e.amount).toLocaleString("ar-SA")} ﷼</td>
+                          <td className="p-3 text-slate-500 text-xs">{new Date(e.expenseDate).toLocaleDateString("ar-SA")}</td>
+                          <td className="p-3 text-slate-500 text-xs">{e.paidBy === "company" ? "الشركة" : e.paidBy === "owner" ? "المالك" : "المستأجر"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {expenses.length === 0 && <p className="text-center text-slate-400 py-8">لا توجد مصاريف بعد</p>}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* ── Maintenance ── */}
+          {activeTab === "maintenance" && (
+            <div className="space-y-4">
+              <p className="text-sm text-slate-500">{maintenance.length} طلب صيانة</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {maintenance.map(m => (
+                  <Card key={m.id} className="border-0 shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-sm">{m.title}</h3>
+                        <Badge className={m.priority === "urgent" ? "bg-red-100 text-red-700" : m.priority === "high" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}>
+                          {m.priority === "urgent" ? "عاجل" : m.priority === "high" ? "عالي" : m.priority === "medium" ? "متوسط" : "منخفض"}
+                        </Badge>
+                      </div>
+                      {m.description && <p className="text-xs text-slate-500 mb-2">{m.description}</p>}
+                      <div className="flex items-center justify-between">
+                        <Badge className={m.status === "completed" ? "bg-green-100 text-green-700" : m.status === "in_progress" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700"}>
+                          {m.status === "completed" ? "مكتمل" : m.status === "in_progress" ? "جاري" : "معلق"}
+                        </Badge>
+                        {m.cost && <span className="text-xs text-slate-500">التكلفة: {Number(m.cost).toLocaleString("ar-SA")} ﷼</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {maintenance.length === 0 && (
+                  <div className="col-span-2 text-center py-12 text-slate-400">
+                    <Wrench size={40} className="mx-auto mb-3 opacity-30" />
+                    <p>لا توجد طلبات صيانة</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -641,246 +738,53 @@ export default function Dashboard() {
 
           {/* ── Chats ── */}
           {activeTab === "chats" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-8rem)]">
-              {/* Lead list */}
-              <Card className="overflow-hidden flex flex-col">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">العملاء</CardTitle>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-10rem)]">
+              <Card className="overflow-hidden flex flex-col border-0 shadow-sm">
+                <CardHeader className="pb-2 border-b">
+                  <CardTitle className="text-sm">العملاء ({leads.filter(l => l.sessionId).length})</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto p-2 space-y-1">
-                  {leads.filter((l) => l.sessionId).map((lead) => (
-                    <button
-                      key={lead.id}
-                      onClick={() => setSelectedLeadSession(lead.sessionId!)}
-                      className={`w-full text-right p-3 rounded-lg transition-colors ${
-                        selectedLeadSession === lead.sessionId
-                          ? "bg-primary/10 border border-primary/30"
-                          : "hover:bg-muted"
-                      }`}
-                    >
+                  {leads.filter(l => l.sessionId).map(lead => (
+                    <button key={lead.id} onClick={() => setSelectedLeadSession(lead.sessionId!)}
+                      className={`w-full text-right p-3 rounded-lg transition-colors ${selectedLeadSession === lead.sessionId ? "bg-amber-50 border border-amber-200" : "hover:bg-slate-50"}`}>
                       <p className="font-medium text-sm">{lead.name || "غير محدد"}</p>
-                      <p className="text-xs text-muted-foreground">{SERVICE_LABELS[lead.serviceType || "unknown"]}</p>
-                      <p className="text-xs text-muted-foreground">{lead.phone || ""}</p>
+                      <p className="text-xs text-slate-500">{SERVICE_LABELS[lead.serviceType || "unknown"]}</p>
+                      <p className="text-xs text-slate-400">{lead.phone || ""}</p>
                     </button>
                   ))}
-                  {leads.filter((l) => l.sessionId).length === 0 && (
-                    <p className="text-center text-muted-foreground text-sm py-4">لا توجد محادثات</p>
+                  {leads.filter(l => l.sessionId).length === 0 && (
+                    <p className="text-center text-slate-400 text-sm py-8">لا توجد محادثات بعد</p>
                   )}
                 </CardContent>
               </Card>
-
-              {/* Chat messages */}
-              <Card className="lg:col-span-2 overflow-hidden flex flex-col">
-                <CardHeader className="pb-2 border-b border-border">
+              <Card className="lg:col-span-2 overflow-hidden flex flex-col border-0 shadow-sm">
+                <CardHeader className="pb-2 border-b">
                   <CardTitle className="text-sm">
-                    {selectedLeadSession
-                      ? `محادثة: ${leads.find((l) => l.sessionId === selectedLeadSession)?.name || "عميل"}`
-                      : "اختر عميلاً لعرض المحادثة"}
+                    {selectedLeadSession ? `محادثة: ${leads.find(l => l.sessionId === selectedLeadSession)?.name || "عميل"}` : "اختر عميلاً"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
                   {!selectedLeadSession ? (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      <MessageSquare size={40} className="opacity-30" />
+                    <div className="flex items-center justify-center h-full text-slate-300">
+                      <MessageSquare size={48} />
                     </div>
                   ) : chatHistoryQuery.isLoading ? (
                     <div className="flex items-center justify-center h-full">
-                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                     </div>
-                  ) : (chatHistoryQuery.data || []).length === 0 ? (
-                    <p className="text-center text-muted-foreground">لا توجد رسائل</p>
-                  ) : (
-                    (chatHistoryQuery.data || []).map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`max-w-[80%] p-3 rounded-2xl text-sm ${
-                            msg.role === "user"
-                              ? "gold-gradient text-white rounded-tr-sm"
-                              : "bg-muted text-foreground rounded-tl-sm"
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${msg.role === "user" ? "text-white/70" : "text-muted-foreground"}`}>
-                            {new Date(msg.createdAt).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        </div>
+                  ) : (chatHistoryQuery.data || []).map((msg: any) => (
+                    <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.role === "user" ? "bg-amber-500 text-white rounded-tr-sm" : "bg-slate-100 text-slate-800 rounded-tl-sm"}`}>
+                        {msg.content}
                       </div>
-                    ))
-                  )}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </div>
           )}
-        </main>
-      </div>
-
-      {/* Add Property Dialog */}
-      <Dialog open={showAddProperty} onOpenChange={setShowAddProperty}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>إضافة عقار جديد</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label>اسم العقار (عربي) *</Label>
-              <Input
-                value={propertyForm.titleAr}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, titleAr: e.target.value }))}
-                placeholder="مثال: شقة فاخرة في حي العزيزية"
-              />
-            </div>
-            <div>
-              <Label>نوع العقار *</Label>
-              <Select value={propertyForm.type} onValueChange={(v) => setPropertyForm((p) => ({ ...p, type: v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PROPERTY_TYPE_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>نوع الإعلان *</Label>
-              <Select value={propertyForm.listingType} onValueChange={(v) => setPropertyForm((p) => ({ ...p, listingType: v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sale">للبيع</SelectItem>
-                  <SelectItem value="rent">للإيجار</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>السعر (ريال) *</Label>
-              <Input
-                type="number"
-                value={propertyForm.price}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, price: e.target.value }))}
-                placeholder="500000"
-              />
-            </div>
-            <div>
-              <Label>وحدة السعر</Label>
-              <Select value={propertyForm.priceUnit} onValueChange={(v) => setPropertyForm((p) => ({ ...p, priceUnit: v as any }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="total">إجمالي</SelectItem>
-                  <SelectItem value="per_month">شهرياً</SelectItem>
-                  <SelectItem value="per_year">سنوياً</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>المساحة (م²)</Label>
-              <Input
-                type="number"
-                value={propertyForm.area}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, area: e.target.value }))}
-                placeholder="150"
-              />
-            </div>
-            <div>
-              <Label>عدد الغرف</Label>
-              <Input
-                type="number"
-                value={propertyForm.bedrooms}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, bedrooms: e.target.value }))}
-                placeholder="3"
-              />
-            </div>
-            <div>
-              <Label>عدد الحمامات</Label>
-              <Input
-                type="number"
-                value={propertyForm.bathrooms}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, bathrooms: e.target.value }))}
-                placeholder="2"
-              />
-            </div>
-            <div>
-              <Label>المدينة</Label>
-              <Input
-                value={propertyForm.city}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, city: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>الحي</Label>
-              <Input
-                value={propertyForm.district}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, district: e.target.value }))}
-                placeholder="حي العزيزية"
-              />
-            </div>
-            <div className="col-span-2">
-              <Label>الوصف</Label>
-              <Textarea
-                value={propertyForm.descriptionAr}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, descriptionAr: e.target.value }))}
-                placeholder="وصف تفصيلي للعقار..."
-                rows={3}
-              />
-            </div>
-            <div className="col-span-2">
-              <Label>المميزات (سطر لكل ميزة)</Label>
-              <Textarea
-                value={propertyForm.featuresAr}
-                onChange={(e) => setPropertyForm((p) => ({ ...p, featuresAr: e.target.value }))}
-                placeholder="مسبح&#10;حديقة&#10;موقف سيارات&#10;مكيف مركزي"
-                rows={3}
-              />
-            </div>
-            <div className="col-span-2">
-              <Label>صور العقار</Label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="block w-full text-sm text-muted-foreground file:ml-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary/90"
-              />
-              {propertyForm.images.length > 0 && (
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {propertyForm.images.map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-16 h-16 object-cover rounded-lg" />
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="col-span-2 flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={propertyForm.negotiable}
-                  onChange={(e) => setPropertyForm((p) => ({ ...p, negotiable: e.target.checked }))}
-                />
-                <span className="text-sm">قابل للتفاوض</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={propertyForm.isFeatured}
-                  onChange={(e) => setPropertyForm((p) => ({ ...p, isFeatured: e.target.checked }))}
-                />
-                <span className="text-sm">عقار مميز</span>
-              </label>
-            </div>
-          </div>
-          <div className="flex gap-3 mt-4">
-            <Button
-              className="flex-1 gold-gradient text-white"
-              onClick={handleAddProperty}
-              disabled={createPropertyMutation.isPending || !propertyForm.titleAr || !propertyForm.price}
-            >
-              {createPropertyMutation.isPending ? "جاري الإضافة..." : "إضافة العقار"}
-            </Button>
-            <Button variant="outline" onClick={() => setShowAddProperty(false)}>إلغاء</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </main>
     </div>
   );
 }
