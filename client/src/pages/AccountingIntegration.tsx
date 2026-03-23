@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Calculator, Download, Clock, CheckCircle, RefreshCw, FileText, TrendingUp, DollarSign } from "lucide-react";
+import { Calculator, Download, Clock, CheckCircle, RefreshCw, FileText, TrendingUp, DollarSign, Receipt } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AccountingIntegration() {
   const [dateFrom, setDateFrom] = useState(() => {
@@ -13,7 +14,9 @@ export default function AccountingIntegration() {
     return d.toISOString().split("T")[0];
   });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().split("T")[0]);
-  const [activeSystem, setActiveSystem] = useState<"quickbooks" | "odoo" | null>(null);
+  const [activeSystem, setActiveSystem] = useState<"quickbooks" | "odoo" | "sap" | "vat" | null>(null);
+  const [vatYear, setVatYear] = useState<number>(new Date().getFullYear());
+  const [vatQuarter, setVatQuarter] = useState<number>(Math.ceil((new Date().getMonth() + 1) / 3));
 
   const { data: history, refetch: refetchHistory } = trpc.accountingDirect.getHistory.useQuery();
 
@@ -58,11 +61,48 @@ export default function AccountingIntegration() {
     }
   };
 
+  const exportSAP = trpc.sapExport.useMutation({
+    onSuccess: (data) => {
+      toast.success(`تم تصدير ${data.recordsCount} سجل بتنسيق SAP IDOC XML`);
+      if (data.url) window.open(data.url, '_blank');
+      refetchHistory();
+      setActiveSystem(null);
+    },
+    onError: (err) => { toast.error(err.message); setActiveSystem(null); },
+  });
+
+  const exportVAT = trpc.vatReport.useMutation({
+    onSuccess: (data) => {
+      toast.success(`تقرير VAT: إجمالي ${data.totalRevenue.toLocaleString()} ر.س | ضريبة ${data.vatAmount.toLocaleString()} ر.س`);
+      if (data.url) window.open(data.url, '_blank');
+      refetchHistory();
+      setActiveSystem(null);
+    },
+    onError: (err) => { toast.error(err.message); setActiveSystem(null); },
+  });
+
+  const handleExportSAP = () => {
+    setActiveSystem('sap');
+    exportSAP.mutate({ dateFrom: new Date(dateFrom).getTime(), dateTo: new Date(dateTo + 'T23:59:59').getTime() });
+  };
+
+  const handleExportVAT = () => {
+    setActiveSystem('vat');
+    exportVAT.mutate({ year: vatYear, quarter: vatQuarter });
+  };
+
   const exportTypeMap: Record<string, { label: string; color: string }> = {
     quickbooks: { label: "QuickBooks", color: "bg-green-100 text-green-800" },
     odoo: { label: "Odoo", color: "bg-purple-100 text-purple-800" },
+    sap_xml: { label: "SAP IDOC", color: "bg-orange-100 text-orange-800" },
     zoho: { label: "Zoho Books", color: "bg-blue-100 text-blue-800" },
   };
+  const vatQuarterMap: Record<string, string> = {};
+  for (let y = new Date().getFullYear(); y >= new Date().getFullYear() - 2; y--) {
+    for (let q = 4; q >= 1; q--) {
+      vatQuarterMap[`vat_q${q}_${y}`] = `VAT Q${q} ${y}`;
+    }
+  }
 
   return (
     <div className="p-6 space-y-6" dir="rtl">
@@ -194,19 +234,111 @@ export default function AccountingIntegration() {
         </Card>
       </div>
 
-      {/* Zoho Books - Coming Soon */}
-      <Card className="border-dashed opacity-70">
-        <CardContent className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">ZB</div>
-            <div>
-              <div className="font-medium">Zoho Books</div>
-              <div className="text-xs text-muted-foreground">قريباً — تكامل مباشر عبر API</div>
+      {/* SAP + VAT Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* SAP */}
+        <Card className="border-2 hover:border-orange-300 transition-colors">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center text-white font-bold text-lg">SAP</div>
+              <div>
+                <CardTitle>SAP ERP</CardTitle>
+                <p className="text-sm text-muted-foreground">تنسيق IDOC XML للاستيراد المباشر</p>
+              </div>
             </div>
-          </div>
-          <Badge variant="secondary">قريباً</Badge>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">من تاريخ</label>
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm bg-background" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">إلى تاريخ</label>
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full border rounded-md px-3 py-2 text-sm bg-background" />
+              </div>
+            </div>
+            <div className="bg-orange-50 rounded-lg p-3 text-sm text-orange-800 space-y-1">
+              <div className="font-medium">ما يتم تصديره:</div>
+              <ul className="text-xs space-y-0.5 list-disc list-inside">
+                <li>IDOC بتنسيق FIDCCP02</li>
+                <li>بيانات الشركة (COMP_CODE: 1000)</li>
+                <li>قيود الإيرادات (DOC_TYPE: RV)</li>
+              </ul>
+            </div>
+            <Button onClick={handleExportSAP} disabled={exportSAP.isPending} className="w-full bg-orange-600 hover:bg-orange-700">
+              {exportSAP.isPending && activeSystem === 'sap' ? (
+                <><RefreshCw className="w-4 h-4 ml-1 animate-spin" /> جاري التصدير...</>
+              ) : (
+                <><Download className="w-4 h-4 ml-1" /> تصدير SAP XML</>
+              )}
+            </Button>
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium">طريقة الاستيراد:</span> SAP → IDOC → File Port → Import IDOC
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* VAT Report */}
+        <Card className="border-2 hover:border-red-300 transition-colors">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white">
+                <Receipt className="w-6 h-6" />
+              </div>
+              <div>
+                <CardTitle>ضريبة القيمة المضافة (VAT)</CardTitle>
+                <p className="text-sm text-muted-foreground">تقرير ربعي VAT 15% لهيئة الزكاة</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">السنة</label>
+                <Select value={String(vatYear)} onValueChange={v => setVatYear(Number(v))}>
+                  <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[0,1,2].map(i => (
+                      <SelectItem key={i} value={String(new Date().getFullYear() - i)}>{new Date().getFullYear() - i}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">الربع</label>
+                <Select value={String(vatQuarter)} onValueChange={v => setVatQuarter(Number(v))}>
+                  <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Q1 (يناير - مارس)</SelectItem>
+                    <SelectItem value="2">Q2 (أبريل - يونيو)</SelectItem>
+                    <SelectItem value="3">Q3 (يوليو - سبتمبر)</SelectItem>
+                    <SelectItem value="4">Q4 (أكتوبر - ديسمبر)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="bg-red-50 rounded-lg p-3 text-sm text-red-800 space-y-1">
+              <div className="font-medium">ما يتضمنه التقرير:</div>
+              <ul className="text-xs space-y-0.5 list-disc list-inside">
+                <li>إجمالي الإيرادات الخاضعة للضريبة</li>
+                <li>مبلغ ضريبة القيمة المضافة (15%)</li>
+                <li>صافي الإيرادات بعد الضريبة</li>
+              </ul>
+            </div>
+            <Button onClick={handleExportVAT} disabled={exportVAT.isPending} className="w-full bg-red-600 hover:bg-red-700">
+              {exportVAT.isPending && activeSystem === 'vat' ? (
+                <><RefreshCw className="w-4 h-4 ml-1 animate-spin" /> جاري إنشاء التقرير...</>
+              ) : (
+                <><Receipt className="w-4 h-4 ml-1" /> إنشاء تقرير VAT</>
+              )}
+            </Button>
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium">تقديم إلكتروني:</span> هيئة الزكاة → بوابة المكلف → إقرار ضريبة القيمة المضافة
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Export History */}
       <Card>

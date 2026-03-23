@@ -55,7 +55,8 @@ import { createHash, randomBytes } from "crypto";
 import { getDb } from "./db";
 import {
   tenantDocuments, apiKeys, propertyListings, accountingExports,
-  staff, rolePermissions, loginLog, internalMessages, webhooks, apiUsageLog, listingViews, contractRenewalRequests
+  staff, rolePermissions, loginLog, internalMessages, webhooks, apiUsageLog, listingViews, contractRenewalRequests,
+  properties, contracts, payments
 } from "../drizzle/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 
@@ -1757,10 +1758,143 @@ export const batch10Router = router({
   }),
 });
 
-// Merge batch10Router into appRouter
+// ─── BATCH 11: SAP/VAT Export + Cashflow Forecast + Arrears Heatmap ─────────────
+const batch11Router = router({
+  sapExport: adminProcedure.input(z.object({
+    dateFrom: z.number(),
+    dateTo: z.number(),
+  })).mutation(async ({ input }) => {
+    const drizzle = await getDb();
+    if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const rows = await drizzle.select().from(payments)
+      .where(and(
+        eq(payments.status, "paid"),
+        sql`UNIX_TIMESTAMP(paidDate)*1000 >= ${input.dateFrom}`,
+        sql`UNIX_TIMESTAMP(paidDate)*1000 <= ${input.dateTo}`
+      ));
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0].replace(/-/g,'');
+    const timeStr = today.toTimeString().slice(0,8).replace(/:/g,'');
+    const lines = rows.map((p, i) => `\n    <E1BPFIITEM>\n      <ITEMNO_ACC>${String(i + 1).padStart(6, '0')}</ITEMNO_ACC>\n      <GL_ACCOUNT>0000400000</GL_ACCOUNT>\n      <AMOUNT>${Number(p.amount).toFixed(2)}</AMOUNT>\n      <CURRENCY>SAR</CURRENCY>\n      <BLINE_DATE>${p.paidDate ?? ''}</BLINE_DATE>\n      <ITEM_TEXT>${p.type} - ${p.receiptNumber ?? p.id}</ITEM_TEXT>\n    </E1BPFIITEM>`).join('');
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<IDOC BEGIN="1">\n  <EDI_DC40 SEGMENT="1">\n    <TABNAM>EDI_DC40</TABNAM>\n    <MANDT>100</MANDT>\n    <IDOCTYP>FIDCCP02</IDOCTYP>\n    <MESTYP>FIDCC2</MESTYP>\n    <SNDPRT>LS</SNDPRT>\n    <SNDPRN>TAKAMOL</SNDPRN>\n    <RCVPRT>LS</RCVPRT>\n    <RCVPRN>SAP_ERP</RCVPRN>\n    <CREDAT>${dateStr}</CREDAT>\n    <CRETIM>${timeStr}</CRETIM>\n  </EDI_DC40>\n  <E1BPFIHDR SEGMENT="1">\n    <COMP_CODE>1000</COMP_CODE>\n    <DOC_DATE>${today.toISOString().split('T')[0]}</DOC_DATE>\n    <PSTNG_DATE>${today.toISOString().split('T')[0]}</PSTNG_DATE>\n    <DOC_TYPE>RV</DOC_TYPE>\n    <CURRENCY>SAR</CURRENCY>\n    <HEADER_TXT>\u062a\u0643\u0627\u0645\u0644 - \u062a\u0635\u062f\u064a\u0631 \u0625\u064a\u0631\u0627\u062f\u0627\u062a</HEADER_TXT>\n  </E1BPFIHDR>${lines}\n</IDOC>`;
+    const key = `accounting/sap-${Date.now()}.xml`;
+    const { url } = await storagePut(key, Buffer.from(xml, 'utf-8'), 'application/xml');
+    await drizzle.insert(accountingExports).values({
+      exportType: 'sap_xml', dateFrom: input.dateFrom, dateTo: input.dateTo,
+      recordsCount: rows.length, fileUrl: url, fileKey: key, status: 'completed',
+    });
+    return { url, recordsCount: rows.length };
+  }),
+
+  vatReport: adminProcedure.input(z.object({
+    year: z.number(),
+    quarter: z.number().min(1).max(4),
+  })).mutation(async ({ input }) => {
+    const drizzle = await getDb();
+    if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const startMonth = (input.quarter - 1) * 3 + 1;
+    const endMonth = startMonth + 2;
+    const startDate = `${input.year}-${String(startMonth).padStart(2,'0')}-01`;
+    const endDate = `${input.year}-${String(endMonth).padStart(2,'0')}-31`;
+    const rows = await drizzle.select().from(payments)
+      .where(and(eq(payments.status, 'paid'), sql`paidDate >= ${startDate}`, sql`paidDate <= ${endDate}`));
+    const totalRevenue = rows.reduce((s, r) => s + Number(r.amount), 0);
+    const vatRate = 0.15;
+    const vatAmount = totalRevenue * vatRate;
+    const netRevenue = totalRevenue - vatAmount;
+    const header = '\u0631\u0642\u0645 \u0627\u0644\u0625\u064a\u0635\u0627\u0644,\u0646\u0648\u0639 \u0627\u0644\u062f\u0641\u0639,\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u062f\u0641\u0639,\u0627\u0644\u0645\u0628\u0644\u063a \u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a,\u0636\u0631\u064a\u0628\u0629 \u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629 (15%),\u0627\u0644\u0645\u0628\u0644\u063a \u0627\u0644\u0635\u0627\u0641\u064a';
+    const csvRows = rows.map(r => [r.receiptNumber ?? r.id, r.type, r.paidDate ?? '', Number(r.amount).toFixed(2), (Number(r.amount)*vatRate).toFixed(2), (Number(r.amount)*(1-vatRate)).toFixed(2)].join(','));
+    const summary = `\n\n\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0625\u064a\u0631\u0627\u062f\u0627\u062a,${totalRevenue.toFixed(2)}\n\u0636\u0631\u064a\u0628\u0629 \u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a\u0629,${vatAmount.toFixed(2)}\n\u0635\u0627\u0641\u064a \u0627\u0644\u0625\u064a\u0631\u0627\u062f\u0627\u062a,${netRevenue.toFixed(2)}`;
+    const csv = '\uFEFF' + [header, ...csvRows, summary].join('\n');
+    const key = `accounting/vat-${input.year}-Q${input.quarter}-${Date.now()}.csv`;
+    const { url } = await storagePut(key, Buffer.from(csv, 'utf-8'), 'text/csv; charset=utf-8');
+    await drizzle.insert(accountingExports).values({
+      exportType: `vat_q${input.quarter}_${input.year}`, dateFrom: new Date(startDate).getTime(),
+      dateTo: new Date(endDate).getTime(), recordsCount: rows.length, fileUrl: url, fileKey: key, status: 'completed',
+    });
+    return { url, recordsCount: rows.length, totalRevenue, vatAmount, netRevenue };
+  }),
+
+  arrearsHeatmap: adminProcedure.query(async () => {
+    const drizzle = await getDb();
+    if (!drizzle) return { matrix: [], months: [] };
+    const months: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(); d.setMonth(d.getMonth() - i);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const props = await drizzle.select({ id: properties.id, title: properties.titleAr }).from(properties);
+    const overdueRows = await drizzle.select({
+      propertyId: payments.propertyId,
+      month: sql<string>`DATE_FORMAT(dueDate, '%Y-%m')`,
+      count: sql<number>`COUNT(*)`,
+      totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)`,
+    }).from(payments)
+      .where(and(
+        sql`status IN ('pending','overdue')`,
+        sql`DATE_FORMAT(dueDate, '%Y-%m') >= ${months[0]}`,
+        sql`DATE_FORMAT(dueDate, '%Y-%m') <= ${months[months.length - 1]}`
+      ))
+      .groupBy(payments.propertyId, sql`DATE_FORMAT(dueDate, '%Y-%m')`);
+    const matrixMap: Record<number, Record<string, { count: number; amount: number }>> = {};
+    for (const row of overdueRows) {
+      if (!row.propertyId) continue;
+      if (!matrixMap[row.propertyId]) matrixMap[row.propertyId] = {};
+      matrixMap[row.propertyId][row.month] = { count: row.count, amount: Number(row.totalAmount) };
+    }
+    const matrix = props.map(p => ({
+      propertyId: p.id, propertyTitle: p.title,
+      months: months.map(m => matrixMap[p.id]?.[m] ?? { count: 0, amount: 0 }),
+    }));
+    return { matrix, months };
+  }),
+
+  cashflowForecast: adminProcedure.query(async () => {
+    const drizzle = await getDb();
+    if (!drizzle) return { forecast: [], historical: [] };
+    const historical = await drizzle.select({
+      month: sql<string>`DATE_FORMAT(paidDate, '%Y-%m')`,
+      revenue: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)`,
+    }).from(payments)
+      .where(and(eq(payments.status, 'paid'), sql`paidDate IS NOT NULL`))
+      .groupBy(sql`DATE_FORMAT(paidDate, '%Y-%m')`)
+      .orderBy(sql`DATE_FORMAT(paidDate, '%Y-%m') DESC`)
+      .limit(6);
+    const activeContracts = await drizzle.select({
+      rentAmount: contracts.rentAmount,
+      rentPeriod: contracts.rentPeriod,
+      endDate: contracts.endDate,
+    }).from(contracts).where(eq(contracts.status, 'active' as any));
+    const monthlyExpected = activeContracts.reduce((sum, c) => {
+      const rent = Number(c.rentAmount ?? 0);
+      const period = c.rentPeriod ?? 'annual';
+      let monthly = 0;
+      if (period === 'monthly') monthly = rent;
+      else if (period === 'quarterly') monthly = rent / 3;
+      else if (period === 'semi_annual') monthly = rent / 6;
+      else monthly = rent / 12;
+      return sum + monthly;
+    }, 0);
+    const forecast = [];
+    for (let i = 1; i <= 3; i++) {
+      const d = new Date(); d.setMonth(d.getMonth() + i);
+      const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const endingCount = activeContracts.filter(c => {
+        if (!c.endDate) return false;
+        return String(c.endDate) < `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+      }).length;
+      const adjustedExpected = monthlyExpected * (1 - (endingCount / Math.max(activeContracts.length, 1)) * 0.1);
+      forecast.push({ month: monthStr, expected: Math.round(adjustedExpected), contractsCount: activeContracts.length, endingContracts: endingCount });
+    }
+    return { forecast, historical: [...historical].reverse() };
+  }),
+});
+
+// Merge all routers
 export const mergedRouter = router({
   ...appRouter._def.record,
   ...batch10Router._def.record,
+  ...batch11Router._def.record,
 });
 export type AppRouter = typeof mergedRouter;
 export type Batch10Router = typeof batch10Router;

@@ -31,6 +31,8 @@ import SecurityLog from "./pages/SecurityLog";
 import RenewalRequests from "./pages/RenewalRequests";
 import ApiStats from "./pages/ApiStats";
 import PublicListings from "./pages/PublicListings";
+import ArrearsHeatmap from "./pages/ArrearsHeatmap";
+import CashflowForecast from "./pages/CashflowForecast";
 
 function Router() {
   return (
@@ -66,6 +68,8 @@ function Router() {
       <Route path={"/renewal-requests"} component={RenewalRequests} />
       <Route path={"/api-stats"} component={ApiStats} />
       <Route path={"/listings/public"} component={PublicListings} />
+      <Route path={"/arrears-heatmap"} component={ArrearsHeatmap} />
+      <Route path={"/cashflow-forecast"} component={CashflowForecast} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
