@@ -46,6 +46,7 @@ import PropertyTax from "./pages/PropertyTax";
 import EmailNotifications from "./pages/EmailNotifications";
 import Reservations from "./pages/Reservations";
 import SwaggerDocs from "./pages/SwaggerDocs";
+import UserManagement from "./pages/UserManagement";
 
 function Router() {
   return (
@@ -96,6 +97,7 @@ function Router() {
       <Route path={"/email-notifications"} component={EmailNotifications} />
       <Route path={"/reservations"} component={Reservations} />
       <Route path={"/api-docs"} component={SwaggerDocs} />
+      <Route path={"/user-management"} component={UserManagement} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2, Shield, Mail, RefreshCw, Activity, UserCog, Flame, TrendingUp, DoorOpen, Archive, CheckCircle, MapPin, BarChart3, ClipboardCheck, Receipt, BookOpen, BarChart, Percent, AtSign, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2, Shield, Mail, RefreshCw, Activity, UserCog, Flame, TrendingUp, DoorOpen, Archive, CheckCircle, MapPin, BarChart3, ClipboardCheck, Receipt, BookOpen, BarChart, Percent, AtSign, CalendarCheck, Crown } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -63,6 +63,7 @@ const menuItems = [
   { icon: AtSign, label: "إشعارات البريد", path: "/email-notifications" },
   { icon: CalendarCheck, label: "الحجوزات المسبقة", path: "/reservations" },
   { icon: BookOpen, label: "توثيق API", path: "/api-docs" },
+  { icon: Crown, label: "إدارة المستخدمين", path: "/user-management", superAdminOnly: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -213,18 +214,19 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {menuItems.filter(item => !(item as any).superAdminOnly || user?.role === "super_admin").map(item => {
                 const isActive = location === item.path;
+                const isSuperAdmin = (item as any).superAdminOnly;
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-10 transition-all font-normal ${isSuperAdmin ? "text-amber-500 hover:text-amber-400" : ""}`}
                     >
                       <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        className={`h-4 w-4 ${isActive ? "text-primary" : isSuperAdmin ? "text-amber-500" : ""}`}
                       />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -244,9 +246,17 @@ function DashboardLayoutContent({
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "-"}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium truncate leading-none">
+                        {user?.name || "-"}
+                      </p>
+                      {user?.role === "super_admin" && (
+                        <span className="text-[10px] bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded px-1 py-0.5 font-medium shrink-0">★ سوبر</span>
+                      )}
+                      {user?.role === "admin" && (
+                        <span className="text-[10px] bg-blue-500/20 text-blue-500 border border-blue-500/30 rounded px-1 py-0.5 font-medium shrink-0">مدير</span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground truncate mt-1.5">
                       {user?.email || "-"}
                     </p>

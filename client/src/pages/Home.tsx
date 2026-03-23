@@ -13,8 +13,9 @@ import {
   TrendingUp, Shield, Users, LayoutDashboard, Menu,
   KeyRound, Wrench, FileText, CheckCircle2, ChevronUp,
   Award, Clock, HeartHandshake, ArrowLeft, Eye, Home,
-  Instagram, Twitter, Facebook, Youtube, Quote,
+  Instagram, Twitter, Facebook, Youtube, Quote, LogIn,
 } from "lucide-react";
+import { getLoginUrl } from "@/const";
 
 const WHATSAPP = "966558018151";
 const OG_IMAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663082433191/EGvRBfpqPGe26TFrJFv9dm/og-image-JZJVCTb8zj6RBGET4uyejN.png";
@@ -146,10 +147,14 @@ export default function HomePage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-500 text-white text-sm font-bold hover:bg-green-600 transition-colors shadow-sm">
                 <Phone size={14} />واتساب
               </a>
-              {isAuthenticated && user?.role === "admin" && (
-                <Button size="sm" variant="outline" onClick={() => navigate("/dashboard")}>
-                  <LayoutDashboard size={14} className="ml-1" />لوحة التحكم
+              {isAuthenticated ? (
+                <Button size="sm" variant="outline" onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5">
+                  <LayoutDashboard size={14} />لوحة التحكم
                 </Button>
+              ) : (
+                <a href={getLoginUrl()} className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors shadow-sm">
+                  <LogIn size={14} />تسجيل الدخول
+                </a>
               )}
             </div>
 
@@ -175,11 +180,15 @@ export default function HomePage() {
                 className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-green-600 hover:bg-green-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>
                 <Phone size={15} />تواصل عبر واتساب
               </a>
-              {isAuthenticated && user?.role === "admin" && (
+              {isAuthenticated ? (
                 <button className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-primary font-medium hover:bg-primary/5 rounded-lg"
                   onClick={() => { navigate("/dashboard"); setMobileMenuOpen(false); }}>
                   <LayoutDashboard size={15} />لوحة التحكم
                 </button>
+              ) : (
+                <a href={getLoginUrl()} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-bold text-amber-600 hover:bg-amber-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>
+                  <LogIn size={15} />تسجيل الدخول
+                </a>
               )}
             </div>
           )}

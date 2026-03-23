@@ -64,16 +64,21 @@ import {
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
+const isAdmin = (role: string) => role === "admin" || role === "super_admin";
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  if (!isAdmin(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  return next({ ctx });
+});
+const superAdminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "super_admin") throw new TRPCError({ code: "FORBIDDEN", message: "Super Admin access required" });
   return next({ ctx });
 });
 const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "owner" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+  if (ctx.user.role !== "owner" && !isAdmin(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN" });
   return next({ ctx });
 });
 const brokerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "broker" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+  if (ctx.user.role !== "broker" && !isAdmin(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN" });
   return next({ ctx });
 });
 
@@ -2718,6 +2723,56 @@ export const batch14Router = router({
 
 });
 
+// ─── User Management Router (Super Admin only) ───────────────────────────────
+const userManagementRouter = router({
+  list: superAdminProcedure.input(z.object({
+    role: z.string().optional(),
+    search: z.string().optional(),
+    limit: z.number().optional(),
+    offset: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) return [];
+    const { eq: eqFn, like: likeFn, and: andFn, or: orFn, desc: descFn } = await import("drizzle-orm");
+    const { users: usersTable } = await import("../drizzle/schema");
+    const conditions = [];
+    if (input?.role) conditions.push(eqFn(usersTable.role, input.role as any));
+    if (input?.search) conditions.push(orFn(
+      likeFn(usersTable.name, `%${input.search}%`),
+      likeFn(usersTable.email, `%${input.search}%`)
+    ));
+    const q = db.select().from(usersTable).orderBy(descFn(usersTable.createdAt))
+      .limit(input?.limit ?? 50).offset(input?.offset ?? 0);
+    return conditions.length ? q.where(andFn(...conditions)) : q;
+  }),
+  updateRole: superAdminProcedure.input(z.object({
+    userId: z.number(),
+    role: z.enum(["user", "admin", "super_admin", "owner", "broker"]),
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const { users: usersTable } = await import("../drizzle/schema");
+    await db.update(usersTable).set({ role: input.role }).where(eq(usersTable.id, input.userId));
+    return { success: true };
+  }),
+  delete: superAdminProcedure.input(z.number()).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const { users: usersTable } = await import("../drizzle/schema");
+    await db.delete(usersTable).where(eq(usersTable.id, input));
+    return { success: true };
+  }),
+  stats: superAdminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return { total: 0, byRole: {} };
+    const { users: usersTable } = await import("../drizzle/schema");
+    const all = await db.select().from(usersTable);
+    const byRole: Record<string, number> = {};
+    for (const u of all) { byRole[u.role] = (byRole[u.role] ?? 0) + 1; }
+    return { total: all.length, byRole };
+  }),
+});
+
 // Merge all routers
 export const mergedRouter = router({
   ...appRouter._def.record,
@@ -2726,6 +2781,7 @@ export const mergedRouter = router({
   ...batch12Router._def.record,
   ...batch13Router._def.record,
   ...batch14Router._def.record,
+  userManagement: userManagementRouter,
 });
 export type AppRouter = typeof mergedRouter;
 export type Batch10Router = typeof batch10Router;
