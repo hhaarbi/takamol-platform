@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import PropertyImageGallery from "@/components/PropertyImageGallery";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -156,6 +157,7 @@ export default function Dashboard() {
   const [showAddContract, setShowAddContract] = useState(false);
   const [showAddHandover, setShowAddHandover] = useState(false);
   const [propertyDetailId, setPropertyDetailId] = useState<number | null>(null);
+  const [propertyGalleryId, setPropertyGalleryId] = useState<number | null>(null);
   const [collectionMonth, setCollectionMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -808,9 +810,18 @@ export default function Dashboard() {
                         {prop.bedrooms && <span>🛏 {prop.bedrooms} غرف</span>}
                         {prop.bathrooms && <span>🚿 {prop.bathrooms} حمام</span>}
                       </div>
+                      {propertyGalleryId === prop.id && (
+                        <div className="mb-3 border-t border-border pt-3">
+                          <PropertyImageGallery propertyId={prop.id} isAdmin={true} compact={true} />
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-amber-600">{formatCurrency(prop.price)}</span>
                         <div className="flex gap-1">
+                          <Button size="sm" variant="outline" className="text-xs h-7 text-purple-600 hover:text-purple-800"
+                            onClick={() => setPropertyGalleryId(prop.id === propertyGalleryId ? null : prop.id)}>
+                            🖼️ صور
+                          </Button>
                           <Button size="sm" variant="outline" className="text-xs h-7 text-blue-600 hover:text-blue-800"
                             onClick={() => setPropertyDetailId(prop.id)}>
                             📊 ROI

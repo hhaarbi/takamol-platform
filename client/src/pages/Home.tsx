@@ -11,6 +11,7 @@ import {
   Building2, MessageCircle, X, Send, Phone, MapPin,
   Bed, Bath, Maximize2, Star, ChevronDown,
   TrendingUp, Shield, Users, LayoutDashboard, Menu,
+  KeyRound, Wrench, FileText, CheckCircle2,
 } from "lucide-react";
 
 const WHATSAPP = "966558018151";
@@ -93,6 +94,9 @@ export default function HomePage() {
               <a href="#properties" className="text-sm text-muted-foreground hover:text-foreground transition-colors">العقارات</a>
               <a href="#services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">خدماتنا</a>
               <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">عن الشركة</a>
+              <a href="/tenant-portal" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                <KeyRound size={14} />بوابة المستأجر
+              </a>
               <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                 <Phone size={14} />تواصل معنا
               </a>
@@ -292,6 +296,53 @@ export default function HomePage() {
                   <div className="w-8 h-8 gold-gradient rounded-lg mb-3" />
                   <h4 className="font-bold text-foreground">{val.label}</h4>
                   <p className="text-xs text-muted-foreground mt-1">{val.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tenant Portal CTA */}
+      <section className="py-16 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+        <div className="container">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 mb-4">للمستأجرين</Badge>
+              <h2 className="text-3xl font-black mb-4">بوابة المستأجر الذكية</h2>
+              <p className="text-white/70 leading-relaxed mb-6">
+                ادخل برقم عقدك واستعرض رصيدك، تاريخ مدفوعاتك، وتفاصيل عقدك — دون الحاجة للتواصل مع الإدارة.
+              </p>
+              <div className="space-y-3 mb-8">
+                {[
+                  { icon: <FileText size={16} />, text: "عرض تفاصيل العقد وتاريخ الانتهاء" },
+                  { icon: <CheckCircle2 size={16} />, text: "متابعة سجل المدفوعات والرصيد المستحق" },
+                  { icon: <Wrench size={16} />, text: "تقديم طلب صيانة وتتبع حالته" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-white/80">
+                    <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center text-amber-400 flex-shrink-0">
+                      {item.icon}
+                    </div>
+                    <span className="text-sm">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <a href="/tenant-portal">
+                <Button size="lg" className="gold-gradient text-white font-bold px-8 hover:opacity-90">
+                  <KeyRound size={18} className="ml-2" />ادخل إلى بوابتك
+                </Button>
+              </a>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "بدون تسجيل", desc: "ادخل برقم العقد فقط", color: "text-amber-400", bg: "bg-amber-500/10" },
+                { label: "24/7", desc: "متاح على مدار الساعة", color: "text-blue-400", bg: "bg-blue-500/10" },
+                { label: "آمن", desc: "بياناتك محمية بالكامل", color: "text-green-400", bg: "bg-green-500/10" },
+                { label: "سريع", desc: "نتائج فورية بدون انتظار", color: "text-purple-400", bg: "bg-purple-500/10" },
+              ].map((item) => (
+                <div key={item.label} className={`p-5 rounded-2xl border border-white/10 ${item.bg} text-center`}>
+                  <p className={`text-2xl font-black ${item.color} mb-1`}>{item.label}</p>
+                  <p className="text-xs text-white/50">{item.desc}</p>
                 </div>
               ))}
             </div>

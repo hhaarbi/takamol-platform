@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /owner/
+Disallow: /broker/
+
+Sitemap: https://takamol.manus.space/sitemap.xml
