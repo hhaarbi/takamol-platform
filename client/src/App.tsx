@@ -21,6 +21,10 @@ import MarketComparison from "./pages/MarketComparison";
 import AnnualReport from "./pages/AnnualReport";
 import ClientNotes from "./pages/ClientNotes";
 import TenantRatings from "./pages/TenantRatings";
+import TenantPortalFull from "./pages/TenantPortalFull";
+import PropertyListings from "./pages/PropertyListings";
+import OpenAPI from "./pages/OpenAPI";
+import AccountingIntegration from "./pages/AccountingIntegration";
 
 function Router() {
   return (
@@ -46,6 +50,10 @@ function Router() {
       <Route path={"/annual-report"} component={AnnualReport} />
       <Route path={"/client-notes"} component={ClientNotes} />
       <Route path={"/tenant-ratings"} component={TenantRatings} />
+      <Route path={"/tenant-portal-v2"} component={TenantPortalFull} />
+      <Route path={"/listings"} component={PropertyListings} />
+      <Route path={"/open-api"} component={OpenAPI} />
+      <Route path={"/accounting"} component={AccountingIntegration} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

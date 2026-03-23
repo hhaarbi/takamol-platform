@@ -677,3 +677,77 @@ export const marketPrices = mysqlTable("market_prices", {
 });
 export type MarketPrice = typeof marketPrices.$inferSelect;
 export type InsertMarketPrice = typeof marketPrices.$inferInsert;
+
+// ─── TENANT SESSIONS (جلسات بوابة المستأجر) ──────────────────────────────────
+export const tenantSessions = mysqlTable("tenant_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenant_id").notNull(),
+  contractId: int("contract_id").notNull(),
+  accessToken: varchar("access_token", { length: 255 }).notNull().unique(),
+  expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type TenantSession = typeof tenantSessions.$inferSelect;
+
+// ─── TENANT DOCUMENTS (وثائق المستأجر) ───────────────────────────────────────
+export const tenantDocuments = mysqlTable("tenant_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenant_id").notNull(),
+  contractId: int("contract_id").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileKey: varchar("file_key", { length: 500 }).notNull(),
+  docType: varchar("doc_type", { length: 100 }).default("other"),
+  uploadedAt: bigint("uploaded_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type TenantDocument = typeof tenantDocuments.$inferSelect;
+
+// ─── API KEYS (مفاتيح API) ────────────────────────────────────────────────────
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  keyHash: varchar("key_hash", { length: 255 }).notNull().unique(),
+  keyPrefix: varchar("key_prefix", { length: 20 }).notNull(),
+  permissions: json("permissions").$type<string[]>().default([]),
+  isActive: boolean("is_active").notNull().default(true),
+  lastUsedAt: bigint("last_used_at", { mode: "number" }),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+  revokedAt: bigint("revoked_at", { mode: "number" }),
+});
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+// ─── PROPERTY LISTINGS (الإعلانات العقارية) ───────────────────────────────────
+export const propertyListings = mysqlTable("property_listings", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("property_id").notNull(),
+  unitId: int("unit_id"),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  listingType: mysqlEnum("listing_type", ["rent", "sale"]).notNull().default("rent"),
+  price: decimal("price", { precision: 12, scale: 2 }).notNull(),
+  status: mysqlEnum("status", ["active", "paused", "rented", "sold"]).notNull().default("active"),
+  autoPublished: boolean("auto_published").notNull().default(false),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  contactWhatsapp: varchar("contact_whatsapp", { length: 50 }),
+  viewsCount: int("views_count").notNull().default(0),
+  inquiriesCount: int("inquiries_count").notNull().default(0),
+  publishedAt: bigint("published_at", { mode: "number" }),
+  expiresAt: bigint("expires_at", { mode: "number" }),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type PropertyListing = typeof propertyListings.$inferSelect;
+
+// ─── ACCOUNTING EXPORTS (سجل التصدير المحاسبي) ───────────────────────────────
+export const accountingExports = mysqlTable("accounting_exports", {
+  id: int("id").autoincrement().primaryKey(),
+  exportType: varchar("export_type", { length: 50 }).notNull(),
+  dateFrom: bigint("date_from", { mode: "number" }).notNull(),
+  dateTo: bigint("date_to", { mode: "number" }).notNull(),
+  recordsCount: int("records_count").notNull().default(0),
+  fileUrl: text("file_url"),
+  fileKey: varchar("file_key", { length: 500 }),
+  status: varchar("status", { length: 20 }).notNull().default("completed"),
+  createdAt: bigint("created_at", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type AccountingExport = typeof accountingExports.$inferSelect;

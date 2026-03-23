@@ -21,15 +21,28 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "لوحة التحكم", path: "/dashboard" },
+  { icon: Building, label: "العقارات", path: "/dashboard/properties" },
+  { icon: Users, label: "المستأجرون", path: "/dashboard/tenants" },
+  { icon: FileText, label: "العقود", path: "/dashboard/contracts" },
+  { icon: BarChart2, label: "المدفوعات", path: "/dashboard/payments" },
+  { icon: Wrench, label: "الصيانة", path: "/dashboard/maintenance" },
+  { icon: UserCheck, label: "بوابة المستأجر", path: "/tenant-portal-v2" },
+  { icon: Megaphone, label: "الإعلانات العقارية", path: "/listings" },
+  { icon: Calculator, label: "التكامل المحاسبي", path: "/accounting" },
+  { icon: Code2, label: "API المفتوح", path: "/open-api" },
+  { icon: BarChart2, label: "التحليلات", path: "/analytics" },
+  { icon: Bell, label: "التنبيهات الذكية", path: "/smart-alerts" },
+  { icon: Download, label: "تصدير البيانات", path: "/data-export" },
+  { icon: Globe, label: "مقارنة السوق", path: "/market-comparison" },
+  { icon: Star, label: "تقييم المستأجرين", path: "/tenant-ratings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

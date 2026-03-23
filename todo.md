@@ -304,3 +304,37 @@
 - [x] إضافة favicon.svg بشعار تكامل
 - [x] إضافة Structured Data (JSON-LD) لـ RealEstateAgent
 - [x] تحسين وصف الصفحات للبحث بالكلمات المفتاحية العربية
+
+## الدفعة التاسعة - الميزات المتقدمة الأربع
+
+### بوابة المستأجر الكاملة
+- [x] جدول tenant_sessions في قاعدة البيانات (رمز دخول مؤقت)
+- [x] API tenantPortal.login (برقم العقد + رقم الهاتف)
+- [x] API tenantPortal.getBalance (رصيد + تاريخ المدفوعات)
+- [x] API tenantPortal.getMaintenanceHistory (طلبات الصيانة السابقة)
+- [x] API tenantPortal.uploadDocument (رفع وثيقة للعقار)
+- [x] API tenantPortal.getDocuments (عرض الوثائق المرفوعة)
+- [x] صفحة /tenant-portal-v2 بالميزات الكاملة
+- [x] عرض تفاصيل العقد + تاريخ الانتهاء
+- [x] نموذج طلب صيانة مع رفع صورة
+
+### تكامل QuickBooks/Odoo
+- [x] API accountingDirect.exportQuickBooks (تصدير IIF)
+- [x] API accountingDirect.exportOdoo (تصدير CSV بتنسيق Odoo)
+- [x] جدول accounting_exports لتتبع عمليات التصدير
+- [x] صفحة /accounting للتكامل المحاسبي المباشر
+- [x] سجل التصديرات السابقة
+
+### API مفتوح للتكامل الخارجي
+- [x] جدول api_keys في قاعدة البيانات
+- [x] API openApiKeys.create / revoke / list
+- [x] صفحة /open-api لإدارة المفاتيح والتوثيق
+- [x] توثيق تفاعلي لجميع endpoints المتاحة
+- [x] Rate limiting خاص بمفاتيح API
+
+### إعلانات العقارات الشاغرة
+- [x] جدول property_listings في قاعدة البيانات
+- [x] API listings.create / update / delete / list
+- [x] Cron job ينشئ إعلان تلقائياً عند انتهاء العقد
+- [x] صفحة /listings لإدارة الإعلانات
+- [x] تنبيه تيليغرام عند نشر إعلان جديد

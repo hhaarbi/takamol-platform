@@ -51,6 +51,12 @@ import {
   getMarketPrices, getPropertiesWithMarketComparison,
   getAnnualReport,
 } from "./db";
+import { createHash, randomBytes } from "crypto";
+import { getDb } from "./db";
+import {
+  tenantDocuments, apiKeys, propertyListings, accountingExports
+} from "../drizzle/schema";
+import { eq, desc } from "drizzle-orm";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1161,6 +1167,234 @@ export const appRouter = router({
         status: "open",
       });
       return { success: true };
+    }),
+    uploadDocument: publicProcedure.input(z.object({
+      contractCode: z.string(),
+      base64: z.string(),
+      filename: z.string(),
+      mimeType: z.string(),
+      docType: z.string().default("other"),
+    })).mutation(async ({ input }) => {
+      const db2 = await import("./db");
+      const contracts = await db2.getContracts();
+      const contract = contracts.find(c => c.contractNumber === input.contractCode);
+      if (!contract) throw new TRPCError({ code: "NOT_FOUND", message: "رقم العقد غير صحيح" });
+      const buffer = Buffer.from(input.base64, "base64");
+      const fileKey = `tenant-docs/${contract.tenantId}-${Date.now()}-${input.filename}`;
+      const { url } = await storagePut(fileKey, buffer, input.mimeType);
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.insert(tenantDocuments).values({
+        tenantId: contract.tenantId ?? 0,
+        contractId: contract.id,
+        fileName: input.filename,
+        fileUrl: url,
+        fileKey,
+        docType: input.docType,
+        uploadedAt: Date.now(),
+      });
+      return { success: true, url };
+    }),
+    getDocuments: publicProcedure.input(z.object({ contractCode: z.string() })).query(async ({ input }) => {
+      const db2 = await import("./db");
+      const contracts = await db2.getContracts();
+      const contract = contracts.find(c => c.contractNumber === input.contractCode);
+      if (!contract) throw new TRPCError({ code: "NOT_FOUND" });
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(tenantDocuments)
+        .where(eq(tenantDocuments.contractId, contract.id))
+        .orderBy(desc(tenantDocuments.uploadedAt));
+    }),
+  }),
+
+  // ─── API KEYS MANAGEMENT ──────────────────────────────────────────────────────
+  openApiKeys: router({
+    list: adminProcedure.query(async () => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(apiKeys).orderBy(desc(apiKeys.createdAt));
+    }),
+    create: adminProcedure.input(z.object({
+      name: z.string().min(3),
+      permissions: z.array(z.string()).default(["read"]),
+    })).mutation(async ({ input }) => {
+      const rawKey = `tk_${randomBytes(32).toString("hex")}`;
+      const keyHash = createHash("sha256").update(rawKey).digest("hex");
+      const keyPrefix = rawKey.substring(0, 12);
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.insert(apiKeys).values({
+        name: input.name,
+        keyHash,
+        keyPrefix,
+        permissions: input.permissions,
+        isActive: true,
+        createdAt: Date.now(),
+      });
+      return { success: true, apiKey: rawKey, prefix: keyPrefix };
+    }),
+    revoke: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.update(apiKeys).set({ isActive: false, revokedAt: Date.now() }).where(eq(apiKeys.id, input.id));
+      return { success: true };
+    }),
+  }),
+
+  // ─── PROPERTY LISTINGS (الإعلانات) ────────────────────────────────────────────
+  listings: router({
+    list: publicProcedure.input(z.object({
+      status: z.enum(["active", "paused", "rented", "sold"]).optional(),
+      listingType: z.enum(["rent", "sale"]).optional(),
+    }).optional()).query(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      const rows = await drizzle.select().from(propertyListings).orderBy(desc(propertyListings.createdAt));
+      if (!input) return rows;
+      return rows.filter((r: typeof rows[0]) => {
+        if (input.status && r.status !== input.status) return false;
+        if (input.listingType && r.listingType !== input.listingType) return false;
+        return true;
+      });
+    }),
+    create: adminProcedure.input(z.object({
+      propertyId: z.number(),
+      unitId: z.number().optional(),
+      title: z.string().min(5),
+      description: z.string().optional(),
+      listingType: z.enum(["rent", "sale"]).default("rent"),
+      price: z.number().positive(),
+      contactPhone: z.string().optional(),
+      contactWhatsapp: z.string().optional(),
+      expiresAt: z.number().optional(),
+    })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const now = Date.now();
+      await drizzle.insert(propertyListings).values({
+        ...input,
+        price: String(input.price),
+        status: "active",
+        autoPublished: false,
+        viewsCount: 0,
+        inquiriesCount: 0,
+        publishedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { success: true };
+    }),
+    update: adminProcedure.input(z.object({
+      id: z.number(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      price: z.number().optional(),
+      status: z.enum(["active", "paused", "rented", "sold"]).optional(),
+      contactPhone: z.string().optional(),
+      contactWhatsapp: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const { id, price, ...rest } = input;
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.update(propertyListings).set({
+        ...rest,
+        ...(price ? { price: String(price) } : {}),
+        updatedAt: Date.now(),
+      }).where(eq(propertyListings.id, id));
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await drizzle.delete(propertyListings).where(eq(propertyListings.id, input.id));
+      return { success: true };
+    }),
+    incrementView: publicProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+      const drizzle = await getDb();
+      if (!drizzle) return { success: false };
+      const [row] = await drizzle.select().from(propertyListings).where(eq(propertyListings.id, input.id));
+      if (row) await drizzle.update(propertyListings).set({ viewsCount: (row.viewsCount ?? 0) + 1 }).where(eq(propertyListings.id, input.id));
+      return { success: true };
+    }),
+  }),
+
+  // ─── ACCOUNTING DIRECT EXPORT (QuickBooks / Odoo) ──────────────────────────────
+  accountingDirect: router({
+    exportQuickBooks: adminProcedure.input(z.object({
+      dateFrom: z.number(),
+      dateTo: z.number(),
+    })).mutation(async ({ input }) => {
+      const db2 = await import("./db");
+      const payments_ = await db2.getPayments({});
+      const filtered = payments_.filter((p: any) => {
+        const d = (p.paidDate ?? p.dueDate) as string | null;
+        if (!d) return false;
+        const ts = new Date(d).getTime();
+        return ts >= input.dateFrom && ts <= input.dateTo;
+      });
+      const lines = [
+        "!TRNS\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tMEMO",
+        "!SPL\tTRNSTYPE\tDATE\tACCNT\tAMOUNT\tMEMO",
+        "!ENDTRNS",
+        ...filtered.map((p: any) => {
+          const date = p.paidDate ? new Date(p.paidDate as string).toLocaleDateString("en-US") : new Date().toLocaleDateString("en-US");
+          return [
+            `TRNS\tINVOICE\t${date}\tAccounts Receivable\tMustajir\t${p.amount}\tإيجار`,
+            `SPL\tINVOICE\t${date}\tRental Income\t-${p.amount}\tإيجار`,
+            "ENDTRNS",
+          ].join("\n");
+        }),
+      ];
+      const content = lines.join("\n");
+      const drizzle = await getDb();
+      if (drizzle) {
+        await drizzle.insert(accountingExports).values({
+          exportType: "quickbooks",
+          dateFrom: input.dateFrom,
+          dateTo: input.dateTo,
+          recordsCount: filtered.length,
+          status: "completed",
+          createdAt: Date.now(),
+        });
+      }
+      return { success: true, content, recordsCount: filtered.length, format: "IIF" };
+    }),
+    exportOdoo: adminProcedure.input(z.object({
+      dateFrom: z.number(),
+      dateTo: z.number(),
+    })).mutation(async ({ input }) => {
+      const db2 = await import("./db");
+      const payments_ = await db2.getPayments({});
+      const filtered = payments_.filter((p: any) => {
+        const d = (p.paidDate ?? p.dueDate) as string | null;
+        if (!d) return false;
+        const ts = new Date(d).getTime();
+        return ts >= input.dateFrom && ts <= input.dateTo;
+      });
+      const headers = ["date", "journal_id", "partner_id", "name", "debit", "credit", "account_id"];
+      const rows2 = filtered.map((p: any) => {
+        const date = p.paidDate ? new Date(p.paidDate as string).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+        return [date, "BNK1", `tenant-${p.tenantId}`, `إيجار - عقار ${p.propertyId}`, p.amount, "0", "411000"].join(",");
+      });
+      const content = [headers.join(","), ...rows2].join("\n");
+      const drizzle = await getDb();
+      if (drizzle) {
+        await drizzle.insert(accountingExports).values({
+          exportType: "odoo",
+          dateFrom: input.dateFrom,
+          dateTo: input.dateTo,
+          recordsCount: filtered.length,
+          status: "completed",
+          createdAt: Date.now(),
+        });
+      }
+      return { success: true, content, recordsCount: filtered.length, format: "CSV" };
+    }),
+    getHistory: adminProcedure.query(async () => {
+      const drizzle = await getDb();
+      if (!drizzle) return [];
+      return drizzle.select().from(accountingExports).orderBy(desc(accountingExports.createdAt)).limit(50);
     }),
   }),
 });
