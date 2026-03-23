@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- الصفحة الرئيسية -->
+  <url>
+    <loc>https://realestatebot-egvrbfpq.manus.space/</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://realestatebot-egvrbfpq.manus.space/" />
+  </url>
+
+  <!-- بوابة المستأجر -->
+  <url>
+    <loc>https://realestatebot-egvrbfpq.manus.space/tenant-portal</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- الإعلانات العقارية العامة -->
+  <url>
+    <loc>https://realestatebot-egvrbfpq.manus.space/listings</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- مقارنة السوق -->
+  <url>
+    <loc>https://realestatebot-egvrbfpq.manus.space/market-comparison</loc>
+    <lastmod>2026-03-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+</urlset>

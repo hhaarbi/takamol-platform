@@ -1,8 +1,19 @@
 User-agent: *
 Allow: /
+Allow: /listings
+Allow: /tenant-portal
+Allow: /market-comparison
+
+# حظر الصفحات الخاصة
 Disallow: /dashboard
+Disallow: /dashboard/
 Disallow: /api/
+Disallow: /api/trpc/
 Disallow: /owner/
 Disallow: /broker/
 
-Sitemap: https://takamol.manus.space/sitemap.xml
+# خريطة الموقع
+Sitemap: https://realestatebot-egvrbfpq.manus.space/sitemap.xml
+
+# معدل الزحف
+Crawl-delay: 5
