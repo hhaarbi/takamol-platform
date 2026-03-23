@@ -56,6 +56,10 @@ export default function HomePage() {
     },
   });
 
+  useEffect(() => {
+    document.title = "تكامل لإدارة الأملاك - عقارات المدينة المنورة";
+    return () => { document.title = "تكامل لإدارة الأملاك"; };
+  }, []);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isTyping]);
 
   useEffect(() => {
