@@ -1,7 +1,9 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { TrendingUp, TrendingDown, Building2, Users, DollarSign, Wrench, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Building2, Users, DollarSign, Wrench, Target, Download, Bell } from "lucide-react";
+import { useLocation } from "wouter";
 
 const COLORS = ["#d97706", "#059669", "#2563eb", "#7c3aed", "#dc2626", "#0891b2"];
 
@@ -21,11 +23,80 @@ export default function Analytics() {
     { label: "عقود منتهية قريباً", value: kpis.expiringContracts ?? 0, icon: <Target className="h-5 w-5" />, color: "text-orange-600", bg: "bg-orange-50", trend: (kpis.expiringContracts ?? 0) > 3 ? "down" : "up" },
   ] : [];
 
+  const [, navigate] = useLocation();
+
+  const exportPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const kpiHtml = kpis ? `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+        <div style="background:#f0fdf4;padding:16px;border-radius:8px;text-align:center">
+          <div style="font-size:24px;font-weight:bold;color:#16a34a">${(kpis.occupancyRate ?? 0).toFixed(1)}%</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">معدل الإشغال</div>
+        </div>
+        <div style="background:#fffbeb;padding:16px;border-radius:8px;text-align:center">
+          <div style="font-size:24px;font-weight:bold;color:#d97706">${Number(kpis.thisMonthRevenue ?? 0).toLocaleString("ar-SA")} ر.س</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">إيرادات الشهر</div>
+        </div>
+        <div style="background:#fef2f2;padding:16px;border-radius:8px;text-align:center">
+          <div style="font-size:24px;font-weight:bold;color:#dc2626">${kpis.overduePayments ?? 0}</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">دفعات متأخرة</div>
+        </div>
+        <div style="background:#f0f9ff;padding:16px;border-radius:8px;text-align:center">
+          <div style="font-size:24px;font-weight:bold;color:#0284c7">${kpis.totalProperties ?? 0}</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">إجمالي العقارات</div>
+        </div>
+        <div style="background:#faf5ff;padding:16px;border-radius:8px;text-align:center">
+          <div style="font-size:24px;font-weight:bold;color:#7c3aed">${kpis.openMaintenance ?? 0}</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">طلبات صيانة مفتوحة</div>
+        </div>
+        <div style="background:#fff7ed;padding:16px;border-radius:8px;text-align:center">
+          <div style="font-size:24px;font-weight:bold;color:#ea580c">${kpis.expiringContracts ?? 0}</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">عقود تنتهي قريباً</div>
+        </div>
+      </div>` : "";
+    const revenueTableHtml = revenueByProperty.length > 0 ? `
+      <h3 style="margin-bottom:12px;color:#374151">الإيرادات حسب العقار</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+        <thead><tr style="background:#f3f4f6">
+          <th style="padding:8px;text-align:right;border:1px solid #e5e7eb">رقم العقار</th>
+          <th style="padding:8px;text-align:right;border:1px solid #e5e7eb">إجمالي الإيرادات</th>
+          <th style="padding:8px;text-align:right;border:1px solid #e5e7eb">عدد الدفعات</th>
+        </tr></thead>
+        <tbody>${revenueByProperty.map((r: any) => `<tr><td style="padding:8px;border:1px solid #e5e7eb">عقار #${r.propertyId}</td><td style="padding:8px;border:1px solid #e5e7eb">${Number(r.total).toLocaleString("ar-SA")} ر.س</td><td style="padding:8px;border:1px solid #e5e7eb">${r.count}</td></tr>`).join("")}</tbody>
+      </table>` : "";
+    printWindow.document.write(`
+      <!DOCTYPE html><html dir="rtl"><head>
+        <meta charset="UTF-8"><title>تقرير تكامل - التحليلات</title>
+        <style>body{font-family:Arial,sans-serif;padding:24px;color:#111;direction:rtl}h1{color:#d97706;border-bottom:2px solid #d97706;padding-bottom:8px}h2{color:#374151;margin-top:24px}</style>
+      </head><body>
+        <h1>تقرير تكامل - التحليلات المتقدمة</h1>
+        <p style="color:#6b7280;margin-bottom:24px">تاريخ التقرير: ${new Date().toLocaleDateString("ar-SA")} | المدينة المنورة</p>
+        <h2>مؤشرات الأداء الرئيسية</h2>
+        ${kpiHtml}
+        ${revenueTableHtml}
+      </body></html>`);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   return (
     <div className="p-6 space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">التحليلات المتقدمة</h1>
-        <p className="text-gray-500 text-sm mt-1">مؤشرات الأداء الرئيسية والتقارير التفصيلية</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">التحليلات المتقدمة</h1>
+          <p className="text-gray-500 text-sm mt-1">مؤشرات الأداء الرئيسية والتقارير التفصيلية</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/smart-alerts")}>
+            <Bell className="h-4 w-4 text-red-500" />
+            مركز التنبيهات
+          </Button>
+          <Button size="sm" className="gap-2 bg-amber-600 hover:bg-amber-700" onClick={exportPDF}>
+            <Download className="h-4 w-4" />
+            تصدير PDF
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}

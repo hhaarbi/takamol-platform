@@ -44,6 +44,7 @@ import {
   getSystemSettings, getSystemSetting, upsertSystemSetting,
   getKPIs, getRevenueByProperty, getCollectionRate, getMaintenanceCostByProperty,
   getBrokerPerformance, getOwnerROI,
+  getPropertyROI, getSmartAlerts,
 } from "./db";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
@@ -941,6 +942,31 @@ export const appRouter = router({
     maintenanceCost: adminProcedure.query(() => getMaintenanceCostByProperty()),
     brokerPerformance: adminProcedure.query(() => getBrokerPerformance()),
     ownerROI: protectedProcedure.input(z.number()).query(({ input }) => getOwnerROI(input)),
+    propertyROI: adminProcedure.input(z.number()).query(({ input }) => getPropertyROI(input)),
+  }),
+
+  // ─── SMART ALERTS (التنبيهات الذكية) ──────────────────────────────────────────────
+  smartAlerts: router({
+    get: adminProcedure.query(() => getSmartAlerts()),
+    sendDailyReport: adminProcedure.mutation(async () => {
+      const alerts = await getSmartAlerts();
+      const kpisData = await getKPIs();
+      const kpis = kpisData ?? { totalProperties: 0, occupancyRate: 0, thisMonthRevenue: 0, overduePayments: 0, overdueAmount: 0, openMaintenance: 0, expiringContracts: 0 };
+      const msg = [
+        `📊 *تقرير تكامل اليومي - ${new Date().toLocaleDateString("ar-SA")}*`,
+        ``,
+        `🏠 العقارات: ${kpis.totalProperties} | الإشغال: ${kpis.occupancyRate.toFixed(1)}%`,
+        `💰 إيرادات الشهر: ${Number(kpis.thisMonthRevenue).toLocaleString("ar-SA")} ر.س`,
+        `⚠️ متأخرات: ${kpis.overduePayments} دفعة (مبلغ: ${Number(kpis.overdueAmount).toLocaleString("ar-SA")} ر.س)`,
+        `🔧 صيانة مفتوحة: ${kpis.openMaintenance}`,
+        `📄 عقود تنتهي قريباً: ${kpis.expiringContracts}`,
+        ``,
+        alerts.overduePayments.length > 0 ? `🚨 *متأخرون عن الدفع:*\n${alerts.overduePayments.slice(0, 3).map(p => `• ${p.tenantName} - ${Number(p.amount).toLocaleString("ar-SA")} ر.س (تأخر ${p.daysOverdue} يوم)`).join("\n")}` : "",
+        alerts.expiringContracts.length > 0 ? `📅 *عقود تنتهي قريباً:*\n${alerts.expiringContracts.slice(0, 3).map(c => `• ${c.tenantName} - ${c.propertyTitle} (${c.daysLeft} يوم)`).join("\n")}` : "",
+      ].filter(Boolean).join("\n");
+      await notifyOwner({ title: "تقرير تكامل اليومي", content: msg });
+      return { success: true, message: msg };
+    }),
   }),
 });
 

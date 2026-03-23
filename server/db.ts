@@ -1265,3 +1265,111 @@ export async function getOwnerROI(ownerId: number) {
     netProfit: net,
   };
 }
+
+// ─── PROPERTY ROI ANALYSIS (تحليل العائد لكل عقار) ────────────────────────────
+export async function getPropertyROI(propertyId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const property = await getPropertyById(propertyId);
+  if (!property) return null;
+
+  const [revenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` })
+    .from(payments).where(and(eq(payments.propertyId, propertyId), eq(payments.status, "paid")));
+
+  const [expensesTotal] = await db.select({ total: sql<number>`coalesce(sum(amount), 0)` })
+    .from(expenses).where(eq(expenses.propertyId, propertyId));
+
+  const [maintenanceCosts] = await db.select({ total: sql<number>`coalesce(sum(cost), 0)` })
+    .from(maintenanceRequests).where(and(eq(maintenanceRequests.propertyId, propertyId), eq(maintenanceRequests.status, "completed")));
+
+  const monthlyData: Array<{ month: string; revenue: number; expenses: number }> = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const [rev] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` })
+      .from(payments).where(and(eq(payments.propertyId, propertyId), eq(payments.status, "paid"), sql`YEAR(paidDate) = ${year} AND MONTH(paidDate) = ${month}`));
+    const [exp] = await db.select({ total: sql<number>`coalesce(sum(amount), 0)` })
+      .from(expenses).where(and(eq(expenses.propertyId, propertyId), sql`YEAR(date) = ${year} AND MONTH(date) = ${month}`));
+    monthlyData.push({ month: `${year}-${String(month).padStart(2, "0")}`, revenue: Number(rev.total), expenses: Number(exp.total) });
+  }
+
+  const totalRevenue = Number(revenue.total);
+  const totalExpenses = Number(expensesTotal.total) + Number(maintenanceCosts.total);
+  const netProfit = totalRevenue - totalExpenses;
+  const propertyPrice = Number(property.price);
+  const roi = propertyPrice > 0 ? (netProfit / propertyPrice) * 100 : 0;
+
+  return {
+    propertyId,
+    propertyTitle: property.titleAr,
+    propertyPrice,
+    totalRevenue,
+    totalExpenses,
+    maintenanceCosts: Number(maintenanceCosts.total),
+    netProfit,
+    roi: Math.round(roi * 100) / 100,
+    monthlyData,
+  };
+}
+
+// ─── SMART ALERTS (التنبيهات الذكية) ──────────────────────────────────────────
+export async function getSmartAlerts() {
+  const db = await getDb();
+  if (!db) return { expiringContracts: [], overduePayments: [], pendingMaintenance: [], vacantUnits: [] };
+
+  const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  const expiringContracts = await db.select({
+    id: contracts.id,
+    tenantName: tenants.name,
+    propertyTitle: properties.titleAr,
+    endDate: contracts.endDate,
+    daysLeft: sql<number>`DATEDIFF(endDate, NOW())`,
+  }).from(contracts)
+    .leftJoin(tenants, eq(contracts.tenantId, tenants.id))
+    .leftJoin(properties, eq(contracts.propertyId, properties.id))
+    .where(and(eq(contracts.status, "active"), sql`endDate BETWEEN NOW() AND ${in60Days}`))
+    .orderBy(contracts.endDate).limit(20);
+
+  const overduePayments = await db.select({
+    id: payments.id,
+    tenantName: tenants.name,
+    propertyTitle: properties.titleAr,
+    amount: payments.amount,
+    dueDate: payments.dueDate,
+    daysOverdue: sql<number>`DATEDIFF(NOW(), dueDate)`,
+  }).from(payments)
+    .leftJoin(tenants, eq(payments.tenantId, tenants.id))
+    .leftJoin(properties, eq(payments.propertyId, properties.id))
+    .where(and(eq(payments.status, "pending"), sql`dueDate < NOW()`))
+    .orderBy(sql`dueDate ASC`).limit(20);
+
+  const pendingMaintenance = await db.select({
+    id: maintenanceRequests.id,
+    title: maintenanceRequests.title,
+    propertyTitle: properties.titleAr,
+    priority: maintenanceRequests.priority,
+    createdAt: maintenanceRequests.createdAt,
+    daysPending: sql<number>`DATEDIFF(NOW(), createdAt)`,
+  }).from(maintenanceRequests)
+    .leftJoin(properties, eq(maintenanceRequests.propertyId, properties.id))
+    .where(sql`status IN ('pending','in_progress') AND priority IN ('high','urgent')`)
+    .orderBy(sql`FIELD(priority,'urgent','high'), createdAt ASC`).limit(10);
+
+  const vacantUnits = await db.select({
+    id: units.id,
+    unitNumber: units.unitNumber,
+    propertyTitle: properties.titleAr,
+    vacantSince: units.vacantSince,
+    daysVacant: sql<number>`DATEDIFF(NOW(), vacantSince)`,
+    rentPrice: units.rentPrice,
+  }).from(units)
+    .leftJoin(properties, eq(units.propertyId, properties.id))
+    .where(and(eq(units.status, "vacant"), sql`vacantSince IS NOT NULL`))
+    .orderBy(sql`vacantSince ASC`).limit(10);
+
+  return { expiringContracts, overduePayments, pendingMaintenance, vacantUnits };
+}

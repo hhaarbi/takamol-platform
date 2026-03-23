@@ -90,6 +90,7 @@ const NAV_SECTIONS = [
     { id: "ext:broker-referrals", label: "إحالات الوسطاء", icon: ArrowUpDown, href: "/broker-referrals" },
   ]},
   { title: "التشغيل المتقدم", items: [
+    { id: "ext:smart-alerts", label: "مركز التنبيهات", icon: AlertTriangle, href: "/smart-alerts" },
     { id: "ext:contractors", label: "المقاولون", icon: Wrench, href: "/contractors" },
     { id: "ext:settings", label: "إعدادات النظام", icon: Settings, href: "/settings" },
   ]},
@@ -279,6 +280,7 @@ export default function Dashboard() {
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
+    <>
     <div className="min-h-screen bg-slate-50 flex" dir="rtl">
       {/* ── Sidebar ── */}
       <aside className={`${sidebarOpen ? "w-64" : "w-16"} bg-slate-900 text-white flex flex-col transition-all duration-300 fixed h-full z-40`}>
@@ -800,10 +802,16 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-amber-600">{formatCurrency(prop.price)}</span>
-                        <Button size="sm" variant="outline" className="text-xs h-7 text-red-500 hover:text-red-700"
-                          onClick={() => { if (confirm("حذف هذا العقار؟")) deletePropertyMutation.mutate(prop.id); }}>
-                          <Trash2 size={12} className="ml-1" /> حذف
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" className="text-xs h-7 text-blue-600 hover:text-blue-800"
+                            onClick={() => setPropertyDetailId(prop.id)}>
+                            📊 ROI
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-xs h-7 text-red-500 hover:text-red-700"
+                            onClick={() => { if (confirm("حذف هذا العقار؟")) deletePropertyMutation.mutate(prop.id); }}>
+                            <Trash2 size={12} className="ml-1" /> حذف
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1580,6 +1588,99 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+    </div>
+
+    {/* ─── PROPERTY ROI DIALOG ─────────────────────────────────────────── */}
+    {propertyDetailId && (
+      <PropertyROIDialog propertyId={propertyDetailId} onClose={() => setPropertyDetailId(null)} />
+    )}
+    </>
+  );
+}
+
+// ─── PROPERTY ROI DIALOG ──────────────────────────────────────────────────────
+function PropertyROIDialog({ propertyId, onClose }: { propertyId: number; onClose: () => void }) {
+  const { data, isLoading } = trpc.analytics.propertyROI.useQuery(propertyId);
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose} dir="rtl">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">📊 تحليل العائد (ROI) - {data?.propertyTitle ?? "جاري التحميل..."}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl font-bold">×</button>
+        </div>
+        {isLoading ? (
+          <div className="p-8 text-center text-gray-500">جاري تحليل بيانات العقار...</div>
+        ) : data ? (
+          <div className="p-5 space-y-5">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <div className="text-xl font-bold text-green-700">{data.totalRevenue.toLocaleString("ar-SA")} ر.س</div>
+                <div className="text-xs text-gray-500 mt-1">إجمالي الإيرادات</div>
+              </div>
+              <div className="bg-red-50 rounded-lg p-3 text-center">
+                <div className="text-xl font-bold text-red-700">{data.totalExpenses.toLocaleString("ar-SA")} ر.س</div>
+                <div className="text-xs text-gray-500 mt-1">إجمالي المصاريف</div>
+              </div>
+              <div className={`rounded-lg p-3 text-center ${data.netProfit >= 0 ? "bg-blue-50" : "bg-orange-50"}`}>
+                <div className={`text-xl font-bold ${data.netProfit >= 0 ? "text-blue-700" : "text-orange-700"}`}>{data.netProfit.toLocaleString("ar-SA")} ر.س</div>
+                <div className="text-xs text-gray-500 mt-1">صافي الربح</div>
+              </div>
+              <div className={`rounded-lg p-3 text-center ${data.roi >= 5 ? "bg-emerald-50" : data.roi >= 0 ? "bg-yellow-50" : "bg-red-50"}`}>
+                <div className={`text-2xl font-bold ${data.roi >= 5 ? "text-emerald-700" : data.roi >= 0 ? "text-yellow-700" : "text-red-700"}`}>{data.roi.toFixed(1)}%</div>
+                <div className="text-xs text-gray-500 mt-1">نسبة العائد ROI</div>
+              </div>
+            </div>
+            {/* ROI Gauge */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">مؤشر العائد</span>
+                <span className="text-sm text-gray-500">معيار السوق: 6-8%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className={`h-3 rounded-full transition-all ${data.roi >= 6 ? "bg-green-500" : data.roi >= 3 ? "bg-yellow-500" : "bg-red-500"}`}
+                  style={{ width: `${Math.min(Math.max(data.roi, 0), 15) / 15 * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>0%</span><span>5%</span><span>10%</span><span>15%+</span>
+              </div>
+            </div>
+            {/* Monthly Chart (simple bars) */}
+            {data.monthlyData.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">الإيرادات والمصاريف الشهرية (12 شهر)</h3>
+                <div className="flex items-end gap-1 h-24">
+                  {data.monthlyData.map((m, i) => {
+                    const maxVal = Math.max(...data.monthlyData.map(d => Math.max(d.revenue, d.expenses)), 1);
+                    const revH = (m.revenue / maxVal) * 100;
+                    const expH = (m.expenses / maxVal) * 100;
+                    return (
+                      <div key={i} className="flex-1 flex items-end gap-0.5" title={`${m.month}: إيراد ${m.revenue.toLocaleString()} | مصروف ${m.expenses.toLocaleString()}`}>
+                        <div className="flex-1 bg-green-400 rounded-t" style={{ height: `${revH}%` }} />
+                        <div className="flex-1 bg-red-400 rounded-t" style={{ height: `${expH}%` }} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-400 rounded inline-block"></span>إيرادات</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 bg-red-400 rounded inline-block"></span>مصاريف</span>
+                </div>
+              </div>
+            )}
+            {/* Details */}
+            <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2">
+              <div className="flex justify-between"><span className="text-gray-600">سعر العقار</span><span className="font-medium">{data.propertyPrice.toLocaleString("ar-SA")} ر.س</span></div>
+              <div className="flex justify-between"><span className="text-gray-600">تكاليف الصيانة</span><span className="font-medium text-orange-600">{data.maintenanceCosts.toLocaleString("ar-SA")} ر.س</span></div>
+              <div className="flex justify-between border-t pt-2"><span className="font-semibold">صافي الربح</span><span className={`font-bold ${data.netProfit >= 0 ? "text-green-700" : "text-red-700"}`}>{data.netProfit.toLocaleString("ar-SA")} ر.س</span></div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-8 text-center text-gray-500">لا توجد بيانات كافية لهذا العقار</div>
+        )}
+      </div>
     </div>
   );
 }
