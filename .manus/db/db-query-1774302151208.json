@@ -1,0 +1,112 @@
+{
+  "query": "SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'property_listings' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'property_listings' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "property_id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "unit_id",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "title",
+      "data_type": "varchar",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "listing_type",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "rent"
+    },
+    {
+      "column_name": "price",
+      "data_type": "decimal",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "status",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "active"
+    },
+    {
+      "column_name": "auto_published",
+      "data_type": "tinyint",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "column_name": "contact_phone",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "contact_whatsapp",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "views_count",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "column_name": "inquiries_count",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "column_name": "published_at",
+      "data_type": "bigint",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "expires_at",
+      "data_type": "bigint",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\tdata_type\tis_nullable\tcolumn_default\nid\tint\tNO\tNULL\nproperty_id\tint\tNO\tNULL\nunit_id\tint\tYES\tNULL\ntitle\tvarchar\tNO\tNULL\ndescription\ttext\tYES\tNULL\nlisting_type\tenum\tNO\trent\nprice\tdecimal\tNO\tNULL\nstatus\tenum\tNO\tactive\nauto_published\ttinyint\tNO\t0\ncontact_phone\tvarchar\tYES\tNULL\ncontact_whatsapp\tvarchar\tYES\tNULL\nviews_count\tint\tNO\t0\ninquiries_count\tint\tNO\t0\npublished_at\tbigint\tYES\tNULL\nexpires_at\tbigint\tYES\tNULL\ncreated_at\tbigint\tNO\tNULL\nupdated_at\tbigint\tNO\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1636
+}

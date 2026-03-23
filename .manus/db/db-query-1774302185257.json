@@ -1,0 +1,157 @@
+{
+  "query": "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name;",
+  "rows": [
+    {
+      "table_name": "__drizzle_migrations"
+    },
+    {
+      "table_name": "accounting_exports"
+    },
+    {
+      "table_name": "activity_log"
+    },
+    {
+      "table_name": "api_keys"
+    },
+    {
+      "table_name": "api_usage_log"
+    },
+    {
+      "table_name": "approvals"
+    },
+    {
+      "table_name": "broker_commissions"
+    },
+    {
+      "table_name": "broker_referrals"
+    },
+    {
+      "table_name": "brokers"
+    },
+    {
+      "table_name": "chat_messages"
+    },
+    {
+      "table_name": "chat_sessions"
+    },
+    {
+      "table_name": "collection_schedule"
+    },
+    {
+      "table_name": "compliance_records"
+    },
+    {
+      "table_name": "contract_renewal_requests"
+    },
+    {
+      "table_name": "contractors"
+    },
+    {
+      "table_name": "contracts"
+    },
+    {
+      "table_name": "email_notification_log"
+    },
+    {
+      "table_name": "email_notification_settings"
+    },
+    {
+      "table_name": "expenses"
+    },
+    {
+      "table_name": "fal_licenses"
+    },
+    {
+      "table_name": "handover_records"
+    },
+    {
+      "table_name": "internal_messages"
+    },
+    {
+      "table_name": "invoices"
+    },
+    {
+      "table_name": "leads"
+    },
+    {
+      "table_name": "listing_views"
+    },
+    {
+      "table_name": "login_log"
+    },
+    {
+      "table_name": "maintenance_requests"
+    },
+    {
+      "table_name": "message_templates"
+    },
+    {
+      "table_name": "notifications"
+    },
+    {
+      "table_name": "owner_statements"
+    },
+    {
+      "table_name": "owner_transfers"
+    },
+    {
+      "table_name": "payments"
+    },
+    {
+      "table_name": "properties"
+    },
+    {
+      "table_name": "property_documents"
+    },
+    {
+      "table_name": "property_images"
+    },
+    {
+      "table_name": "property_listings"
+    },
+    {
+      "table_name": "property_owners"
+    },
+    {
+      "table_name": "role_permissions"
+    },
+    {
+      "table_name": "scheduled_maintenance"
+    },
+    {
+      "table_name": "staff"
+    },
+    {
+      "table_name": "system_settings"
+    },
+    {
+      "table_name": "tasks"
+    },
+    {
+      "table_name": "tenant_documents"
+    },
+    {
+      "table_name": "tenant_sessions"
+    },
+    {
+      "table_name": "tenants"
+    },
+    {
+      "table_name": "unit_reservations"
+    },
+    {
+      "table_name": "units"
+    },
+    {
+      "table_name": "users"
+    },
+    {
+      "table_name": "webhooks"
+    }
+  ],
+  "messages": [],
+  "stdout": "table_name\n__drizzle_migrations\naccounting_exports\nactivity_log\napi_keys\napi_usage_log\napprovals\nbroker_commissions\nbroker_referrals\nbrokers\nchat_messages\nchat_sessions\ncollection_schedule\ncompliance_records\ncontract_renewal_requests\ncontractors\ncontracts\nemail_notification_log\nemail_notification_settings\nexpenses\nfal_licenses\nhandover_records\ninternal_messages\ninvoices\nleads\nlisting_views\nlogin_log\nmaintenance_requests\nmessage_templates\nnotifications\nowner_statements\nowner_transfers\npayments\nproperties\nproperty_documents\nproperty_images\nproperty_listings\nproperty_owners\nrole_permissions\nscheduled_maintenance\nstaff\nsystem_settings\ntasks\ntenant_documents\ntenant_sessions\ntenants\nunit_reservations\nunits\nusers\nwebhooks\n",
+  "stderr": "",
+  "execution_time_ms": 1590
+}

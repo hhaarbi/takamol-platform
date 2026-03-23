@@ -1,0 +1,316 @@
+{
+  "query": "SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'properties' ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'properties' ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "ownerId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "brokerId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "source",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "company"
+    },
+    {
+      "column_name": "titleAr",
+      "data_type": "varchar",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "descriptionAr",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "type",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "listingType",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "status",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "available"
+    },
+    {
+      "column_name": "price",
+      "data_type": "decimal",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "priceUnit",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "total"
+    },
+    {
+      "column_name": "negotiable",
+      "data_type": "tinyint",
+      "is_nullable": "NO",
+      "column_default": "1"
+    },
+    {
+      "column_name": "minPrice",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "brokerCommissionRate",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "brokerCommissionAmount",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "area",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "bedrooms",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "bathrooms",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "floor",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "totalFloors",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "city",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "المدينة المنورة"
+    },
+    {
+      "column_name": "district",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "address",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "latitude",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "longitude",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "images",
+      "data_type": "json",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "features",
+      "data_type": "json",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "isFeatured",
+      "data_type": "tinyint",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "column_name": "viewCount",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "column_name": "createdAt",
+      "data_type": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "column_name": "updatedAt",
+      "data_type": "timestamp",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "column_name": "yearBuilt",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "lastRenovation",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "floorNumber",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "parkingSpaces",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "column_name": "furnished",
+      "data_type": "enum",
+      "is_nullable": "YES",
+      "column_default": "unfurnished"
+    },
+    {
+      "column_name": "deedNumber",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "electricityAccount",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "waterAccount",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "nationalAddress",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "buildingPermitNo",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "approvalStatus",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "approved"
+    },
+    {
+      "column_name": "maintenanceBudget",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "maintenanceSpent",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "column_name": "vacantSince",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "vacancyReason",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "roi",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "column_name": "vacancyLoss",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "column_name": "marketRent",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "lastInspectionDate",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "column_name": "nextInspectionDate",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\tdata_type\tis_nullable\tcolumn_default\nid\tint\tNO\tNULL\nownerId\tint\tYES\tNULL\nbrokerId\tint\tYES\tNULL\nsource\tenum\tNO\tcompany\ntitleAr\tvarchar\tNO\tNULL\ndescriptionAr\ttext\tYES\tNULL\ntype\tenum\tNO\tNULL\nlistingType\tenum\tNO\tNULL\nstatus\tenum\tNO\tavailable\nprice\tdecimal\tNO\tNULL\npriceUnit\tenum\tNO\ttotal\nnegotiable\ttinyint\tNO\t1\nminPrice\tdecimal\tYES\tNULL\nbrokerCommissionRate\tdecimal\tYES\tNULL\nbrokerCommissionAmount\tdecimal\tYES\tNULL\narea\tdecimal\tYES\tNULL\nbedrooms\tint\tYES\tNULL\nbathrooms\tint\tYES\tNULL\nfloor\tint\tYES\tNULL\ntotalFloors\tint\tYES\tNULL\ncity\tvarchar\tYES\tالمدينة المنورة\ndistrict\tvarchar\tYES\tNULL\naddress\ttext\tYES\tNULL\nlatitude\tdecimal\tYES\tNULL\nlongitude\tdecimal\tYES\tNULL\nimages\tjson\tYES\tNULL\nfeatures\tjson\tYES\tNULL\nisFeatured\ttinyint\tNO\t0\nviewCount\tint\tYES\t0\ncreatedAt\ttimestamp\tNO\tCURRENT_TIMESTAMP\nupdatedAt\ttimestamp\tNO\tCURRENT_TIMESTAMP\nyearBuilt\tint\tYES\tNULL\nlastRenovation\tdate\tYES\tNULL\nfloorNumber\tint\tYES\tNULL\nparkingSpaces\tint\tYES\t0\nfurnished\tenum\tYES\tunfurnished\ndeedNumber\tvarchar\tYES\tNULL\nelectricityAccount\tvarchar\tYES\tNULL\nwaterAccount\tvarchar\tYES\tNULL\nnationalAddress\tvarchar\tYES\tNULL\nbuildingPermitNo\tvarchar\tYES\tNULL\napprovalStatus\tenum\tNO\tapproved\nmaintenanceBudget\tdecimal\tYES\tNULL\nmaintenanceSpent\tdecimal\tYES\t0\nvacantSince\ttimestamp\tYES\tNULL\nvacancyReason\tvarchar\tYES\tNULL\nroi\tdecimal\tYES\t0\nvacancyLoss\tdecimal\tYES\t0\nmarketRent\tdecimal\tYES\tNULL\nlastInspectionDate\tdate\tYES\tNULL\nnextInspectionDate\tdate\tYES\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1705
+}

@@ -1,0 +1,54 @@
+{
+  "query": "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'properties' AND ordinal_position > 40 ORDER BY ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'properties' AND ordinal_position > 40 ORDER BY ordinal_position;",
+  "rows": [
+    {
+      "column_name": "buildingPermitNo",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "approvalStatus",
+      "data_type": "enum"
+    },
+    {
+      "column_name": "maintenanceBudget",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "maintenanceSpent",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "vacantSince",
+      "data_type": "timestamp"
+    },
+    {
+      "column_name": "vacancyReason",
+      "data_type": "varchar"
+    },
+    {
+      "column_name": "roi",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "vacancyLoss",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "marketRent",
+      "data_type": "decimal"
+    },
+    {
+      "column_name": "lastInspectionDate",
+      "data_type": "date"
+    },
+    {
+      "column_name": "nextInspectionDate",
+      "data_type": "date"
+    }
+  ],
+  "messages": [],
+  "stdout": "column_name\tdata_type\nbuildingPermitNo\tvarchar\napprovalStatus\tenum\nmaintenanceBudget\tdecimal\nmaintenanceSpent\tdecimal\nvacantSince\ttimestamp\nvacancyReason\tvarchar\nroi\tdecimal\nvacancyLoss\tdecimal\nmarketRent\tdecimal\nlastInspectionDate\tdate\nnextInspectionDate\tdate\n",
+  "stderr": "",
+  "execution_time_ms": 1647
+}

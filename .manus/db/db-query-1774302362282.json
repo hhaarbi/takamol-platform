@@ -1,0 +1,437 @@
+{
+  "query": "SELECT table_name, column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name IN ('collection_schedule', 'compliance_records', 'handover_records', 'property_documents', 'tasks') ORDER BY table_name, ordinal_position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT table_name, column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name IN ('collection_schedule', 'compliance_records', 'handover_records', 'property_documents', 'tasks') ORDER BY table_name, ordinal_position;",
+  "rows": [
+    {
+      "table_name": "collection_schedule",
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "contractId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "tenantId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "propertyId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "amount",
+      "data_type": "decimal",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "dueDate",
+      "data_type": "date",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "status",
+      "data_type": "enum",
+      "is_nullable": "YES",
+      "column_default": "upcoming"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "collectedAmount",
+      "data_type": "decimal",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "collectedDate",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "reminderSent",
+      "data_type": "tinyint",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "notes",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "createdAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "collection_schedule",
+      "column_name": "updatedAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "entityType",
+      "data_type": "varchar",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "entityId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "complianceType",
+      "data_type": "varchar",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "status",
+      "data_type": "enum",
+      "is_nullable": "YES",
+      "column_default": "pending"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "expiryDate",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "documentUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "notes",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "createdAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "compliance_records",
+      "column_name": "updatedAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "propertyId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "unitId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "contractId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "type",
+      "data_type": "enum",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "date",
+      "data_type": "date",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "tenantName",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "meterReadingElectricity",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "meterReadingWater",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "propertyCondition",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "notes",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "photos",
+      "data_type": "json",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "signedByTenant",
+      "data_type": "tinyint",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "signedByCompany",
+      "data_type": "tinyint",
+      "is_nullable": "YES",
+      "column_default": "0"
+    },
+    {
+      "table_name": "handover_records",
+      "column_name": "createdAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "propertyId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "ownerId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "contractId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "documentType",
+      "data_type": "varchar",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "title",
+      "data_type": "varchar",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "fileUrl",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "fileKey",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "expiryDate",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "notes",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "property_documents",
+      "column_name": "createdAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "id",
+      "data_type": "int",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "title",
+      "data_type": "varchar",
+      "is_nullable": "NO",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "description",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "assignedTo",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "relatedEntityType",
+      "data_type": "varchar",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "relatedEntityId",
+      "data_type": "int",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "priority",
+      "data_type": "enum",
+      "is_nullable": "YES",
+      "column_default": "medium"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "status",
+      "data_type": "enum",
+      "is_nullable": "YES",
+      "column_default": "pending"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "dueDate",
+      "data_type": "date",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "completedAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "NULL"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "createdAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    },
+    {
+      "table_name": "tasks",
+      "column_name": "updatedAt",
+      "data_type": "timestamp",
+      "is_nullable": "YES",
+      "column_default": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "table_name\tcolumn_name\tdata_type\tis_nullable\tcolumn_default\ncollection_schedule\tid\tint\tNO\tNULL\ncollection_schedule\tcontractId\tint\tYES\tNULL\ncollection_schedule\ttenantId\tint\tYES\tNULL\ncollection_schedule\tpropertyId\tint\tYES\tNULL\ncollection_schedule\tamount\tdecimal\tNO\tNULL\ncollection_schedule\tdueDate\tdate\tNO\tNULL\ncollection_schedule\tstatus\tenum\tYES\tupcoming\ncollection_schedule\tcollectedAmount\tdecimal\tYES\t0\ncollection_schedule\tcollectedDate\tdate\tYES\tNULL\ncollection_schedule\treminderSent\ttinyint\tYES\t0\ncollection_schedule\tnotes\ttext\tYES\tNULL\ncollection_schedule\tcreatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\ncollection_schedule\tupdatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\ncompliance_records\tid\tint\tNO\tNULL\ncompliance_records\tentityType\tvarchar\tNO\tNULL\ncompliance_records\tentityId\tint\tYES\tNULL\ncompliance_records\tcomplianceType\tvarchar\tNO\tNULL\ncompliance_records\tstatus\tenum\tYES\tpending\ncompliance_records\texpiryDate\tdate\tYES\tNULL\ncompliance_records\tdocumentUrl\ttext\tYES\tNULL\ncompliance_records\tnotes\ttext\tYES\tNULL\ncompliance_records\tcreatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\ncompliance_records\tupdatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\nhandover_records\tid\tint\tNO\tNULL\nhandover_records\tpropertyId\tint\tYES\tNULL\nhandover_records\tunitId\tint\tYES\tNULL\nhandover_records\tcontractId\tint\tYES\tNULL\nhandover_records\ttype\tenum\tNO\tNULL\nhandover_records\tdate\tdate\tNO\tNULL\nhandover_records\ttenantName\tvarchar\tYES\tNULL\nhandover_records\tmeterReadingElectricity\tvarchar\tYES\tNULL\nhandover_records\tmeterReadingWater\tvarchar\tYES\tNULL\nhandover_records\tpropertyCondition\ttext\tYES\tNULL\nhandover_records\tnotes\ttext\tYES\tNULL\nhandover_records\tphotos\tjson\tYES\tNULL\nhandover_records\tsignedByTenant\ttinyint\tYES\t0\nhandover_records\tsignedByCompany\ttinyint\tYES\t0\nhandover_records\tcreatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\nproperty_documents\tid\tint\tNO\tNULL\nproperty_documents\tpropertyId\tint\tYES\tNULL\nproperty_documents\townerId\tint\tYES\tNULL\nproperty_documents\tcontractId\tint\tYES\tNULL\nproperty_documents\tdocumentType\tvarchar\tNO\tNULL\nproperty_documents\ttitle\tvarchar\tNO\tNULL\nproperty_documents\tfileUrl\ttext\tYES\tNULL\nproperty_documents\tfileKey\ttext\tYES\tNULL\nproperty_documents\texpiryDate\tdate\tYES\tNULL\nproperty_documents\tnotes\ttext\tYES\tNULL\nproperty_documents\tcreatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\ntasks\tid\tint\tNO\tNULL\ntasks\ttitle\tvarchar\tNO\tNULL\ntasks\tdescription\ttext\tYES\tNULL\ntasks\tassignedTo\tint\tYES\tNULL\ntasks\trelatedEntityType\tvarchar\tYES\tNULL\ntasks\trelatedEntityId\tint\tYES\tNULL\ntasks\tpriority\tenum\tYES\tmedium\ntasks\tstatus\tenum\tYES\tpending\ntasks\tdueDate\tdate\tYES\tNULL\ntasks\tcompletedAt\ttimestamp\tYES\tNULL\ntasks\tcreatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\ntasks\tupdatedAt\ttimestamp\tYES\tCURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 1587
+}
