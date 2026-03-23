@@ -1,0 +1,127 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'properties' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'properties' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "ownerId"
+    },
+    {
+      "COLUMN_NAME": "brokerId"
+    },
+    {
+      "COLUMN_NAME": "source"
+    },
+    {
+      "COLUMN_NAME": "titleAr"
+    },
+    {
+      "COLUMN_NAME": "descriptionAr"
+    },
+    {
+      "COLUMN_NAME": "type"
+    },
+    {
+      "COLUMN_NAME": "listingType"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "price"
+    },
+    {
+      "COLUMN_NAME": "priceUnit"
+    },
+    {
+      "COLUMN_NAME": "negotiable"
+    },
+    {
+      "COLUMN_NAME": "minPrice"
+    },
+    {
+      "COLUMN_NAME": "brokerCommissionRate"
+    },
+    {
+      "COLUMN_NAME": "brokerCommissionAmount"
+    },
+    {
+      "COLUMN_NAME": "area"
+    },
+    {
+      "COLUMN_NAME": "bedrooms"
+    },
+    {
+      "COLUMN_NAME": "bathrooms"
+    },
+    {
+      "COLUMN_NAME": "floor"
+    },
+    {
+      "COLUMN_NAME": "totalFloors"
+    },
+    {
+      "COLUMN_NAME": "city"
+    },
+    {
+      "COLUMN_NAME": "district"
+    },
+    {
+      "COLUMN_NAME": "address"
+    },
+    {
+      "COLUMN_NAME": "latitude"
+    },
+    {
+      "COLUMN_NAME": "longitude"
+    },
+    {
+      "COLUMN_NAME": "images"
+    },
+    {
+      "COLUMN_NAME": "features"
+    },
+    {
+      "COLUMN_NAME": "isFeatured"
+    },
+    {
+      "COLUMN_NAME": "viewCount"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "yearBuilt"
+    },
+    {
+      "COLUMN_NAME": "lastRenovation"
+    },
+    {
+      "COLUMN_NAME": "floorNumber"
+    },
+    {
+      "COLUMN_NAME": "parkingSpaces"
+    },
+    {
+      "COLUMN_NAME": "furnished"
+    },
+    {
+      "COLUMN_NAME": "deedNumber"
+    },
+    {
+      "COLUMN_NAME": "electricityAccount"
+    },
+    {
+      "COLUMN_NAME": "waterAccount"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nownerId\nbrokerId\nsource\ntitleAr\ndescriptionAr\ntype\nlistingType\nstatus\nprice\npriceUnit\nnegotiable\nminPrice\nbrokerCommissionRate\nbrokerCommissionAmount\narea\nbedrooms\nbathrooms\nfloor\ntotalFloors\ncity\ndistrict\naddress\nlatitude\nlongitude\nimages\nfeatures\nisFeatured\nviewCount\ncreatedAt\nupdatedAt\nyearBuilt\nlastRenovation\nfloorNumber\nparkingSpaces\nfurnished\ndeedNumber\nelectricityAccount\nwaterAccount\n",
+  "stderr": "",
+  "execution_time_ms": 2367
+}

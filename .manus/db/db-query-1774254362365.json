@@ -1,0 +1,85 @@
+{
+  "query": "\nSELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES \nWHERE TABLE_SCHEMA = DATABASE() \nORDER BY TABLE_NAME;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute \nSELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES \nWHERE TABLE_SCHEMA = DATABASE() \nORDER BY TABLE_NAME;\n",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations"
+    },
+    {
+      "TABLE_NAME": "activity_log"
+    },
+    {
+      "TABLE_NAME": "broker_commissions"
+    },
+    {
+      "TABLE_NAME": "brokers"
+    },
+    {
+      "TABLE_NAME": "chat_messages"
+    },
+    {
+      "TABLE_NAME": "chat_sessions"
+    },
+    {
+      "TABLE_NAME": "collection_schedule"
+    },
+    {
+      "TABLE_NAME": "compliance_records"
+    },
+    {
+      "TABLE_NAME": "contracts"
+    },
+    {
+      "TABLE_NAME": "expenses"
+    },
+    {
+      "TABLE_NAME": "handover_records"
+    },
+    {
+      "TABLE_NAME": "leads"
+    },
+    {
+      "TABLE_NAME": "maintenance_requests"
+    },
+    {
+      "TABLE_NAME": "message_templates"
+    },
+    {
+      "TABLE_NAME": "notifications"
+    },
+    {
+      "TABLE_NAME": "owner_statements"
+    },
+    {
+      "TABLE_NAME": "payments"
+    },
+    {
+      "TABLE_NAME": "properties"
+    },
+    {
+      "TABLE_NAME": "property_documents"
+    },
+    {
+      "TABLE_NAME": "property_owners"
+    },
+    {
+      "TABLE_NAME": "scheduled_maintenance"
+    },
+    {
+      "TABLE_NAME": "tasks"
+    },
+    {
+      "TABLE_NAME": "tenants"
+    },
+    {
+      "TABLE_NAME": "units"
+    },
+    {
+      "TABLE_NAME": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\n__drizzle_migrations\nactivity_log\nbroker_commissions\nbrokers\nchat_messages\nchat_sessions\ncollection_schedule\ncompliance_records\ncontracts\nexpenses\nhandover_records\nleads\nmaintenance_requests\nmessage_templates\nnotifications\nowner_statements\npayments\nproperties\nproperty_documents\nproperty_owners\nscheduled_maintenance\ntasks\ntenants\nunits\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1541
+}

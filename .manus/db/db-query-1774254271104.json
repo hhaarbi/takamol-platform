@@ -1,0 +1,322 @@
+{
+  "query": "DESCRIBE properties;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute DESCRIBE properties;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "ownerId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "brokerId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "source",
+      "Type": "enum('company','broker','owner')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "company",
+      "Extra": ""
+    },
+    {
+      "Field": "titleAr",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "descriptionAr",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "type",
+      "Type": "enum('apartment','villa','land','commercial','office','warehouse','building','farm')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "listingType",
+      "Type": "enum('sale','rent','managed')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('available','rented','sold','under_management','reserved','inactive')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "available",
+      "Extra": ""
+    },
+    {
+      "Field": "price",
+      "Type": "decimal(15,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "priceUnit",
+      "Type": "enum('total','per_month','per_year')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "total",
+      "Extra": ""
+    },
+    {
+      "Field": "negotiable",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "minPrice",
+      "Type": "decimal(15,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "brokerCommissionRate",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "brokerCommissionAmount",
+      "Type": "decimal(15,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "area",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "bedrooms",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "bathrooms",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "floor",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "totalFloors",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "city",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "المدينة المنورة",
+      "Extra": ""
+    },
+    {
+      "Field": "district",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "address",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "latitude",
+      "Type": "decimal(10,7)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "longitude",
+      "Type": "decimal(10,7)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "images",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "features",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "isFeatured",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "viewCount",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "yearBuilt",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "lastRenovation",
+      "Type": "date",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "floorNumber",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "parkingSpaces",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "furnished",
+      "Type": "enum('unfurnished','semi_furnished','fully_furnished')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "unfurnished",
+      "Extra": ""
+    },
+    {
+      "Field": "deedNumber",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "electricityAccount",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "waterAccount",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nownerId\tint\tYES\t\tNULL\t\nbrokerId\tint\tYES\t\tNULL\t\nsource\tenum('company','broker','owner')\tNO\t\tcompany\t\ntitleAr\tvarchar(255)\tNO\t\tNULL\t\ndescriptionAr\ttext\tYES\t\tNULL\t\ntype\tenum('apartment','villa','land','commercial','office','warehouse','building','farm')\tNO\t\tNULL\t\nlistingType\tenum('sale','rent','managed')\tNO\t\tNULL\t\nstatus\tenum('available','rented','sold','under_management','reserved','inactive')\tNO\t\tavailable\t\nprice\tdecimal(15,2)\tNO\t\tNULL\t\npriceUnit\tenum('total','per_month','per_year')\tNO\t\ttotal\t\nnegotiable\ttinyint(1)\tNO\t\t1\t\nminPrice\tdecimal(15,2)\tYES\t\tNULL\t\nbrokerCommissionRate\tdecimal(5,2)\tYES\t\tNULL\t\nbrokerCommissionAmount\tdecimal(15,2)\tYES\t\tNULL\t\narea\tdecimal(10,2)\tYES\t\tNULL\t\nbedrooms\tint\tYES\t\tNULL\t\nbathrooms\tint\tYES\t\tNULL\t\nfloor\tint\tYES\t\tNULL\t\ntotalFloors\tint\tYES\t\tNULL\t\ncity\tvarchar(100)\tYES\t\tالمدينة المنورة\t\ndistrict\tvarchar(100)\tYES\t\tNULL\t\naddress\ttext\tYES\t\tNULL\t\nlatitude\tdecimal(10,7)\tYES\t\tNULL\t\nlongitude\tdecimal(10,7)\tYES\t\tNULL\t\nimages\tjson\tYES\t\tNULL\t\nfeatures\tjson\tYES\t\tNULL\t\nisFeatured\ttinyint(1)\tNO\t\t0\t\nviewCount\tint\tYES\t\t0\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\nyearBuilt\tint\tYES\t\tNULL\t\nlastRenovation\tdate\tYES\t\tNULL\t\nfloorNumber\tint\tYES\t\tNULL\t\nparkingSpaces\tint\tYES\t\t0\t\nfurnished\tenum('unfurnished','semi_furnished','fully_furnished')\tYES\t\tunfurnished\t\ndeedNumber\tvarchar(50)\tYES\t\tNULL\t\nelectricityAccount\tvarchar(50)\tYES\t\tNULL\t\nwaterAccount\tvarchar(50)\tYES\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 1703
+}

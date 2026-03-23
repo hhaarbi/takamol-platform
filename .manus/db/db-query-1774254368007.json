@@ -1,0 +1,25 @@
+{
+  "query": "\nSELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES \nWHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME > 'property_owners'\nORDER BY TABLE_NAME;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute \nSELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES \nWHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME > 'property_owners'\nORDER BY TABLE_NAME;\n",
+  "rows": [
+    {
+      "TABLE_NAME": "scheduled_maintenance"
+    },
+    {
+      "TABLE_NAME": "tasks"
+    },
+    {
+      "TABLE_NAME": "tenants"
+    },
+    {
+      "TABLE_NAME": "units"
+    },
+    {
+      "TABLE_NAME": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nscheduled_maintenance\ntasks\ntenants\nunits\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1534
+}

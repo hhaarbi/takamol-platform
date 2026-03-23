@@ -1,0 +1,9 @@
+{
+  "query": "\n-- contracts: أعمدة التجديد والتنبيهات\nALTER TABLE contracts \n  ADD COLUMN IF NOT EXISTS `renewalStatus` enum('none','pending','sent','accepted','rejected') NOT NULL DEFAULT 'none',\n  ADD COLUMN IF NOT EXISTS `renewedFromId` int NULL,\n  ADD COLUMN IF NOT EXISTS `newRentAmount` decimal(15,2) NULL,\n  ADD COLUMN IF NOT EXISTS `alert90Sent` tinyint(1) NOT NULL DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS `alert60Sent` tinyint(1) NOT NULL DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS `alert30Sent` tinyint(1) NOT NULL DEFAULT 0;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute \n-- contracts: أعمدة التجديد والتنبيهات\nALTER TABLE contracts \n  ADD COLUMN IF NOT EXISTS `renewalStatus` enum('none','pending','sent','accepted','rejected') NOT NULL DEFAULT 'none',\n  ADD COLUMN IF NOT EXISTS `renewedFromId` int NULL,\n  ADD COLUMN IF NOT EXISTS `newRentAmount` decimal(15,2) NULL,\n  ADD COLUMN IF NOT EXISTS `alert90Sent` tinyint(1) NOT NULL DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS `alert60Sent` tinyint(1) NOT NULL DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS `alert30Sent` tinyint(1) NOT NULL DEFAULT 0;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2649
+}

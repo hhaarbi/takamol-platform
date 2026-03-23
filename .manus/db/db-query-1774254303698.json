@@ -1,0 +1,85 @@
+{
+  "query": "\nSELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'contracts' ORDER BY ORDINAL_POSITION;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute \nSELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'contracts' ORDER BY ORDINAL_POSITION;\n",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "contractNumber"
+    },
+    {
+      "COLUMN_NAME": "type"
+    },
+    {
+      "COLUMN_NAME": "propertyId"
+    },
+    {
+      "COLUMN_NAME": "unitId"
+    },
+    {
+      "COLUMN_NAME": "tenantId"
+    },
+    {
+      "COLUMN_NAME": "ownerId"
+    },
+    {
+      "COLUMN_NAME": "rentAmount"
+    },
+    {
+      "COLUMN_NAME": "rentPeriod"
+    },
+    {
+      "COLUMN_NAME": "startDate"
+    },
+    {
+      "COLUMN_NAME": "endDate"
+    },
+    {
+      "COLUMN_NAME": "depositAmount"
+    },
+    {
+      "COLUMN_NAME": "salePrice"
+    },
+    {
+      "COLUMN_NAME": "managementFeeType"
+    },
+    {
+      "COLUMN_NAME": "managementFeeValue"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "COLUMN_NAME": "documents"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "managementFeePercent"
+    },
+    {
+      "COLUMN_NAME": "securityDeposit"
+    },
+    {
+      "COLUMN_NAME": "autoRenew"
+    },
+    {
+      "COLUMN_NAME": "ejarNumber"
+    },
+    {
+      "COLUMN_NAME": "terms"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\ncontractNumber\ntype\npropertyId\nunitId\ntenantId\nownerId\nrentAmount\nrentPeriod\nstartDate\nendDate\ndepositAmount\nsalePrice\nmanagementFeeType\nmanagementFeeValue\nstatus\nnotes\ndocuments\ncreatedAt\nupdatedAt\nmanagementFeePercent\nsecurityDeposit\nautoRenew\nejarNumber\nterms\n",
+  "stderr": "",
+  "execution_time_ms": 1633
+}
