@@ -30,6 +30,9 @@ import {
   brokerReferrals, InsertBrokerReferral,
   systemSettings,
   propertyImages, InsertPropertyImage,
+  tenantRatings, InsertTenantRating,
+  clientNotes, InsertClientNote,
+  marketPrices,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1451,4 +1454,121 @@ export async function setPrimaryImage(id: number, propertyId: number) {
   if (!db) return;
   await db.update(propertyImages).set({ isPrimary: false }).where(eq(propertyImages.propertyId, propertyId));
   await db.update(propertyImages).set({ isPrimary: true }).where(eq(propertyImages.id, id));
+}
+
+// ─── TENANT RATINGS ───────────────────────────────────────────────────────────
+export async function getTenantRatings(tenantId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(tenantRatings).where(eq(tenantRatings.tenantId, tenantId)).orderBy(desc(tenantRatings.createdAt));
+}
+export async function addTenantRating(data: InsertTenantRating) {
+  const db = await getDb();
+  if (!db) return;
+  const overall = (((data.paymentScore ?? 5) + (data.cleanlinessScore ?? 5) + (data.complianceScore ?? 5)) / 3).toFixed(2);
+  await db.insert(tenantRatings).values({ ...data, overallScore: overall });
+  // Update tenant overall rating
+  await db.update(tenants).set({
+    paymentRating: data.paymentScore ?? 5,
+    propertyRating: data.cleanlinessScore ?? 5,
+    cooperationRating: data.complianceScore ?? 5,
+    overallRating: overall,
+  }).where(eq(tenants.id, data.tenantId));
+}
+
+// ─── CLIENT NOTES ─────────────────────────────────────────────────────────────
+export async function getClientNotes(filter: { leadId?: number; ownerId?: number; tenantId?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (filter.leadId) conditions.push(eq(clientNotes.leadId, filter.leadId));
+  if (filter.ownerId) conditions.push(eq(clientNotes.ownerId, filter.ownerId));
+  if (filter.tenantId) conditions.push(eq(clientNotes.tenantId, filter.tenantId));
+  if (conditions.length === 0) return [];
+  return db.select().from(clientNotes).where(or(...conditions)).orderBy(desc(clientNotes.createdAt));
+}
+export async function addClientNote(data: InsertClientNote) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(clientNotes).values(data);
+}
+export async function getUpcomingFollowUps() {
+  const db = await getDb();
+  if (!db) return [];
+  const threeDaysFromNow = Date.now() + 3 * 24 * 60 * 60 * 1000;
+  return db.select().from(clientNotes)
+    .where(and(
+      sql`${clientNotes.followUpDate} IS NOT NULL`,
+      lte(clientNotes.followUpDate, threeDaysFromNow),
+      gte(clientNotes.followUpDate, Date.now())
+    ))
+    .orderBy(asc(clientNotes.followUpDate));
+}
+
+// ─── MARKET PRICES ────────────────────────────────────────────────────────────
+export async function getMarketPrices() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(marketPrices).orderBy(asc(marketPrices.propertyType));
+}
+export async function getMarketPriceByType(propertyType: string, district?: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const conditions: ReturnType<typeof eq>[] = [eq(marketPrices.propertyType, propertyType as "apartment" | "villa" | "land" | "commercial" | "office" | "warehouse" | "building" | "farm")];
+  if (district) conditions.push(eq(marketPrices.district, district));
+  const results = await db.select().from(marketPrices).where(and(...conditions)).limit(1);
+  return results[0] || null;
+}
+export async function getPropertiesWithMarketComparison() {
+  const db = await getDb();
+  if (!db) return [];
+  const props = await db.select().from(properties).where(eq(properties.listingType, "rent")).orderBy(desc(properties.price));
+  const result = [];
+  for (const prop of props) {
+    const market = await getMarketPriceByType(prop.type, prop.district || undefined);
+    result.push({
+      ...prop,
+      marketAvgRent: market ? Number(market.avgAnnualRent) : null,
+      marketMinRent: market ? Number(market.minRent) : null,
+      marketMaxRent: market ? Number(market.maxRent) : null,
+      priceDiff: market ? Number(prop.price) - Number(market.avgAnnualRent) : null,
+      pricingOpportunity: market ? Number(prop.price) < Number(market.avgAnnualRent) * 0.9 ? "raise" : Number(prop.price) > Number(market.maxRent) ? "lower" : "optimal" : "unknown",
+    });
+  }
+  return result;
+}
+
+// ─── ANNUAL REPORT ────────────────────────────────────────────────────────────
+export async function getAnnualReport(year: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const startMs = new Date(`${year}-01-01`).getTime();
+  const endMs = new Date(`${year}-12-31T23:59:59`).getTime();
+  const [totalRevenue] = await db.select({ total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` })
+    .from(payments).where(and(eq(payments.status, "paid"), sql`${payments.paidDate} IS NOT NULL`));
+  const [totalExpenses] = await db.select({ total: sql<number>`COALESCE(SUM(${expenses.amount}), 0)` })
+    .from(expenses).where(between(expenses.expenseDate, new Date(`${year}-01-01`), new Date(`${year}-12-31`)));
+  const [totalMaintenance] = await db.select({ total: sql<number>`COALESCE(SUM(${maintenanceRequests.cost}), 0)` })
+    .from(maintenanceRequests).where(and(
+      sql`YEAR(${maintenanceRequests.createdAt}) = ${year}`,
+      eq(maintenanceRequests.status, "completed")
+    ));
+  const [activeContracts] = await db.select({ count: drizzleCount() }).from(contracts).where(eq(contracts.status, "active"));
+  const [totalProperties] = await db.select({ count: drizzleCount() }).from(properties);
+  const [vacantUnits] = await db.select({ count: drizzleCount() }).from(units).where(eq(units.status, "vacant"));
+  const [totalUnits] = await db.select({ count: drizzleCount() }).from(units);
+  const revenue = Number(totalRevenue?.total || 0);
+  const expenses_ = Number(totalExpenses?.total || 0) + Number(totalMaintenance?.total || 0);
+  const netProfit = revenue - expenses_;
+  const occupancyRate = totalUnits?.count > 0 ? ((totalUnits.count - (vacantUnits?.count || 0)) / totalUnits.count * 100).toFixed(1) : "0";
+  return {
+    year,
+    totalRevenue: revenue,
+    totalExpenses: expenses_,
+    netProfit,
+    profitMargin: revenue > 0 ? ((netProfit / revenue) * 100).toFixed(1) : "0",
+    activeContracts: activeContracts?.count || 0,
+    totalProperties: totalProperties?.count || 0,
+    occupancyRate,
+  };
 }

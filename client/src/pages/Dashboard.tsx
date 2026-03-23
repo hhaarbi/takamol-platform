@@ -92,8 +92,15 @@ const NAV_SECTIONS = [
   { title: "التشغيل المتقدم", items: [
     { id: "ext:smart-alerts", label: "مركز التنبيهات", icon: AlertTriangle, href: "/smart-alerts" },
     { id: "ext:contractors", label: "المقاولون", icon: Wrench, href: "/contractors" },
+    { id: "ext:tenant-ratings", label: "تقييم المستأجرين", icon: Star, href: "/tenant-ratings" },
+    { id: "ext:client-notes", label: "سجل المحادثات", icon: MessageSquare, href: "/client-notes" },
     { id: "ext:data-export", label: "تصدير ونسخ احتياطي", icon: Archive, href: "/data-export" },
     { id: "ext:settings", label: "إعدادات النظام", icon: Settings, href: "/settings" },
+  ]},
+  { title: "التقارير والسوق", items: [
+    { id: "ext:annual-report", label: "التقرير السنوي", icon: FileText, href: "/annual-report" },
+    { id: "ext:market-comparison", label: "مقارنة السوق", icon: BarChart3, href: "/market-comparison" },
+    { id: "ext:tenant-portal", label: "بوابة المستأجر", icon: Home, href: "/tenant-portal" },
   ]},
   { title: "أخرى", items: [
     { id: "chats", label: "المحادثات", icon: MessageSquare },

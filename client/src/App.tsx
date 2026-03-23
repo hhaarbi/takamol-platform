@@ -16,6 +16,11 @@ import BrokerReferrals from "./pages/BrokerReferrals";
 import SystemSettings from "./pages/SystemSettings";
 import SmartAlerts from "./pages/SmartAlerts";
 import DataExport from "./pages/DataExport";
+import TenantPortal from "./pages/TenantPortal";
+import MarketComparison from "./pages/MarketComparison";
+import AnnualReport from "./pages/AnnualReport";
+import ClientNotes from "./pages/ClientNotes";
+import TenantRatings from "./pages/TenantRatings";
 
 function Router() {
   return (
@@ -36,6 +41,11 @@ function Router() {
       <Route path={"/settings"} component={SystemSettings} />
       <Route path={"/smart-alerts"} component={SmartAlerts} />
       <Route path={"/data-export"} component={DataExport} />
+      <Route path={"/tenant-portal"} component={TenantPortal} />
+      <Route path={"/market-comparison"} component={MarketComparison} />
+      <Route path={"/annual-report"} component={AnnualReport} />
+      <Route path={"/client-notes"} component={ClientNotes} />
+      <Route path={"/tenant-ratings"} component={TenantRatings} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

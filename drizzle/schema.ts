@@ -630,3 +630,50 @@ export const propertyImages = mysqlTable("property_images", {
 });
 export type PropertyImage = typeof propertyImages.$inferSelect;
 export type InsertPropertyImage = typeof propertyImages.$inferInsert;
+
+// ─── TENANT RATINGS (تقييمات المستأجرين) ─────────────────────────────────────
+export const tenantRatings = mysqlTable("tenant_ratings", {
+  id: int("id").autoincrement().primaryKey(),
+  tenantId: int("tenantId").notNull(),
+  contractId: int("contractId").notNull(),
+  paymentScore: int("paymentScore").default(5).notNull(),
+  cleanlinessScore: int("cleanlinessScore").default(5).notNull(),
+  complianceScore: int("complianceScore").default(5).notNull(),
+  overallScore: decimal("overallScore", { precision: 3, scale: 2 }).default("5.00").notNull(),
+  notes: text("notes"),
+  ratedBy: int("ratedBy"),
+  createdAt: bigint("createdAt", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type TenantRating = typeof tenantRatings.$inferSelect;
+export type InsertTenantRating = typeof tenantRatings.$inferInsert;
+
+// ─── CLIENT NOTES (ملاحظات العملاء) ──────────────────────────────────────────
+export const clientNotes = mysqlTable("client_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  leadId: int("leadId"),
+  ownerId: int("ownerId"),
+  tenantId: int("tenantId"),
+  note: text("note").notNull(),
+  noteType: mysqlEnum("noteType", ["call", "meeting", "email", "whatsapp", "other"]).default("other").notNull(),
+  followUpDate: bigint("followUpDate", { mode: "number" }),
+  createdBy: int("createdBy"),
+  createdAt: bigint("createdAt", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type ClientNote = typeof clientNotes.$inferSelect;
+export type InsertClientNote = typeof clientNotes.$inferInsert;
+
+// ─── MARKET PRICES (أسعار السوق) ─────────────────────────────────────────────
+export const marketPrices = mysqlTable("market_prices", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyType: mysqlEnum("propertyType", ["apartment", "villa", "land", "commercial", "office", "warehouse", "building", "farm"]).notNull(),
+  district: varchar("district", { length: 200 }),
+  city: varchar("city", { length: 200 }).default("المدينة المنورة").notNull(),
+  avgPricePerSqm: decimal("avgPricePerSqm", { precision: 10, scale: 2 }),
+  avgAnnualRent: decimal("avgAnnualRent", { precision: 12, scale: 2 }),
+  minRent: decimal("minRent", { precision: 12, scale: 2 }),
+  maxRent: decimal("maxRent", { precision: 12, scale: 2 }),
+  source: varchar("source", { length: 200 }).default("تقدير السوق").notNull(),
+  updatedAt: bigint("updatedAt", { mode: "number" }).notNull().$defaultFn(() => Date.now()),
+});
+export type MarketPrice = typeof marketPrices.$inferSelect;
+export type InsertMarketPrice = typeof marketPrices.$inferInsert;

@@ -46,6 +46,10 @@ import {
   getBrokerPerformance, getOwnerROI,
   getPropertyROI, getSmartAlerts, getAllPropertiesROI,
   getPropertyImages, addPropertyImage, deletePropertyImage, setPrimaryImage,
+  getTenantRatings, addTenantRating,
+  getClientNotes, addClientNote, getUpcomingFollowUps,
+  getMarketPrices, getPropertiesWithMarketComparison,
+  getAnnualReport,
 } from "./db";
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
@@ -1062,6 +1066,101 @@ export const appRouter = router({
       ].filter(Boolean).join("\n");
       await notifyOwner({ title: "تقرير تكامل اليومي", content: msg });
       return { success: true, message: msg };
+    }),
+  }),
+
+  // ─── TENANT RATINGS ──────────────────────────────────────────────────────────
+  tenantRatings: router({
+    getByTenant: adminProcedure.input(z.object({ tenantId: z.number() })).query(async ({ input }) => {
+      return getTenantRatings(input.tenantId);
+    }),
+    add: adminProcedure.input(z.object({
+      tenantId: z.number(),
+      contractId: z.number(),
+      paymentScore: z.number().min(1).max(5).default(5),
+      cleanlinessScore: z.number().min(1).max(5).default(5),
+      complianceScore: z.number().min(1).max(5).default(5),
+      notes: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      await addTenantRating({ ...input, ratedBy: ctx.user.id });
+      return { success: true };
+    }),
+  }),
+
+  // ─── CLIENT NOTES ─────────────────────────────────────────────────────────────
+  clientNotes: router({
+    get: adminProcedure.input(z.object({
+      leadId: z.number().optional(),
+      ownerId: z.number().optional(),
+      tenantId: z.number().optional(),
+    })).query(async ({ input }) => {
+      return getClientNotes(input);
+    }),
+    add: adminProcedure.input(z.object({
+      leadId: z.number().optional(),
+      ownerId: z.number().optional(),
+      tenantId: z.number().optional(),
+      note: z.string().min(1),
+      noteType: z.enum(["call", "meeting", "email", "whatsapp", "other"]).default("other"),
+      followUpDate: z.number().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      await addClientNote({ ...input, createdBy: ctx.user.id });
+      return { success: true };
+    }),
+    getFollowUps: adminProcedure.query(async () => {
+      return getUpcomingFollowUps();
+    }),
+  }),
+
+  // ─── MARKET COMPARISON ────────────────────────────────────────────────────────
+  market: router({
+    getPrices: adminProcedure.query(async () => {
+      return getMarketPrices();
+    }),
+    getComparison: adminProcedure.query(async () => {
+      return getPropertiesWithMarketComparison();
+    }),
+  }),
+
+  // ─── ANNUAL REPORT ────────────────────────────────────────────────────────────
+  annualReport: router({
+    get: adminProcedure.input(z.object({ year: z.number().default(new Date().getFullYear()) })).query(async ({ input }) => {
+      return getAnnualReport(input.year);
+    }),
+  }),
+
+  // ─── TENANT PORTAL (بوابة المستأجر) ──────────────────────────────────────────
+  tenantPortal: router({
+    getByContract: publicProcedure.input(z.object({ contractCode: z.string() })).query(async ({ input }) => {
+      const db = await import("./db");
+      const contracts = await db.getContracts();
+      const contract = contracts.find(c => c.contractNumber === input.contractCode);
+      if (!contract) throw new TRPCError({ code: "NOT_FOUND", message: "رقم العقد غير صحيح" });
+      const tenant = contract.tenantId ? await db.getTenantById(contract.tenantId) : null;
+      const payments_ = await db.getPayments({ contractId: contract.id });
+      const maintenance = contract.propertyId ? await db.getMaintenanceRequests({ propertyId: contract.propertyId }) : [];
+      return { contract, tenant, payments: payments_, maintenance };
+    }),
+    submitMaintenance: publicProcedure.input(z.object({
+      contractCode: z.string(),
+      title: z.string().min(3),
+      description: z.string().optional(),
+      priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
+    })).mutation(async ({ input }) => {
+      const db = await import("./db");
+      const contracts = await db.getContracts();
+      const contract = contracts.find(c => c.contractNumber === input.contractCode);
+      if (!contract) throw new TRPCError({ code: "NOT_FOUND", message: "رقم العقد غير صحيح" });
+      await db.createMaintenanceRequest({
+        propertyId: contract.propertyId ?? undefined,
+        unitId: contract.unitId ?? undefined,
+        tenantId: contract.tenantId ?? undefined,
+        title: input.title,
+        description: input.description,
+        priority: input.priority,
+        status: "open",
+      });
+      return { success: true };
     }),
   }),
 });
