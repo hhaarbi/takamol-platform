@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, name, email, openId, role, createdAt FROM users ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT id, name, email, openId, role, createdAt FROM users ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Hamad Alharbi",
+      "email": "h.bdrani.94@gmail.com",
+      "openId": "ktWdzXihm8qnBtbyk9enT6",
+      "role": "super_admin",
+      "createdAt": "2026-03-23 05:41:40"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\topenId\trole\tcreatedAt\n1\tHamad Alharbi\th.bdrani.94@gmail.com\tktWdzXihm8qnBtbyk9enT6\tsuper_admin\t2026-03-23 05:41:40\n",
+  "stderr": "",
+  "execution_time_ms": 1574
+}

@@ -87,7 +87,7 @@ export default function BrokerPortal() {
     </div>
   );
 
-  if (user?.role !== "broker" && user?.role !== "admin") return (
+  if (user?.role !== "broker" && user?.role !== "admin" && user?.role !== "super_admin") return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <Card className="w-96 border-0 shadow-xl">
         <CardContent className="p-8 text-center">

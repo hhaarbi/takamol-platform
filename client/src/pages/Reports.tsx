@@ -42,12 +42,12 @@ export default function Reports() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  const financialSummary = trpc.financial.summary.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const overdueList = trpc.payments.overdue.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const propertiesData = trpc.properties.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const tenantsData = trpc.tenants.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const maintenanceData = trpc.maintenance.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const collectionsData = trpc.payments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const financialSummary = trpc.financial.summary.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" || user?.role === "super_admin" });
+  const overdueList = trpc.payments.overdue.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" || user?.role === "super_admin" });
+  const propertiesData = trpc.properties.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" || user?.role === "super_admin" });
+  const tenantsData = trpc.tenants.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" || user?.role === "super_admin" });
+  const maintenanceData = trpc.maintenance.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" || user?.role === "super_admin" });
+  const collectionsData = trpc.payments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" || user?.role === "super_admin" });
 
   if (authLoading) {
     return (
@@ -57,7 +57,7 @@ export default function Reports() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated || user?.role !== "admin" && user?.role !== "super_admin") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
         <Card className="w-full max-w-md">

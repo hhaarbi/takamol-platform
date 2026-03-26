@@ -45,12 +45,12 @@ export default function OwnerPortal() {
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const profileQuery = trpc.owners.myProfile.useQuery(undefined, { enabled: isAuthenticated && user?.role === "owner" });
+  const profileQuery = trpc.owners.myProfile.useQuery(undefined, { enabled: isAuthenticated && user?.role === "owner" || user?.role === "super_admin" });
   const propertiesQuery = trpc.properties.list.useQuery({ ownerId: profileQuery.data?.id } as any, { enabled: !!profileQuery.data?.id });
   const contractsQuery = trpc.contracts.list.useQuery({ ownerId: profileQuery.data?.id } as any, { enabled: !!profileQuery.data?.id });
   const paymentsQuery = trpc.payments.list.useQuery({ ownerId: profileQuery.data?.id } as any, { enabled: !!profileQuery.data?.id });
-  const myFinancialsQuery = trpc.financial.myFinancials.useQuery(undefined, { enabled: isAuthenticated && user?.role === "owner" });
-  const maintenanceQuery = trpc.maintenance.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "owner" });
+  const myFinancialsQuery = trpc.financial.myFinancials.useQuery(undefined, { enabled: isAuthenticated && user?.role === "owner" || user?.role === "super_admin" });
+  const maintenanceQuery = trpc.maintenance.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "owner" || user?.role === "super_admin" });
 
   const owner = profileQuery.data;
   const properties = propertiesQuery.data || [];
@@ -93,7 +93,7 @@ export default function OwnerPortal() {
     </div>
   );
 
-  if (user?.role !== "owner") return (
+  if (user?.role !== "owner" && user?.role !== "super_admin") return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <Card className="w-96 border-0 shadow-xl">
         <CardContent className="p-8 text-center">

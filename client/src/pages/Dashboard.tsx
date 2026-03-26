@@ -166,7 +166,7 @@ export default function Dashboard() {
   const [leadsFilter, setLeadsFilter] = useState("all");
 
   // ─── QUERIES ──────────────────────────────────────────────────────────────
-  const isAdmin = isAuthenticated && user?.role === "admin";
+  const isAdmin = isAuthenticated && (user?.role === "admin" || user?.role === "super_admin");
   const statsQuery = trpc.financial.dashboardStats.useQuery(undefined, { enabled: isAdmin });
   const financialQuery = trpc.financial.summary.useQuery(undefined as any, { enabled: isAdmin });
   const leadsQuery = trpc.leads.list.useQuery({ limit: 500 }, { enabled: isAdmin });
@@ -277,7 +277,7 @@ export default function Dashboard() {
       </CardContent></Card>
     </div>
   );
-  if (user?.role !== "admin") return (
+  if (user?.role !== "admin" && user?.role !== "super_admin") return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50" dir="rtl">
       <Card className="w-full max-w-sm shadow-xl"><CardContent className="p-8 text-center">
         <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
