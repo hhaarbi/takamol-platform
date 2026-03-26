@@ -1,0 +1,122 @@
+{
+  "query": "DESCRIBE subscriptions;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute DESCRIBE subscriptions;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "company_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sub_status",
+      "Type": "enum('active','trialing','past_due','cancelled','expired')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "trialing",
+      "Extra": ""
+    },
+    {
+      "Field": "start_date_sub",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "end_date_sub",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "trial_end_date",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "billing_cycle",
+      "Type": "enum('monthly','yearly')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "monthly",
+      "Extra": ""
+    },
+    {
+      "Field": "sub_amount",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sub_currency",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "SAR",
+      "Extra": ""
+    },
+    {
+      "Field": "cancelled_at",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "cancel_reason",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at_sub",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "updated_at_sub",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\ncompany_id\tint\tNO\t\tNULL\t\nplan_id\tint\tNO\t\tNULL\t\nsub_status\tenum('active','trialing','past_due','cancelled','expired')\tYES\t\ttrialing\t\nstart_date_sub\tbigint\tNO\t\tNULL\t\nend_date_sub\tbigint\tYES\t\tNULL\t\ntrial_end_date\tbigint\tYES\t\tNULL\t\nbilling_cycle\tenum('monthly','yearly')\tYES\t\tmonthly\t\nsub_amount\tdecimal(10,2)\tYES\t\tNULL\t\nsub_currency\tvarchar(10)\tYES\t\tSAR\t\ncancelled_at\tbigint\tYES\t\tNULL\t\ncancel_reason\ttext\tYES\t\tNULL\t\ncreated_at_sub\tbigint\tNO\t\tNULL\t\nupdated_at_sub\tbigint\tNO\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 1541
+}

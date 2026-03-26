@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE users ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE property_owners ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE properties ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE tenants ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE contracts ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE payments ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE expenses ADD COLUMN IF NOT EXISTS companyId INT NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute \nALTER TABLE users ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE property_owners ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE properties ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE tenants ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE contracts ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE payments ADD COLUMN IF NOT EXISTS companyId INT NULL;\nALTER TABLE expenses ADD COLUMN IF NOT EXISTS companyId INT NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 8889
+}

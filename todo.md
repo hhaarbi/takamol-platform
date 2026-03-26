@@ -492,3 +492,59 @@
 - [ ] إضافة دور super_admin في schema.ts وترقية المالك
 - [ ] حماية لوحة التحكم بصلاحية super_admin
 - [ ] إضافة قائمة إدارة المستخدمين في لوحة التحكم
+
+## المرحلة الجديدة — Critical Fixes + SaaS Transformation
+
+### إصلاح قاعدة البيانات
+- [ ] إضافة جدول tasks في schema.ts
+- [ ] إضافة جدول property_documents في schema.ts
+- [ ] إضافة جدول handover_records في schema.ts
+- [ ] إضافة جدول collection_schedule في schema.ts
+- [ ] إضافة جدول compliance_records في schema.ts
+- [x] إنشاء جدول vouchers (سندات القبض والصرف)
+- [x] إنشاء جدول companies
+- [x] إنشاء جدول plans (مع بيانات أولية: مبتدئ/احترافي/مؤسسي)
+- [x] إنشاء جدول subscriptions
+
+### نظام سندات القبض والصرف
+- [x] إنشاء db helpers لـ vouchers
+- [x] إنشاء tRPC router لـ vouchers
+- [x] إنشاء صفحة Vouchers.tsx
+- [x] إضافة رابط في DashboardLayout
+
+### تصدير PDF للفواتير
+- [x] تثبيت jsPDF
+- [x] إنشاء invoice PDF generator مع QR ZATCA
+- [x] إضافة زر تحميل PDF في Invoices.tsx
+
+### إصلاح الصلاحيات
+- [x] إضافة tenantProcedure
+- [x] تحويل tenantPortal إلى tenantProcedure
+- [x] مراجعة protectedProcedures الحساسة
+
+### Pagination
+- [x] pagination لـ properties.list
+- [x] pagination لـ contracts.list
+- [x] pagination لـ payments.list
+- [x] pagination لـ tenants.list
+
+### SaaS Multi-Tenancy
+- [x] إضافة company_id للجداول الأساسية (properties, units, contracts, payments, tenants, owners, expenses)
+- [x] تعديل queries للتصفية بـ company_id
+- [x] companyMiddleware في tRPC context
+
+### نظام الاشتراكات والـ Onboarding
+- [x] db helpers لـ companies وplans وsubscriptions
+- [x] tRPC routers للشركات والاشتراكات (saas.ts)
+- [x] صفحة Onboarding.tsx (اختيار الباقة + بيانات الشركة)
+- [x] صفحة Subscription.tsx (إدارة الاشتراك الحالي)
+
+### إصلاحات Full Debug
+- [x] إصلاح Drizzle prepared statements (تحويل إلى connection pool)
+- [x] إضافة الأعمدة المفقودة في payments (paidAmount, lastReminderSent, daysOverdue, periodCovered)
+- [x] إضافة الأعمدة المفقودة في brokers (companyId, commissionStructure, performanceScore)
+- [x] إضافة الأعمدة المفقودة في activity_log (companyId, severity, ipAddress, userAgent)
+- [x] إضافة الأعمدة المفقودة في maintenance_requests (companyId, scheduledDate, completionDate, vendorName)
+- [x] Vitest: 45/45 tests passed
+- [x] TypeScript: No errors
+- [x] جميع API calls تعمل بـ 200 OK (لا 500 errors بعد الإصلاح)

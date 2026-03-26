@@ -1,5 +1,6 @@
 import { eq, and, or, like, desc, lte, gte, sql, asc, between, count as drizzleCount, isNull, ne, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import {
   InsertUser, users,
   propertyOwners, InsertPropertyOwner,
@@ -38,9 +39,15 @@ import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+export function resetDb() { _db = null; }
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
-    try { _db = drizzle(process.env.DATABASE_URL); } catch (error) {
+    try { 
+      // Use mysql2 connection pool to avoid stale prepared statements after ALTER TABLE
+      const pool = mysql.createPool({ uri: process.env.DATABASE_URL, waitForConnections: true, connectionLimit: 5 });
+      _db = drizzle(pool as any);
+    } catch (error) {
       console.warn("[Database] Failed to connect:", error); _db = null;
     }
   }
@@ -274,7 +281,7 @@ export async function getVacantUnits() {
 }
 
 // ─── TENANTS ──────────────────────────────────────────────────────────────────
-export async function getTenants(filters?: { isActive?: boolean; search?: string }) {
+export async function getTenants(filters?: { isActive?: boolean; search?: string; limit?: number; offset?: number }) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [];
@@ -286,7 +293,8 @@ export async function getTenants(filters?: { isActive?: boolean; search?: string
       like(tenants.nationalId, `%${filters.search}%`)
     ));
   }
-  const q = db.select().from(tenants).orderBy(desc(tenants.createdAt));
+  const q = db.select().from(tenants).orderBy(desc(tenants.createdAt))
+    .limit(filters?.limit ?? 50).offset(filters?.offset ?? 0);
   return conditions.length ? q.where(and(...conditions)) : q;
 }
 
@@ -325,6 +333,7 @@ export async function rateTenant(id: number, ratings: { paymentRating: number; p
 // ─── CONTRACTS ────────────────────────────────────────────────────────────────
 export async function getContracts(filters?: {
   type?: string; status?: string; ownerId?: number; tenantId?: number; propertyId?: number;
+  limit?: number; offset?: number;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -334,7 +343,8 @@ export async function getContracts(filters?: {
   if (filters?.ownerId) conditions.push(eq(contracts.ownerId, filters.ownerId));
   if (filters?.tenantId) conditions.push(eq(contracts.tenantId, filters.tenantId));
   if (filters?.propertyId) conditions.push(eq(contracts.propertyId, filters.propertyId));
-  const q = db.select().from(contracts).orderBy(desc(contracts.createdAt));
+  const q = db.select().from(contracts).orderBy(desc(contracts.createdAt))
+    .limit(filters?.limit ?? 50).offset(filters?.offset ?? 0);
   return conditions.length ? q.where(and(...conditions)) : q;
 }
 
@@ -385,6 +395,7 @@ export async function renewContract(oldId: number, newData: InsertContract) {
 export async function getPayments(filters?: {
   status?: string; ownerId?: number; tenantId?: number; propertyId?: number;
   contractId?: number; type?: string; fromDate?: string; toDate?: string;
+  limit?: number; offset?: number;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -397,7 +408,8 @@ export async function getPayments(filters?: {
   if (filters?.type) conditions.push(eq(payments.type, filters.type as any));
   if (filters?.fromDate) conditions.push(gte(payments.dueDate, filters.fromDate as any));
   if (filters?.toDate) conditions.push(lte(payments.dueDate, filters.toDate as any));
-  const q = db.select().from(payments).orderBy(desc(payments.dueDate));
+  const q = db.select().from(payments).orderBy(desc(payments.dueDate))
+    .limit(filters?.limit ?? 50).offset(filters?.offset ?? 0);
   return conditions.length ? q.where(and(...conditions)) : q;
 }
 

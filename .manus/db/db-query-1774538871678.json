@@ -1,0 +1,28 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'payments' AND ORDINAL_POSITION > 20 ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'payments' AND ORDINAL_POSITION > 20 ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "totalInstallments"
+    },
+    {
+      "COLUMN_NAME": "lateFee"
+    },
+    {
+      "COLUMN_NAME": "lateDays"
+    },
+    {
+      "COLUMN_NAME": "reminderSent"
+    },
+    {
+      "COLUMN_NAME": "escalationLevel"
+    },
+    {
+      "COLUMN_NAME": "companyId"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\ntotalInstallments\nlateFee\nlateDays\nreminderSent\nescalationLevel\ncompanyId\n",
+  "stderr": "",
+  "execution_time_ms": 1588
+}

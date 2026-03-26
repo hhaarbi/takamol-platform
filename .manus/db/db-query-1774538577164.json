@@ -1,0 +1,46 @@
+{
+  "query": "SELECT id, plan_name, plan_name_ar, price_monthly, price_yearly, max_properties, max_units, max_users, is_active, sort_order FROM plans ORDER BY sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT id, plan_name, plan_name_ar, price_monthly, price_yearly, max_properties, max_units, max_users, is_active, sort_order FROM plans ORDER BY sort_order;",
+  "rows": [
+    {
+      "id": "1",
+      "plan_name": "Starter",
+      "plan_name_ar": "المبتدئ",
+      "price_monthly": "99.00",
+      "price_yearly": "990.00",
+      "max_properties": "5",
+      "max_units": "20",
+      "max_users": "2",
+      "is_active": "1",
+      "sort_order": "1"
+    },
+    {
+      "id": "2",
+      "plan_name": "Professional",
+      "plan_name_ar": "الاحترافي",
+      "price_monthly": "299.00",
+      "price_yearly": "2990.00",
+      "max_properties": "25",
+      "max_units": "100",
+      "max_users": "5",
+      "is_active": "1",
+      "sort_order": "2"
+    },
+    {
+      "id": "3",
+      "plan_name": "Enterprise",
+      "plan_name_ar": "المؤسسي",
+      "price_monthly": "799.00",
+      "price_yearly": "7990.00",
+      "max_properties": "999",
+      "max_units": "9999",
+      "max_users": "20",
+      "is_active": "1",
+      "sort_order": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tplan_name\tplan_name_ar\tprice_monthly\tprice_yearly\tmax_properties\tmax_units\tmax_users\tis_active\tsort_order\n1\tStarter\tالمبتدئ\t99.00\t990.00\t5\t20\t2\t1\t1\n2\tProfessional\tالاحترافي\t299.00\t2990.00\t25\t100\t5\t1\t2\n3\tEnterprise\tالمؤسسي\t799.00\t7990.00\t999\t9999\t20\t1\t3\n",
+  "stderr": "",
+  "execution_time_ms": 1542
+}

@@ -1,0 +1,25 @@
+{
+  "query": "SHOW TABLES LIKE 'companies'; SHOW TABLES LIKE 'plans'; SHOW TABLES LIKE 'subscriptions';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SHOW TABLES LIKE 'companies'; SHOW TABLES LIKE 'plans'; SHOW TABLES LIKE 'subscriptions';",
+  "rows": [
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (companies)": "companies"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (companies)": "Tables_in_EGvRBfpqPGe26TFrJFv9dm (plans)"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (companies)": "plans"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (companies)": "Tables_in_EGvRBfpqPGe26TFrJFv9dm (subscriptions)"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (companies)": "subscriptions"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_EGvRBfpqPGe26TFrJFv9dm (companies)\ncompanies\nTables_in_EGvRBfpqPGe26TFrJFv9dm (plans)\nplans\nTables_in_EGvRBfpqPGe26TFrJFv9dm (subscriptions)\nsubscriptions\n",
+  "stderr": "",
+  "execution_time_ms": 2097
+}

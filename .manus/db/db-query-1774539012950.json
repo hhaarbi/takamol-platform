@@ -1,0 +1,46 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'properties' AND ORDINAL_POSITION > 40 ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'properties' AND ORDINAL_POSITION > 40 ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "buildingPermitNo"
+    },
+    {
+      "COLUMN_NAME": "approvalStatus"
+    },
+    {
+      "COLUMN_NAME": "maintenanceBudget"
+    },
+    {
+      "COLUMN_NAME": "maintenanceSpent"
+    },
+    {
+      "COLUMN_NAME": "vacantSince"
+    },
+    {
+      "COLUMN_NAME": "vacancyReason"
+    },
+    {
+      "COLUMN_NAME": "roi"
+    },
+    {
+      "COLUMN_NAME": "vacancyLoss"
+    },
+    {
+      "COLUMN_NAME": "marketRent"
+    },
+    {
+      "COLUMN_NAME": "lastInspectionDate"
+    },
+    {
+      "COLUMN_NAME": "nextInspectionDate"
+    },
+    {
+      "COLUMN_NAME": "companyId"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nbuildingPermitNo\napprovalStatus\nmaintenanceBudget\nmaintenanceSpent\nvacantSince\nvacancyReason\nroi\nvacancyLoss\nmarketRent\nlastInspectionDate\nnextInspectionDate\ncompanyId\n",
+  "stderr": "",
+  "execution_time_ms": 1619
+}

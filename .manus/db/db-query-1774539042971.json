@@ -1,0 +1,19 @@
+{
+  "query": "SHOW TABLES LIKE 'chat_sessions'; SHOW TABLES LIKE 'chat_messages';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SHOW TABLES LIKE 'chat_sessions'; SHOW TABLES LIKE 'chat_messages';",
+  "rows": [
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (chat_sessions)": "chat_sessions"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (chat_sessions)": "Tables_in_EGvRBfpqPGe26TFrJFv9dm (chat_messages)"
+    },
+    {
+      "Tables_in_EGvRBfpqPGe26TFrJFv9dm (chat_sessions)": "chat_messages"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_EGvRBfpqPGe26TFrJFv9dm (chat_sessions)\nchat_sessions\nTables_in_EGvRBfpqPGe26TFrJFv9dm (chat_messages)\nchat_messages\n",
+  "stderr": "",
+  "execution_time_ms": 1763
+}

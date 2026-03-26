@@ -1,0 +1,133 @@
+{
+  "query": "DESCRIBE plans; SELECT COUNT(*) as plans_count FROM plans;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute DESCRIBE plans; SELECT COUNT(*) as plans_count FROM plans;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "plan_name",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_name_ar",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_description",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "price_monthly",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "price_yearly",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_currency",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "SAR",
+      "Extra": ""
+    },
+    {
+      "Field": "max_properties",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "10",
+      "Extra": ""
+    },
+    {
+      "Field": "max_units",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "50",
+      "Extra": ""
+    },
+    {
+      "Field": "max_users",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "5",
+      "Extra": ""
+    },
+    {
+      "Field": "features",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "sort_order",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at_pl",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "updated_at_pl",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [
+    "plans_count",
+    "3"
+  ],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nplan_name\tvarchar(100)\tNO\t\tNULL\t\nplan_name_ar\tvarchar(100)\tYES\t\tNULL\t\nplan_description\ttext\tYES\t\tNULL\t\nprice_monthly\tdecimal(10,2)\tNO\t\tNULL\t\nprice_yearly\tdecimal(10,2)\tYES\t\tNULL\t\nplan_currency\tvarchar(10)\tYES\t\tSAR\t\nmax_properties\tint\tYES\t\t10\t\nmax_units\tint\tYES\t\t50\t\nmax_users\tint\tYES\t\t5\t\nfeatures\ttext\tYES\t\tNULL\t\nis_active\ttinyint\tYES\t\t1\t\nsort_order\tint\tYES\t\t0\t\ncreated_at_pl\tbigint\tNO\t\tNULL\t\nupdated_at_pl\tbigint\tNO\t\tNULL\t\nplans_count\n3\n",
+  "stderr": "",
+  "execution_time_ms": 1751
+}

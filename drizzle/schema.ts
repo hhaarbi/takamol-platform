@@ -10,6 +10,7 @@ import {
   json,
   date,
   bigint,
+  tinyint,
 } from "drizzle-orm/mysql-core";
 
 // ─── USERS (Auth) ─────────────────────────────────────────────────────────────
@@ -19,7 +20,8 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin", "super_admin", "owner", "broker"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "super_admin", "owner", "broker", "tenant"]).default("user").notNull(),
+  companyId: int("companyId"),
   profileId: int("profileId"),
   profileType: mysqlEnum("profileType", ["owner", "broker"]),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -32,6 +34,7 @@ export type InsertUser = typeof users.$inferInsert;
 // ─── PROPERTY OWNERS (الملاك) ─────────────────────────────────────────────────
 export const propertyOwners = mysqlTable("property_owners", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   userId: int("userId"),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 30 }).notNull(),
@@ -84,6 +87,7 @@ export type InsertBroker = typeof brokers.$inferInsert;
 // ─── PROPERTIES (العقارات) ────────────────────────────────────────────────────
 export const properties = mysqlTable("properties", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   ownerId: int("ownerId"),
   brokerId: int("brokerId"),
   source: mysqlEnum("source", ["company", "broker", "owner"]).default("company").notNull(),
@@ -163,6 +167,7 @@ export type InsertUnit = typeof units.$inferInsert;
 // ─── TENANTS (المستأجرون) ─────────────────────────────────────────────────────
 export const tenants = mysqlTable("tenants", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 30 }).notNull(),
   phone2: varchar("phone2", { length: 30 }),
@@ -188,6 +193,7 @@ export type InsertTenant = typeof tenants.$inferInsert;
 // ─── CONTRACTS (العقود) ───────────────────────────────────────────────────────
 export const contracts = mysqlTable("contracts", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   contractNumber: varchar("contractNumber", { length: 50 }).notNull().unique(),
   type: mysqlEnum("type", ["rent", "sale", "management"]).notNull(),
   propertyId: int("propertyId"),
@@ -224,6 +230,7 @@ export type InsertContract = typeof contracts.$inferInsert;
 // ─── PAYMENTS (المدفوعات / التحصيل) ──────────────────────────────────────────
 export const payments = mysqlTable("payments", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   receiptNumber: varchar("receiptNumber", { length: 50 }),
   contractId: int("contractId"),
   tenantId: int("tenantId"),
@@ -254,6 +261,7 @@ export type InsertPayment = typeof payments.$inferInsert;
 // ─── EXPENSES (المصاريف) ──────────────────────────────────────────────────────
 export const expenses = mysqlTable("expenses", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   propertyId: int("propertyId"),
   unitId: int("unitId"),
   ownerId: int("ownerId"),
@@ -999,3 +1007,178 @@ export const emailNotificationLog = mysqlTable("email_notification_log", {
   createdAt: bigint("created_at_enl", { mode: "number" }).notNull(),
 });
 export type EmailNotificationLog = typeof emailNotificationLog.$inferSelect;
+
+// ─── TASKS ─────────────────────────────────────────────────────────────────
+export const tasks = mysqlTable("tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 300 }).notNull(),
+  description: text("description"),
+  assignedTo: int("assigned_to"),
+  relatedPropertyId: int("related_property_id"),
+  relatedContractId: int("related_contract_id"),
+  status: mysqlEnum("task_status", ["pending","in_progress","completed","cancelled"]).default("pending"),
+  priority: mysqlEnum("task_priority", ["low","medium","high","urgent"]).default("medium"),
+  dueDate: bigint("due_date", { mode: "number" }),
+  completedAt: bigint("completed_at", { mode: "number" }),
+  createdBy: int("created_by"),
+  createdAt: bigint("created_at_tasks", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_tasks", { mode: "number" }).notNull(),
+});
+export type Task = typeof tasks.$inferSelect;
+
+// ─── PROPERTY DOCUMENTS ────────────────────────────────────────────────────
+export const propertyDocuments = mysqlTable("property_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("property_id").notNull(),
+  title: varchar("title", { length: 300 }).notNull(),
+  documentType: mysqlEnum("pd_doc_type", ["deed","license","insurance","inspection","other"]).default("other"),
+  fileUrl: varchar("file_url", { length: 1000 }),
+  fileKey: varchar("file_key", { length: 500 }),
+  expiryDate: bigint("expiry_date", { mode: "number" }),
+  notes: text("notes"),
+  uploadedBy: int("uploaded_by"),
+  createdAt: bigint("created_at_pd", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_pd", { mode: "number" }).notNull(),
+});
+export type PropertyDocument = typeof propertyDocuments.$inferSelect;
+
+// ─── HANDOVER RECORDS ──────────────────────────────────────────────────────
+export const handoverRecords = mysqlTable("handover_records", {
+  id: int("id").autoincrement().primaryKey(),
+  unitId: int("unit_id").notNull(),
+  contractId: int("contract_id"),
+  handoverType: mysqlEnum("hr_type", ["move_in","move_out"]).notNull(),
+  handoverDate: bigint("handover_date", { mode: "number" }).notNull(),
+  condition: mysqlEnum("hr_condition", ["excellent","good","fair","poor"]).default("good"),
+  meterReading: varchar("meter_reading", { length: 100 }),
+  keysReceived: int("keys_received").default(0),
+  notes: text("notes"),
+  checklist: text("checklist"),
+  conductedBy: int("conducted_by"),
+  tenantSignature: tinyint("tenant_signature").default(0),
+  createdAt: bigint("created_at_hr", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_hr", { mode: "number" }).notNull(),
+});
+export type HandoverRecord = typeof handoverRecords.$inferSelect;
+
+// ─── COLLECTION SCHEDULE ───────────────────────────────────────────────────
+export const collectionSchedule = mysqlTable("collection_schedule", {
+  id: int("id").autoincrement().primaryKey(),
+  contractId: int("contract_id").notNull(),
+  tenantId: int("tenant_id").notNull(),
+  unitId: int("unit_id").notNull(),
+  dueDate: bigint("due_date_cs", { mode: "number" }).notNull(),
+  amount: decimal("amount_cs", { precision: 12, scale: 2 }).notNull(),
+  status: mysqlEnum("cs_status", ["upcoming","due","overdue","collected","waived"]).default("upcoming"),
+  collectedAt: bigint("collected_at", { mode: "number" }),
+  collectedBy: int("collected_by"),
+  paymentId: int("payment_id"),
+  reminderSent: tinyint("reminder_sent").default(0),
+  notes: text("notes"),
+  createdAt: bigint("created_at_cs", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_cs", { mode: "number" }).notNull(),
+});
+export type CollectionScheduleItem = typeof collectionSchedule.$inferSelect;
+
+// ─── COMPLIANCE RECORDS ────────────────────────────────────────────────────
+export const complianceRecords = mysqlTable("compliance_records", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("property_id"),
+  complianceType: mysqlEnum("cr_type", ["fal_license","municipality","fire_safety","elevator","other"]).notNull(),
+  title: varchar("title", { length: 300 }).notNull(),
+  status: mysqlEnum("cr_status", ["compliant","non_compliant","pending","expired"]).default("pending"),
+  issueDate: bigint("issue_date_cr", { mode: "number" }),
+  expiryDate: bigint("expiry_date_cr", { mode: "number" }),
+  documentUrl: varchar("document_url", { length: 1000 }),
+  notes: text("notes"),
+  createdBy: int("created_by"),
+  createdAt: bigint("created_at_cr", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_cr", { mode: "number" }).notNull(),
+});
+export type ComplianceRecord = typeof complianceRecords.$inferSelect;
+
+// ─── VOUCHERS (سندات القبض والصرف) ────────────────────────────────────────
+export const vouchers = mysqlTable("vouchers", {
+  id: int("id").autoincrement().primaryKey(),
+  voucherNumber: varchar("voucher_number", { length: 50 }).notNull(),
+  type: mysqlEnum("voucher_type", ["receipt","payment"]).notNull(),
+  amount: decimal("voucher_amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("SAR"),
+  description: text("description"),
+  payerName: varchar("payer_name", { length: 200 }),
+  payerPhone: varchar("payer_phone", { length: 30 }),
+  receiverName: varchar("receiver_name", { length: 200 }),
+  paymentMethod: mysqlEnum("voucher_payment_method", ["cash","bank_transfer","check","online"]).default("cash"),
+  bankName: varchar("bank_name", { length: 200 }),
+  checkNumber: varchar("check_number", { length: 100 }),
+  relatedContractId: int("related_contract_id"),
+  relatedPaymentId: int("related_payment_id"),
+  relatedPropertyId: int("related_property_id"),
+  status: mysqlEnum("voucher_status", ["draft","issued","cancelled"]).default("issued"),
+  notes: text("notes"),
+  createdBy: int("created_by"),
+  issuedAt: bigint("issued_at", { mode: "number" }).notNull(),
+  createdAt: bigint("created_at_v", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_v", { mode: "number" }).notNull(),
+});
+export type Voucher = typeof vouchers.$inferSelect;
+
+// ─── COMPANIES ─────────────────────────────────────────────────────────────
+export const companies = mysqlTable("companies", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 300 }).notNull(),
+  nameEn: varchar("name_en", { length: 300 }),
+  crNumber: varchar("cr_number", { length: 50 }),
+  vatNumber: varchar("vat_number", { length: 50 }),
+  phone: varchar("phone", { length: 30 }),
+  email: varchar("email", { length: 200 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("SA"),
+  logoUrl: varchar("logo_url", { length: 1000 }),
+  website: varchar("website", { length: 300 }),
+  status: mysqlEnum("company_status", ["active","suspended","trial","cancelled"]).default("trial"),
+  ownerId: int("owner_id"),
+  createdAt: bigint("created_at_co", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_co", { mode: "number" }).notNull(),
+});
+export type Company = typeof companies.$inferSelect;
+
+// ─── PLANS (باقات الاشتراك) ────────────────────────────────────────────────
+export const plans = mysqlTable("plans", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("plan_name", { length: 100 }).notNull(),
+  nameAr: varchar("plan_name_ar", { length: 100 }),
+  description: text("plan_description"),
+  priceMonthly: decimal("price_monthly", { precision: 10, scale: 2 }).notNull(),
+  priceYearly: decimal("price_yearly", { precision: 10, scale: 2 }),
+  currency: varchar("plan_currency", { length: 10 }).default("SAR"),
+  maxProperties: int("max_properties").default(10),
+  maxUnits: int("max_units").default(50),
+  maxUsers: int("max_users").default(5),
+  features: text("features"),
+  isActive: tinyint("is_active").default(1),
+  sortOrder: int("sort_order").default(0),
+  createdAt: bigint("created_at_pl", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_pl", { mode: "number" }).notNull(),
+});
+export type Plan = typeof plans.$inferSelect;
+
+// ─── SUBSCRIPTIONS ─────────────────────────────────────────────────────────
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("company_id").notNull(),
+  planId: int("plan_id").notNull(),
+  status: mysqlEnum("sub_status", ["active","trialing","past_due","cancelled","expired"]).default("trialing"),
+  startDate: bigint("start_date_sub", { mode: "number" }).notNull(),
+  endDate: bigint("end_date_sub", { mode: "number" }),
+  trialEndDate: bigint("trial_end_date", { mode: "number" }),
+  billingCycle: mysqlEnum("billing_cycle", ["monthly","yearly"]).default("monthly"),
+  amount: decimal("sub_amount", { precision: 10, scale: 2 }),
+  currency: varchar("sub_currency", { length: 10 }).default("SAR"),
+  cancelledAt: bigint("cancelled_at", { mode: "number" }),
+  cancelReason: text("cancel_reason"),
+  createdAt: bigint("created_at_sub", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at_sub", { mode: "number" }).notNull(),
+});
+export type Subscription = typeof subscriptions.$inferSelect;

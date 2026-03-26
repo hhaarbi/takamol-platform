@@ -1,0 +1,9 @@
+{
+  "query": "-- property_owners: إضافة nationalAddress, companyId, commercialRegNo\nALTER TABLE property_owners \n  ADD COLUMN IF NOT EXISTS nationalAddress VARCHAR(255) NULL,\n  ADD COLUMN IF NOT EXISTS companyId INT NULL,\n  ADD COLUMN IF NOT EXISTS commercialRegNo VARCHAR(30) NULL;\n\n-- maintenance_requests: إضافة ownerApprovalRequired, completionImages\nALTER TABLE maintenance_requests\n  ADD COLUMN IF NOT EXISTS ownerApprovalRequired TINYINT(1) DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS completionImages JSON NULL;\n\n-- brokers: إضافة companyId\nALTER TABLE brokers\n  ADD COLUMN IF NOT EXISTS companyId INT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute -- property_owners: إضافة nationalAddress, companyId, commercialRegNo\nALTER TABLE property_owners \n  ADD COLUMN IF NOT EXISTS nationalAddress VARCHAR(255) NULL,\n  ADD COLUMN IF NOT EXISTS companyId INT NULL,\n  ADD COLUMN IF NOT EXISTS commercialRegNo VARCHAR(30) NULL;\n\n-- maintenance_requests: إضافة ownerApprovalRequired, completionImages\nALTER TABLE maintenance_requests\n  ADD COLUMN IF NOT EXISTS ownerApprovalRequired TINYINT(1) DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS completionImages JSON NULL;\n\n-- brokers: إضافة companyId\nALTER TABLE brokers\n  ADD COLUMN IF NOT EXISTS companyId INT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 7028
+}

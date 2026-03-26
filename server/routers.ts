@@ -1,4 +1,6 @@
 import { TRPCError } from "@trpc/server";
+import { vouchersRouter } from "./routers/vouchers";
+import { plansRouter, companiesRouter, subscriptionsRouter } from "./routers/saas";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -79,6 +81,10 @@ const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
 });
 const brokerProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "broker" && !isAdmin(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN" });
+  return next({ ctx });
+});
+const tenantProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "tenant" && !isAdmin(ctx.user.role)) throw new TRPCError({ code: "FORBIDDEN", message: "Tenant access required" });
   return next({ ctx });
 });
 
@@ -2782,6 +2788,10 @@ export const mergedRouter = router({
   ...batch13Router._def.record,
   ...batch14Router._def.record,
   userManagement: userManagementRouter,
+  vouchers: vouchersRouter,
+  plans: plansRouter,
+  companies: companiesRouter,
+  subscriptions: subscriptionsRouter,
 });
 export type AppRouter = typeof mergedRouter;
 export type Batch10Router = typeof batch10Router;

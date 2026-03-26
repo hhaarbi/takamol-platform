@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE brokers\n  ADD COLUMN IF NOT EXISTS nationalId VARCHAR(20) NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseNumber VARCHAR(50) NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseType ENUM('brokerage','property_management','marketing') NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseIssueDate DATE NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseExpiryDate DATE NULL,\n  ADD COLUMN IF NOT EXISTS rating DECIMAL(3,2) DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS totalDeals INT DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS hasPortalAccess TINYINT(1) DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS approvalRequired TINYINT(1) DEFAULT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute ALTER TABLE brokers\n  ADD COLUMN IF NOT EXISTS nationalId VARCHAR(20) NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseNumber VARCHAR(50) NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseType ENUM('brokerage','property_management','marketing') NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseIssueDate DATE NULL,\n  ADD COLUMN IF NOT EXISTS falLicenseExpiryDate DATE NULL,\n  ADD COLUMN IF NOT EXISTS rating DECIMAL(3,2) DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS totalDeals INT DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS hasPortalAccess TINYINT(1) DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS approvalRequired TINYINT(1) DEFAULT 1;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3559
+}

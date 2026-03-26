@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE payments \n  ADD COLUMN IF NOT EXISTS paidAmount DECIMAL(15,2) NULL,\n  ADD COLUMN IF NOT EXISTS lastReminderSent TIMESTAMP NULL,\n  ADD COLUMN IF NOT EXISTS daysOverdue INT DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS periodCovered VARCHAR(100) NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute ALTER TABLE payments \n  ADD COLUMN IF NOT EXISTS paidAmount DECIMAL(15,2) NULL,\n  ADD COLUMN IF NOT EXISTS lastReminderSent TIMESTAMP NULL,\n  ADD COLUMN IF NOT EXISTS daysOverdue INT DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS periodCovered VARCHAR(100) NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3357
+}

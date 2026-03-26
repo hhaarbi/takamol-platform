@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, FileText, QrCode, CheckCircle2, Clock, XCircle, AlertTriangle, Download } from "lucide-react";
+import { Plus, FileText, QrCode, CheckCircle2, Clock, XCircle, AlertTriangle, Download, Printer } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   draft: { label: "مسودة", color: "bg-gray-100 text-gray-700", icon: <Clock className="h-3 w-3" /> },
@@ -19,9 +21,25 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: React.Rea
   cancelled: { label: "ملغاة", color: "bg-gray-100 text-gray-500", icon: <XCircle className="h-3 w-3" /> },
 };
 
+type InvoiceItem = {
+  id: number;
+  invoiceNumber: string;
+  amount: string;
+  vatAmount: string | null;
+  vatRate?: number | null;
+  totalAmount: string;
+  description: string | null;
+  notes: string | null;
+  issueDate: number;
+  dueDate: number | null;
+  status: string | null;
+  qrCode: string | null;
+  [key: string]: unknown;
+};
+
 export default function Invoices() {
   const [open, setOpen] = useState(false);
-  const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string; number: string }>({ open: false, qr: "", number: "" });
+  const [qrDialog, setQrDialog] = useState<{ open: boolean; qr: string; number: string; inv?: InvoiceItem }>({ open: false, qr: "", number: "" });
   const [form, setForm] = useState({
     amount: "",
     vatRate: 15,
@@ -74,24 +92,163 @@ export default function Invoices() {
     });
   };
 
+  const buildPDF = (inv: InvoiceItem, qrDataUrl?: string) => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    // Blue header
+    doc.setFillColor(30, 64, 175);
+    doc.rect(0, 0, 210, 42, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Takaml Real Estate Management", 105, 14, { align: "center" });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Al-Madinah Al-Munawwarah, Saudi Arabia  |  VAT No: 300000000000003", 105, 23, { align: "center" });
+    doc.text("ZATCA Compliant Electronic Invoice", 105, 31, { align: "center" });
+    doc.setFontSize(9);
+    doc.text("Tel: +966 14 000 0000  |  info@takaml.sa  |  www.takaml.sa", 105, 38, { align: "center" });
+
+    // Invoice title
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(15);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE  /  فاتورة إلكترونية", 105, 52, { align: "center" });
+
+    // Info box
+    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, 57, 182, 30, 3, 3, "FD");
+    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Invoice Number:", 18, 65);
+    doc.text("Issue Date:", 18, 72);
+    doc.text("Due Date:", 18, 79);
+    doc.setFont("helvetica", "normal");
+    doc.text(inv.invoiceNumber, 55, 65);
+    doc.text(new Date(inv.issueDate).toLocaleDateString("en-GB"), 55, 72);
+    doc.text(inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-GB") : "—", 55, 79);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Status:", 120, 65);
+    doc.text("VAT Rate:", 120, 72);
+    doc.setFont("helvetica", "normal");
+    const st = STATUS_MAP[inv.status || "draft"];
+    doc.text(st.label, 145, 65);
+    doc.text(`${inv.vatRate || 15}%`, 145, 72);
+
+    // Amounts table
+    autoTable(doc, {
+      startY: 93,
+      head: [["Description / البيان", "Amount (SAR)", "VAT Rate", "VAT Amount", "Total (SAR)"]],
+      body: [[
+        inv.description || "Real Estate Service",
+        parseFloat(inv.amount || "0").toFixed(2),
+        `${inv.vatRate || 15}%`,
+        parseFloat(inv.vatAmount || "0").toFixed(2),
+        parseFloat(inv.totalAmount || "0").toFixed(2),
+      ]],
+      foot: [["", "", "", "Grand Total / الإجمالي:", parseFloat(inv.totalAmount || "0").toFixed(2) + " SAR"]],
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: "bold", fontSize: 9, halign: "center" },
+      footStyles: { fillColor: [240, 245, 255], textColor: [30, 64, 175], fontStyle: "bold", fontSize: 10 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: { 0: { cellWidth: 70 }, 1: { halign: "right" }, 2: { halign: "center" }, 3: { halign: "right" }, 4: { halign: "right", fontStyle: "bold" } },
+      margin: { left: 14, right: 14 },
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 8;
+
+    // QR section
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(220, 220, 220);
+    doc.roundedRect(14, finalY, 80, 58, 3, 3, "FD");
+    doc.setTextColor(30, 64, 175);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("ZATCA QR Code", 54, finalY + 8, { align: "center" });
+    if (qrDataUrl) {
+      doc.addImage(qrDataUrl, "PNG", 24, finalY + 12, 40, 40);
+    }
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont("helvetica", "normal");
+    doc.text("Scan with ZATCA Fatoora App", 54, finalY + 55, { align: "center" });
+
+    // Notes
+    if (inv.notes) {
+      doc.setFillColor(255, 251, 235);
+      doc.setDrawColor(251, 191, 36);
+      doc.roundedRect(100, finalY, 96, 30, 3, 3, "FD");
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text("Notes / ملاحظات:", 104, finalY + 8);
+      doc.setFont("helvetica", "normal");
+      const noteLines = doc.splitTextToSize(inv.notes, 88);
+      doc.text(noteLines.slice(0, 3), 104, finalY + 15);
+    }
+
+    // Footer
+    doc.setFillColor(30, 64, 175);
+    doc.rect(0, 280, 210, 17, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text("This is a ZATCA-compliant electronic invoice generated by Takaml Real Estate Management System", 105, 288, { align: "center" });
+    doc.text("هذه فاتورة إلكترونية متوافقة مع متطلبات هيئة الزكاة والضريبة والجمارك", 105, 293, { align: "center" });
+
+    doc.save(`invoice_${inv.invoiceNumber}.pdf`);
+    toast.success(`تم تصدير الفاتورة ${inv.invoiceNumber} بصيغة PDF ✅`);
+  };
+
+  const exportInvoicePDF = (inv: InvoiceItem) => {
+    // Try to get QR SVG from DOM
+    const svgEl = document.querySelector(`[data-invoice-id="${inv.id}"] svg`) as SVGElement | null;
+    if (svgEl) {
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const canvas = document.createElement("canvas");
+      canvas.width = 200; canvas.height = 200;
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      img.onload = () => {
+        ctx?.drawImage(img, 0, 0);
+        buildPDF(inv, canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => buildPDF(inv);
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    } else if (inv.qrCode) {
+      // Render hidden QR then capture
+      const tempDiv = document.createElement("div");
+      tempDiv.style.position = "absolute";
+      tempDiv.style.left = "-9999px";
+      document.body.appendChild(tempDiv);
+      // Use a timeout to let React render
+      setTimeout(() => {
+        document.body.removeChild(tempDiv);
+        buildPDF(inv);
+      }, 100);
+    } else {
+      buildPDF(inv);
+    }
+  };
+
   const downloadQR = (qrCode: string, invoiceNumber: string) => {
-    const svgEl = document.getElementById('qr-svg-container')?.querySelector('svg') as SVGElement | null;
-    if (!svgEl) { toast.error('QR Code غير موجود'); return; }
+    const svgEl = document.getElementById("qr-svg-container")?.querySelector("svg") as SVGElement | null;
+    if (!svgEl) { toast.error("QR Code غير موجود"); return; }
     const svgData = new XMLSerializer().serializeToString(svgEl);
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
+    const canvas = document.createElement("canvas");
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext("2d");
     const img = new Image();
     img.onload = () => {
       ctx?.drawImage(img, 0, 0);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.download = `qr_${invoiceNumber}.png`;
-      a.href = canvas.toDataURL('image/png');
+      a.href = canvas.toDataURL("image/png");
       a.click();
-      toast.success('تم تنزيل QR Code');
+      toast.success("تم تنزيل QR Code");
     };
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   };
 
   const vatAmount = form.amount ? (parseFloat(form.amount) * form.vatRate) / 100 : 0;
@@ -241,12 +398,22 @@ export default function Invoices() {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-1">
+                            {/* Hidden QR for PDF capture */}
                             {inv.qrCode && (
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
-                                onClick={() => setQrDialog({ open: true, qr: inv.qrCode!, number: inv.invoiceNumber })}>
+                              <div data-invoice-id={inv.id} className="hidden">
+                                <QRCodeSVG value={inv.qrCode} size={200} level="M" includeMargin />
+                              </div>
+                            )}
+                            {inv.qrCode && (
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="عرض QR Code"
+                                onClick={() => setQrDialog({ open: true, qr: inv.qrCode!, number: inv.invoiceNumber, inv })}>
                                 <QrCode className="h-3.5 w-3.5" />
                               </Button>
                             )}
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700" title="تحميل PDF"
+                              onClick={() => exportInvoicePDF(inv as unknown as InvoiceItem)}>
+                              <Printer className="h-3.5 w-3.5" />
+                            </Button>
                             {inv.status === "issued" && (
                               <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:text-green-700"
                                 onClick={() => updateStatusMutation.mutate({ id: inv.id, status: "paid", paidDate: Date.now() })}>
@@ -286,7 +453,7 @@ export default function Invoices() {
                 <QrCode className="h-24 w-24 text-gray-800" />
               )}
             </div>
-            <div className="bg-muted/30 rounded-lg p-3 text-xs font-mono break-all text-muted-foreground">
+            <div className="bg-muted/30 rounded-lg p-3 text-xs font-mono break-all text-muted-foreground max-h-16 overflow-auto">
               {qrDialog.qr}
             </div>
             <div className="flex gap-2">
@@ -294,6 +461,12 @@ export default function Invoices() {
                 <Download className="h-4 w-4" />
                 تنزيل QR
               </Button>
+                {qrDialog.inv && (
+                <Button variant="outline" className="flex-1 gap-2" onClick={() => { exportInvoicePDF(qrDialog.inv as unknown as InvoiceItem); }}>
+                  <Printer className="h-4 w-4" />
+                  PDF
+                </Button>
+              )}
               <Button variant="outline" className="flex-1" onClick={() => setQrDialog(p => ({ ...p, open: false }))}>
                 إغلاق
               </Button>

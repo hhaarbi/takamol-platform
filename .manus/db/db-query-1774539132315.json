@@ -1,0 +1,109 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'maintenance_requests' AND ORDINAL_POSITION > 20 ORDER BY ORDINAL_POSITION;\nSELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'brokers' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'maintenance_requests' AND ORDINAL_POSITION > 20 ORDER BY ORDINAL_POSITION;\nSELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'brokers' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "assignedPhone"
+    },
+    {
+      "COLUMN_NAME": "estimatedCost"
+    },
+    {
+      "COLUMN_NAME": "scheduledDate"
+    },
+    {
+      "COLUMN_NAME": "ownerApproval"
+    },
+    {
+      "COLUMN_NAME": "contractorId"
+    },
+    {
+      "COLUMN_NAME": "ownerApproved"
+    },
+    {
+      "COLUMN_NAME": "ownerApprovalDate"
+    },
+    {
+      "COLUMN_NAME": "completionDate"
+    },
+    {
+      "COLUMN_NAME": "invoiceUrl"
+    },
+    {
+      "COLUMN_NAME": "rating"
+    },
+    {
+      "COLUMN_NAME": "COLUMN_NAME"
+    },
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "userId"
+    },
+    {
+      "COLUMN_NAME": "name"
+    },
+    {
+      "COLUMN_NAME": "phone"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "licenseNumber"
+    },
+    {
+      "COLUMN_NAME": "commissionRates"
+    },
+    {
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "COLUMN_NAME": "isActive"
+    },
+    {
+      "COLUMN_NAME": "hasPortalAccess"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "nationalId"
+    },
+    {
+      "COLUMN_NAME": "falLicenseType"
+    },
+    {
+      "COLUMN_NAME": "totalSales"
+    },
+    {
+      "COLUMN_NAME": "totalDeals"
+    },
+    {
+      "COLUMN_NAME": "rating"
+    },
+    {
+      "COLUMN_NAME": "falLicenseNumber"
+    },
+    {
+      "COLUMN_NAME": "falLicenseExpiry"
+    },
+    {
+      "COLUMN_NAME": "totalCommissions"
+    },
+    {
+      "COLUMN_NAME": "totalReferrals"
+    },
+    {
+      "COLUMN_NAME": "performanceScore"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nassignedPhone\nestimatedCost\nscheduledDate\nownerApproval\ncontractorId\nownerApproved\nownerApprovalDate\ncompletionDate\ninvoiceUrl\nrating\nCOLUMN_NAME\nid\nuserId\nname\nphone\nemail\nlicenseNumber\ncommissionRates\nnotes\nisActive\nhasPortalAccess\ncreatedAt\nupdatedAt\nnationalId\nfalLicenseType\ntotalSales\ntotalDeals\nrating\nfalLicenseNumber\nfalLicenseExpiry\ntotalCommissions\ntotalReferrals\nperformanceScore\n",
+  "stderr": "",
+  "execution_time_ms": 1767
+}

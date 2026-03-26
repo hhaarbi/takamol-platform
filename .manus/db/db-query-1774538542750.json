@@ -1,0 +1,386 @@
+{
+  "query": "DESCRIBE companies; DESCRIBE plans; DESCRIBE subscriptions;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute DESCRIBE companies; DESCRIBE plans; DESCRIBE subscriptions;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(300)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "name_en",
+      "Type": "varchar(300)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "cr_number",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "vat_number",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "phone",
+      "Type": "varchar(30)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "email",
+      "Type": "varchar(200)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "address",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "city",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "country",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "SA",
+      "Extra": ""
+    },
+    {
+      "Field": "logo_url",
+      "Type": "varchar(1000)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "website",
+      "Type": "varchar(300)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "company_status",
+      "Type": "enum('active','suspended','trial','cancelled')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "trial",
+      "Extra": ""
+    },
+    {
+      "Field": "owner_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at_co",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "updated_at_co",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "Field",
+      "Type": "Type",
+      "Null": "Null",
+      "Key": "Key",
+      "Default": "Default",
+      "Extra": "Extra"
+    },
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "plan_name",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_name_ar",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_description",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "price_monthly",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "price_yearly",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_currency",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "SAR",
+      "Extra": ""
+    },
+    {
+      "Field": "max_properties",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "10",
+      "Extra": ""
+    },
+    {
+      "Field": "max_units",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "50",
+      "Extra": ""
+    },
+    {
+      "Field": "max_users",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "5",
+      "Extra": ""
+    },
+    {
+      "Field": "features",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "sort_order",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at_pl",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "updated_at_pl",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "Field",
+      "Type": "Type",
+      "Null": "Null",
+      "Key": "Key",
+      "Default": "Default",
+      "Extra": "Extra"
+    },
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "company_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plan_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sub_status",
+      "Type": "enum('active','trialing','past_due','cancelled','expired')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "trialing",
+      "Extra": ""
+    },
+    {
+      "Field": "start_date_sub",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "end_date_sub",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "trial_end_date",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "billing_cycle",
+      "Type": "enum('monthly','yearly')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "monthly",
+      "Extra": ""
+    },
+    {
+      "Field": "sub_amount",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sub_currency",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "SAR",
+      "Extra": ""
+    },
+    {
+      "Field": "cancelled_at",
+      "Type": "bigint",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "cancel_reason",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at_sub",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "updated_at_sub",
+      "Type": "bigint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nname\tvarchar(300)\tNO\t\tNULL\t\nname_en\tvarchar(300)\tYES\t\tNULL\t\ncr_number\tvarchar(50)\tYES\t\tNULL\t\nvat_number\tvarchar(50)\tYES\t\tNULL\t\nphone\tvarchar(30)\tYES\t\tNULL\t\nemail\tvarchar(200)\tYES\t\tNULL\t\naddress\ttext\tYES\t\tNULL\t\ncity\tvarchar(100)\tYES\t\tNULL\t\ncountry\tvarchar(100)\tYES\t\tSA\t\nlogo_url\tvarchar(1000)\tYES\t\tNULL\t\nwebsite\tvarchar(300)\tYES\t\tNULL\t\ncompany_status\tenum('active','suspended','trial','cancelled')\tYES\t\ttrial\t\nowner_id\tint\tYES\t\tNULL\t\ncreated_at_co\tbigint\tNO\t\tNULL\t\nupdated_at_co\tbigint\tNO\t\tNULL\t\nField\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nplan_name\tvarchar(100)\tNO\t\tNULL\t\nplan_name_ar\tvarchar(100)\tYES\t\tNULL\t\nplan_description\ttext\tYES\t\tNULL\t\nprice_monthly\tdecimal(10,2)\tNO\t\tNULL\t\nprice_yearly\tdecimal(10,2)\tYES\t\tNULL\t\nplan_currency\tvarchar(10)\tYES\t\tSAR\t\nmax_properties\tint\tYES\t\t10\t\nmax_units\tint\tYES\t\t50\t\nmax_users\tint\tYES\t\t5\t\nfeatures\ttext\tYES\t\tNULL\t\nis_active\ttinyint\tYES\t\t1\t\nsort_order\tint\tYES\t\t0\t\ncreated_at_pl\tbigint\tNO\t\tNULL\t\nupdated_at_pl\tbigint\tNO\t\tNULL\t\nField\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\ncompany_id\tint\tNO\t\tNULL\t\nplan_id\tint\tNO\t\tNULL\t\nsub_status\tenum('active','trialing','past_due','cancelled','expired')\tYES\t\ttrialing\t\nstart_date_sub\tbigint\tNO\t\tNULL\t\nend_date_sub\tbigint\tYES\t\tNULL\t\ntrial_end_date\tbigint\tYES\t\tNULL\t\nbilling_cycle\tenum('monthly','yearly')\tYES\t\tmonthly\t\nsub_amount\tdecimal(10,2)\tYES\t\tNULL\t\nsub_currency\tvarchar(10)\tYES\t\tSAR\t\ncancelled_at\tbigint\tYES\t\tNULL\t\ncancel_reason\ttext\tYES\t\tNULL\t\ncreated_at_sub\tbigint\tNO\t\tNULL\t\nupdated_at_sub\tbigint\tNO\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 1942
+}

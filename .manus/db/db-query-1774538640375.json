@@ -1,0 +1,50 @@
+{
+  "query": "SHOW COLUMNS FROM users LIKE '%company%'; SHOW COLUMNS FROM properties LIKE '%company%'; SHOW COLUMNS FROM contracts LIKE '%company%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute SHOW COLUMNS FROM users LIKE '%company%'; SHOW COLUMNS FROM properties LIKE '%company%'; SHOW COLUMNS FROM contracts LIKE '%company%';",
+  "rows": [
+    {
+      "Field": "companyId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "Field",
+      "Type": "Type",
+      "Null": "Null",
+      "Key": "Key",
+      "Default": "Default",
+      "Extra": "Extra"
+    },
+    {
+      "Field": "companyId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "Field",
+      "Type": "Type",
+      "Null": "Null",
+      "Key": "Key",
+      "Default": "Default",
+      "Extra": "Extra"
+    },
+    {
+      "Field": "companyId",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\ncompanyId\tint\tYES\t\tNULL\t\nField\tType\tNull\tKey\tDefault\tExtra\ncompanyId\tint\tYES\t\tNULL\t\nField\tType\tNull\tKey\tDefault\tExtra\ncompanyId\tint\tYES\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 1927
+}
