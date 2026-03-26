@@ -548,3 +548,58 @@
 - [x] Vitest: 45/45 tests passed
 - [x] TypeScript: No errors
 - [x] جميع API calls تعمل بـ 200 OK (لا 500 errors بعد الإصلاح)
+
+## المرحلة الاحترافية — SaaS Product كامل
+
+### Phase 1: DB Schema الاحترافية
+- [x] تحديث جدول plans (trialDays, limitsJson, isRecommended)
+- [x] تحديث جدول subscriptions (trial_end, grace_period, status enum كامل)
+- [x] إنشاء جدول plan_features (feature_key, plan_id, enabled, limit_value)
+- [x] إنشاء جدول company_usage (company_id, feature_key, current_usage, period)
+- [x] إنشاء جدول plan_change_log (company_id, from_plan, to_plan, reason, changed_at)
+- [x] بيانات أولية: 3 باقات (مبتدئ 99ر.س / احترافي 299ر.س / مؤسسي 799ر.س)
+
+### Phase 2: Subscription Engine Backend
+- [x] getPlans procedure
+- [x] getCurrentSubscription procedure
+- [x] subscribeToPlan procedure
+- [x] upgradePlan / downgradePlan procedures
+- [x] cancelSubscription / renewSubscription procedures
+- [x] getUsageStats procedure
+- [x] checkFeatureAccess procedure
+- [x] getPlanComparison procedure
+- [x] listAll procedure (للـ Super Admin)
+- [x] server/routers/subscriptions.ts مسجّل في routers.ts
+
+### Phase 3: Frontend صفحات الاشتراكات
+- [x] صفحة /pricing (عرض الباقات + مقارنة + Monthly/Yearly toggle)
+- [x] صفحة /subscription (الباقة الحالية + Usage Stats + Upgrade/Cancel)
+- [ ] صفحة /billing (فواتير الاشتراك + تاريخ المدفوعات)
+- [ ] صفحة /usage (Usage & Limits لكل resource)
+- [ ] صفحة /upgrade (مقارنة + تأكيد تغيير الباقة)
+
+### Phase 4: Super Admin Dashboard
+- [x] صفحة /super-admin (قائمة الشركات + باقاتها + حالة الاشتراك)
+- [x] MRR dashboard (الإيراد الشهري المتكرر + ARR + ARPU)
+- [x] إدارة الاشتراكات يدوياً (إلغاء + تمديد تجريبي)
+- [x] إحصائيات: trial, active, past_due, expired
+
+### Phase 5: Feature Gating
+- [x] تعريف feature keys لكل باقة (في plan_features DB)
+- [x] useFeatureAccess() hook في Frontend
+- [x] FeatureGate component مع LockedOverlay
+- [ ] SubscriptionBanner component (عند قرب الانتهاء)
+- [ ] منع الوصول في Backend بـ requireFeature middleware
+
+### Phase 6: Dashboard Debug & UI/UX
+- [x] فحص وإصلاح جميع أزرار CRUD غير الشغالة
+- [x] إصلاح navigation مشاكل
+- [x] إصلاح خطأ Objects are not valid as React child في Pricing
+- [x] توحيد تصميم البطاقات والـ spacing
+- [ ] SubscriptionBanner component (عند قرب الانتهاء)
+
+### Phase 7: Tests + Checkpoint
+- [x] Vitest: 45/45 tests passed
+- [x] TypeScript: 0 errors
+- [x] Checkpoint: 68beaaae (قبل المرحلة الاحترافية)
+- [ ] Checkpoint نهائي للمرحلة الاحترافية

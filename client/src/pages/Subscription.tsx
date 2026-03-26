@@ -5,291 +5,356 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Crown, Zap, Rocket, CheckCircle2, Building2, Users, Home,
-  CreditCard, Calendar, TrendingUp, AlertTriangle, RefreshCw
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Crown, Zap, CheckCircle2, Building2, Users, FileText,
+  CreditCard, Calendar, TrendingUp, AlertTriangle, RefreshCw,
+  XCircle, Receipt, ArrowUpCircle, Clock
 } from "lucide-react";
+import { useLocation } from "wouter";
 
-const planIcons = [Zap, Rocket, Crown];
-const planColors = [
-  "from-blue-500 to-blue-600",
-  "from-purple-500 to-purple-600",
-  "from-amber-500 to-amber-600",
-];
+const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  active: { label: "نشط", color: "bg-green-500/10 text-green-600 border-green-500/20", icon: CheckCircle2 },
+  trialing: { label: "تجربة مجانية", color: "bg-blue-500/10 text-blue-600 border-blue-500/20", icon: Zap },
+  past_due: { label: "متأخر السداد", color: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: AlertTriangle },
+  cancelled: { label: "ملغي", color: "bg-red-500/10 text-red-600 border-red-500/20", icon: XCircle },
+  expired: { label: "منتهي", color: "bg-gray-500/10 text-gray-600 border-gray-500/20", icon: Clock },
+  suspended: { label: "موقوف", color: "bg-orange-500/10 text-orange-600 border-orange-500/20", icon: AlertTriangle },
+};
+
+function UsageBar({ label, current, limit, icon: Icon }: { label: string; current: number; limit: number | null; icon: any }) {
+  const isUnlimited = !limit || limit === -1;
+  const pct = !isUnlimited && limit! > 0 ? Math.min(100, (current / limit!) * 100) : 0;
+  const isWarning = pct >= 80;
+  const isDanger = pct >= 95;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{label}</span>
+        </div>
+        <span className={`font-semibold ${isDanger ? "text-red-500" : isWarning ? "text-amber-500" : ""}`}>
+          {current}{isUnlimited ? "" : ` / ${limit}`}
+          {isUnlimited && <span className="text-muted-foreground font-normal mr-1">(غير محدود)</span>}
+        </span>
+      </div>
+      {!isUnlimited && (
+        <Progress
+          value={pct}
+          className={`h-2 ${isDanger ? "[&>div]:bg-red-500" : isWarning ? "[&>div]:bg-amber-500" : ""}`}
+        />
+      )}
+      {isDanger && <p className="text-xs text-red-500">⚠ وصلت إلى الحد الأقصى. يُنصح بالترقية.</p>}
+    </div>
+  );
+}
 
 export default function Subscription() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [upgrading, setUpgrading] = useState(false);
+  const [, setLocation] = useLocation();
+  const [cancelReason, setCancelReason] = useState("");
 
-  const { data: plans = [] } = trpc.plans.list.useQuery();
-  const { data: myCompany, refetch: refetchCompany } = trpc.companies.getMine.useQuery();
-  const { data: mySub, refetch: refetchSub } = trpc.subscriptions.getMine.useQuery();
+  const { data: sub, isLoading, refetch } = trpc.subscriptions.getCurrentSubscription.useQuery();
+  const { data: usage } = trpc.subscriptions.getUsageStats.useQuery();
+  const { data: billing } = trpc.subscriptions.getBillingHistory.useQuery({ page: 1, limit: 10 });
+  const { data: plans = [] } = trpc.subscriptions.getPlans.useQuery({ billingCycle: "monthly" });
 
-  const upgradeSub = trpc.subscriptions.upgrade.useMutation({
-    onSuccess: () => {
-      toast.success("تم تحديث الاشتراك بنجاح");
-      setUpgrading(false);
-      refetchSub();
-      refetchCompany();
-    },
-    onError: (err) => {
-      toast.error(err.message || "حدث خطأ أثناء التحديث");
-      setUpgrading(false);
-    },
-  });
+  const cancelMutation = trpc.subscriptions.cancelSubscription.useMutation({ onSuccess: () => refetch() });
+  const renewMutation = trpc.subscriptions.renewSubscription.useMutation({ onSuccess: () => refetch() });
+  const upgradeMutation = trpc.subscriptions.upgradePlan.useMutation({ onSuccess: () => refetch() });
 
-  const currentPlan = plans.find((p) => p.id === mySub?.planId);
-  const daysLeft = mySub?.trialEndDate
-    ? Math.max(0, Math.ceil((mySub.trialEndDate - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null;
-  const isOnTrial = mySub?.status === "trialing" && daysLeft !== null && daysLeft > 0;
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  const usagePercent = (used: number, max: number) =>
-    max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
+  if (!sub) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-2xl mx-auto py-16 text-center" dir="rtl">
+          <CreditCard className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">لا يوجد اشتراك نشط</h2>
+          <p className="text-muted-foreground mb-6">اختر الباقة المناسبة لبدء استخدام المنصة</p>
+          <Button onClick={() => setLocation("/pricing")} size="lg">
+            عرض الباقات
+            <ArrowUpCircle className="h-4 w-4 mr-2" />
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const status = sub.subscription.computedStatus;
+  const statusInfo = statusConfig[status] ?? statusConfig.active;
+  const StatusIcon = statusInfo.icon;
+  const currentPlanIdx = plans.findIndex((p: any) => p.id === sub.plan?.id);
+  const upgradablePlans = plans.filter((_: any, i: number) => i > currentPlanIdx);
 
   return (
     <DashboardLayout>
-      <div className="p-6 max-w-6xl mx-auto" dir="rtl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-800">إدارة الاشتراك</h1>
-          <p className="text-slate-500 mt-1">عرض وإدارة اشتراكك في منصة تكامل</p>
-        </div>
-
-        {/* Current Status */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100">
-            <CardContent className="pt-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-amber-700 font-medium">الباقة الحالية</p>
-                  <p className="text-lg font-bold text-amber-900">
-                    {currentPlan?.nameAr ?? currentPlan?.name ?? "غير مشترك"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100">
-            <CardContent className="pt-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-blue-700 font-medium">حالة الاشتراك</p>
-                  <div className="flex items-center gap-2">
-                    {isOnTrial ? (
-                      <Badge className="bg-blue-200 text-blue-800 border-0">
-                        تجريبي — {daysLeft} {daysLeft === 1 ? "يوم" : "أيام"} متبقية
-                      </Badge>
-                    ) : mySub?.status === "active" ? (
-                      <Badge className="bg-green-200 text-green-800 border-0">نشط</Badge>
-                    ) : mySub?.status === "expired" ? (
-                      <Badge className="bg-red-200 text-red-800 border-0">منتهي</Badge>
-                    ) : (
-                      <Badge className="bg-slate-200 text-slate-700 border-0">غير مفعّل</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100">
-            <CardContent className="pt-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center">
-                  <CreditCard className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-green-700 font-medium">تاريخ التجديد</p>
-                  <p className="text-lg font-bold text-green-900">
-                    {mySub?.endDate
-                      ? new Date(mySub.endDate).toLocaleDateString("ar-SA")
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Trial Warning */}
-        {isOnTrial && daysLeft <= 1 && (
-          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6">
-            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-semibold text-amber-800">فترتك التجريبية تنتهي قريباً</p>
-              <p className="text-amber-700 text-sm mt-1">
-                اشترك الآن للاستمرار في استخدام جميع الميزات دون انقطاع.
-              </p>
-            </div>
+      <div className="max-w-5xl mx-auto space-y-6" dir="rtl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">الاشتراك والباقات</h1>
+            <p className="text-muted-foreground text-sm mt-1">إدارة اشتراكك وتتبع الاستخدام</p>
           </div>
-        )}
+          <Button variant="outline" onClick={() => setLocation("/pricing")}>عرض جميع الباقات</Button>
+        </div>
 
-        {/* Usage Stats */}
-        {myCompany && currentPlan && (
-          <Card className="mb-8 border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base">استخدام الباقة</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="flex items-center gap-1 text-slate-600">
-                    <Building2 className="w-4 h-4" /> العقارات
-                  </span>
-                  <span className="text-slate-500">
-                    0 / {currentPlan.maxProperties}
-                  </span>
-                </div>
-                <Progress value={0} className="h-2" />
+        {/* Alerts */}
+        {(status === "past_due" || status === "expired") && (
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-700 dark:text-amber-400">
+                  {status === "expired" ? "انتهى اشتراكك" : "اشتراكك متأخر السداد"}
+                </p>
+                <p className="text-sm text-muted-foreground">جدّد اشتراكك للاستمرار في الوصول إلى جميع المزايا</p>
               </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="flex items-center gap-1 text-slate-600">
-                    <Home className="w-4 h-4" /> الوحدات
-                  </span>
-                  <span className="text-slate-500">
-                    0 / {currentPlan.maxUnits}
-                  </span>
-                </div>
-                <Progress value={0} className="h-2" />
-              </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="flex items-center gap-1 text-slate-600">
-                    <Users className="w-4 h-4" /> المستخدمون
-                  </span>
-                  <span className="text-slate-500">
-                    0 / {currentPlan.maxUsers}
-                  </span>
-                </div>
-                <Progress value={0} className="h-2" />
-              </div>
+              <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={() => renewMutation.mutate({ billingCycle: (sub.subscription.billingCycle as any) ?? "monthly" })}
+                disabled={renewMutation.isPending}>
+                <RefreshCw className="h-4 w-4 ml-1" /> تجديد الآن
+              </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Plan Selection */}
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-800 mb-1">الباقات المتاحة</h2>
-          <p className="text-slate-500 text-sm mb-4">اختر الباقة المناسبة لحجم أعمالك</p>
+        {status === "trialing" && sub.trialDaysLeft !== null && (
+          <Card className="border-blue-500/30 bg-blue-500/5">
+            <CardContent className="flex items-center gap-3 py-4">
+              <Zap className="h-5 w-5 text-blue-500 shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-blue-700 dark:text-blue-400">أنت في فترة التجربة المجانية</p>
+                <p className="text-sm text-muted-foreground">تبقّى <strong>{sub.trialDaysLeft} يوم</strong> من تجربتك المجانية</p>
+              </div>
+              <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white" onClick={() => setLocation("/pricing")}>
+                اشترك الآن
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              onClick={() => setBillingCycle("monthly")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                billingCycle === "monthly" ? "bg-amber-500 text-black" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              شهري
-            </button>
-            <button
-              onClick={() => setBillingCycle("yearly")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                billingCycle === "yearly" ? "bg-amber-500 text-black" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              سنوي
-              <Badge className="mr-2 bg-green-100 text-green-700 border-0 text-xs">وفر 17%</Badge>
-            </button>
-          </div>
-        </div>
+        <Tabs defaultValue="overview" dir="rtl">
+          <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+            <TabsTrigger value="usage">الاستخدام</TabsTrigger>
+            <TabsTrigger value="billing">الفواتير</TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan, i) => {
-            const Icon = planIcons[i] ?? Zap;
-            const price = billingCycle === "yearly"
-              ? (parseFloat(plan.priceYearly ?? plan.priceMonthly) / 12).toFixed(0)
-              : parseFloat(plan.priceMonthly).toFixed(0);
-            const features = (() => {
-              try { return JSON.parse(plan.features ?? "[]") as string[]; }
-              catch { return []; }
-            })();
-            const isCurrent = mySub?.planId === plan.id;
-
-            return (
-              <Card
-                key={plan.id}
-                className={`border-2 transition-all ${
-                  isCurrent
-                    ? "border-amber-500 shadow-lg shadow-amber-500/10"
-                    : "border-slate-200 hover:border-slate-300"
-                } ${i === 1 ? "relative" : ""}`}
-              >
-                {i === 1 && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-amber-500 text-black font-bold px-3">الأكثر شيوعاً</Badge>
-                  </div>
-                )}
-                <CardHeader className="pb-2">
-                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${planColors[i]} flex items-center justify-center mb-3`}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <CardTitle className="text-slate-800">{plan.nameAr ?? plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
+          <TabsContent value="overview" className="space-y-4 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-amber-500" /> الباقة الحالية
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="mb-4">
-                    <span className="text-3xl font-bold text-slate-800">{price}</span>
-                    <span className="text-slate-500 text-sm"> ريال/شهر</span>
-                    {billingCycle === "yearly" && (
-                      <p className="text-green-600 text-xs mt-1">يُدفع سنوياً</p>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold">{sub.plan?.nameAr ?? sub.plan?.name ?? "—"}</span>
+                    <Badge className={statusInfo.color}>
+                      <StatusIcon className="h-3 w-3 ml-1" />{statusInfo.label}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <div className="flex justify-between">
+                      <span>دورة الفوترة</span>
+                      <span className="font-medium">{sub.subscription.billingCycle === "yearly" ? "سنوية" : "شهرية"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>المبلغ</span>
+                      <span className="font-medium">{Number(sub.subscription.amount ?? 0).toLocaleString("ar-SA")} ر.س</span>
+                    </div>
+                    {sub.subscription.endDate && (
+                      <div className="flex justify-between">
+                        <span>تاريخ الانتهاء</span>
+                        <span className={`font-medium ${sub.isExpiringSoon ? "text-amber-500" : ""}`}>
+                          {new Date(sub.subscription.endDate).toLocaleDateString("ar-SA")}
+                          {sub.isExpiringSoon && ` (${sub.daysLeft} يوم)`}
+                        </span>
+                      </div>
                     )}
                   </div>
-                  <ul className="space-y-2 mb-6">
-                    <li className="flex items-center gap-2 text-slate-600 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                      <span>حتى {plan.maxProperties} عقار</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-slate-600 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                      <span>حتى {plan.maxUnits} وحدة</span>
-                    </li>
-                    <li className="flex items-center gap-2 text-slate-600 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                      <span>حتى {plan.maxUsers} مستخدمين</span>
-                    </li>
-                    {features.map((f: string, fi: number) => (
-                      <li key={fi} className="flex items-center gap-2 text-slate-600 text-sm">
-                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {isCurrent ? (
-                    <div className="flex items-center gap-2 text-amber-600 text-sm font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>باقتك الحالية</span>
-                    </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" /> ملخص الاستخدام
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {usage ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1"><Building2 className="h-3 w-3" /> العقارات</span>
+                        <span className="font-medium">{usage.properties.current} / {usage.properties.limit === -1 ? "∞" : usage.properties.limit}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1"><FileText className="h-3 w-3" /> العقود</span>
+                        <span className="font-medium">{usage.contracts.current}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground flex items-center gap-1"><Users className="h-3 w-3" /> المستخدمون</span>
+                        <span className="font-medium">{usage.users.current} / {usage.users.limit === -1 ? "∞" : usage.users.limit}</span>
+                      </div>
+                    </>
                   ) : (
-                    <Button
-                      className="w-full bg-slate-800 hover:bg-slate-700 text-white"
-                      onClick={() => {
-                        setUpgrading(true);
-                        upgradeSub.mutate({ planId: plan.id, billingCycle });
-                      }}
-                      disabled={upgradeSub.isPending}
-                    >
-                      {upgradeSub.isPending && upgrading ? (
-                        <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
-                      ) : (
-                        <TrendingUp className="w-4 h-4 ml-2" />
-                      )}
-                      {(mySub?.planId ?? 0) < plan.id ? "ترقية" : "تخفيض"} إلى هذه الباقة
-                    </Button>
+                    <p className="text-sm text-muted-foreground">لا توجد بيانات</p>
                   )}
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            </div>
+
+            {upgradablePlans.length > 0 && status !== "cancelled" && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ArrowUpCircle className="h-4 w-4 text-primary" /> ترقية الباقة
+                  </CardTitle>
+                  <CardDescription>احصل على مزايا أكثر بترقية باقتك</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {upgradablePlans.map((plan) => (
+                      <div key={plan.id} className="flex items-center justify-between p-3 rounded-lg border hover:border-primary/50 transition-colors">
+                        <div>
+                          <p className="font-medium">{plan.nameAr ?? plan.name}</p>
+                          <p className="text-sm text-muted-foreground">{Number(plan.priceMonthly).toLocaleString("ar-SA")} ر.س / شهر</p>
+                        </div>
+                        <Button size="sm"
+                          onClick={() => upgradeMutation.mutate({ newPlanId: plan.id, billingCycle: "monthly" })}
+                          disabled={upgradeMutation.isPending}>
+                          ترقية
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              {(status === "active" || status === "trialing") && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5">
+                      <XCircle className="h-4 w-4 ml-1" /> إلغاء الاشتراك
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent dir="rtl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>تأكيد إلغاء الاشتراك</AlertDialogTitle>
+                      <AlertDialogDescription>سيستمر وصولك حتى نهاية الفترة الحالية. هل أنت متأكد؟</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <textarea className="w-full border rounded-lg p-2 text-sm resize-none mt-2" rows={3}
+                      placeholder="سبب الإلغاء (اختياري)" value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)} />
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>تراجع</AlertDialogCancel>
+                      <AlertDialogAction className="bg-destructive hover:bg-destructive/90"
+                        onClick={() => cancelMutation.mutate({ reason: cancelReason })}>
+                        تأكيد الإلغاء
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              {(status === "cancelled" || status === "expired") && (
+                <Button onClick={() => renewMutation.mutate({ billingCycle: "monthly" })} disabled={renewMutation.isPending}>
+                  <RefreshCw className="h-4 w-4 ml-1" /> تجديد الاشتراك
+                </Button>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="usage" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">تفاصيل الاستخدام</CardTitle>
+                <CardDescription>مقارنة استخدامك الحالي بحدود باقتك</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {usage ? (
+                  <>
+                    <UsageBar label="العقارات" current={usage.properties.current} limit={usage.properties.limit} icon={Building2} />
+                    <UsageBar label="الوحدات" current={usage.units.current} limit={usage.units.limit} icon={Building2} />
+                    <UsageBar label="العقود النشطة" current={usage.contracts.current} limit={usage.contracts.limit} icon={FileText} />
+                    <UsageBar label="المستخدمون" current={usage.users.current} limit={usage.users.limit} icon={Users} />
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p>لا توجد بيانات استخدام متاحة</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="billing" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Receipt className="h-4 w-4" /> سجل الفواتير
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {billing && billing.items.length > 0 ? (
+                  <div className="space-y-2">
+                    {billing.items.map((item: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Receipt className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{item.inv?.invoiceNumber ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.plan?.nameAr ?? item.plan?.name ?? "—"} •{" "}
+                              {item.inv?.createdAt ? new Date(item.inv.createdAt).toLocaleDateString("ar-SA") : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold text-sm">{Number(item.inv?.amount ?? 0).toLocaleString("ar-SA")} ر.س</p>
+                          <Badge variant="outline" className={item.inv?.status === "paid" ? "text-green-600 border-green-500/30 text-xs" : "text-amber-600 border-amber-500/30 text-xs"}>
+                            {item.inv?.status === "paid" ? "مدفوع" : "معلق"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p>لا توجد فواتير بعد</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

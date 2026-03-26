@@ -1159,6 +1159,12 @@ export const plans = mysqlTable("plans", {
   features: text("features"),
   isActive: tinyint("is_active").default(1),
   sortOrder: int("sort_order").default(0),
+  isRecommended: tinyint("is_recommended").default(0),
+  trialDays: int("trial_days").default(14),
+  maxContracts: int("max_contracts").default(50),
+  maxApiCalls: int("max_api_calls").default(0),
+  featureKeys: json("feature_keys").$type<string[]>().default([]),
+  limitsJson: json("limits_json").$type<Record<string, number>>().default({}),
   createdAt: bigint("created_at_pl", { mode: "number" }).notNull(),
   updatedAt: bigint("updated_at_pl", { mode: "number" }).notNull(),
 });
@@ -1182,3 +1188,58 @@ export const subscriptions = mysqlTable("subscriptions", {
   updatedAt: bigint("updated_at_sub", { mode: "number" }).notNull(),
 });
 export type Subscription = typeof subscriptions.$inferSelect;
+
+// ─── SUBSCRIPTION FEATURES (feature keys per plan) ─────────────────────────
+export const subscriptionFeatures = mysqlTable("subscription_features", {
+  id: int("id").autoincrement().primaryKey(),
+  planId: int("plan_id_sf").notNull(),
+  featureKey: varchar("feature_key", { length: 100 }).notNull(),
+  enabled: tinyint("enabled_sf").default(1),
+  limitValue: int("limit_value"),
+  createdAt: bigint("created_at_sf", { mode: "number" }).notNull(),
+});
+export type SubscriptionFeature = typeof subscriptionFeatures.$inferSelect;
+
+// ─── COMPANY USAGE ──────────────────────────────────────────────────────────
+export const companyUsage = mysqlTable("company_usage", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("company_id_cu").notNull(),
+  featureKey: varchar("feature_key_cu", { length: 100 }).notNull(),
+  currentUsage: int("current_usage").default(0),
+  period: varchar("usage_period", { length: 7 }),
+  updatedAt: bigint("updated_at_cu", { mode: "number" }).notNull(),
+});
+export type CompanyUsage = typeof companyUsage.$inferSelect;
+
+// ─── PLAN CHANGE LOG ────────────────────────────────────────────────────────
+export const planChangeLog = mysqlTable("plan_change_log", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("company_id_pcl").notNull(),
+  fromPlanId: int("from_plan_id"),
+  toPlanId: int("to_plan_id").notNull(),
+  changeType: mysqlEnum("change_type", ["upgrade","downgrade","cancel","renew","trial_start","manual"]).default("upgrade"),
+  reason: text("change_reason"),
+  changedBy: int("changed_by"),
+  changedAt: bigint("changed_at", { mode: "number" }).notNull(),
+});
+export type PlanChangeLog = typeof planChangeLog.$inferSelect;
+
+// ─── SUBSCRIPTION INVOICES ──────────────────────────────────────────────────
+export const subscriptionInvoices = mysqlTable("subscription_invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("company_id_si").notNull(),
+  subscriptionId: int("subscription_id_si").notNull(),
+  planId: int("plan_id_si").notNull(),
+  amount: decimal("inv_amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("inv_currency", { length: 10 }).default("SAR"),
+  status: mysqlEnum("inv_status", ["paid","pending","failed","refunded"]).default("pending"),
+  billingCycle: mysqlEnum("inv_billing_cycle", ["monthly","yearly"]).default("monthly"),
+  periodStart: bigint("period_start", { mode: "number" }),
+  periodEnd: bigint("period_end", { mode: "number" }),
+  paidAt: bigint("paid_at_inv", { mode: "number" }),
+  invoiceNumber: varchar("invoice_number", { length: 50 }),
+  notes: text("inv_notes"),
+  createdAt: bigint("created_at_inv", { mode: "number" }).notNull(),
+});
+export type SubscriptionInvoice = typeof subscriptionInvoices.$inferSelect;
+export type InsertSubscriptionInvoice = typeof subscriptionInvoices.$inferInsert;

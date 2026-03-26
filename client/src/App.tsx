@@ -50,6 +50,8 @@ import UserManagement from "./pages/UserManagement";
 import Vouchers from "./pages/Vouchers";
 import Onboarding from "./pages/Onboarding";
 import Subscription from "./pages/Subscription";
+import Pricing from "./pages/Pricing";
+import SuperAdmin from "./pages/SuperAdmin";
 
 function Router() {
   return (
@@ -104,6 +106,8 @@ function Router() {
       <Route path={"/vouchers"} component={Vouchers} />
       <Route path={"/onboarding"} component={Onboarding} />
       <Route path={"/subscription"} component={Subscription} />
+      <Route path={"/pricing"} component={Pricing} />
+      <Route path={"/super-admin"} component={SuperAdmin} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

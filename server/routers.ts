@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { vouchersRouter } from "./routers/vouchers";
-import { plansRouter, companiesRouter, subscriptionsRouter } from "./routers/saas";
+import { plansRouter, companiesRouter, subscriptionsRouter as saasSubscriptionsRouter } from "./routers/saas";
+import { subscriptionsRouter } from "./routers/subscriptions";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";

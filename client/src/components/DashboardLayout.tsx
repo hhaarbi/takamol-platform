@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2, Shield, Mail, RefreshCw, Activity, UserCog, Flame, TrendingUp, DoorOpen, Archive, CheckCircle, MapPin, BarChart3, ClipboardCheck, Receipt, BookOpen, BarChart, Percent, AtSign, CalendarCheck, Crown, Wallet } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Home, FileText, BarChart2, Wrench, Building, UserCheck, Star, Bell, Download, Globe, Calculator, Megaphone, Key, Code2, Shield, Mail, RefreshCw, Activity, UserCog, Flame, TrendingUp, DoorOpen, Archive, CheckCircle, MapPin, BarChart3, ClipboardCheck, Receipt, BookOpen, BarChart, Percent, AtSign, CalendarCheck, Crown, Wallet, CreditCard, LayoutGrid } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -65,6 +65,8 @@ const menuItems = [
   { icon: CalendarCheck, label: "الحجوزات المسبقة", path: "/reservations" },
   { icon: BookOpen, label: "توثيق API", path: "/api-docs" },
   { icon: Crown, label: "إدارة المستخدمين", path: "/user-management", superAdminOnly: true },
+  { icon: LayoutGrid, label: "Super Admin", path: "/super-admin", superAdminOnly: true },
+  { icon: CreditCard, label: "الاشتراك والباقات", path: "/subscription" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
