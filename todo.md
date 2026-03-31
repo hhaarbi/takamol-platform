@@ -719,4 +719,28 @@
 ### Phase 3 Tests + Checkpoint
 - [x] Vitest: 45/45 ✅
 - [x] TypeScript: 0 errors ✅
+- [x] Checkpoint نهائي (93d33346)
+
+## Phase 4: Business Engine + UX + Launch Readiness (31 مارس 2026)
+
+### Automation Engine
+- [x] Late Fees Automation: processOverdueEscalation يحسب lateFeeAmount = amount × lateFeeRate × (daysOverdue/30)
+- [x] Escalation Logic: Level 1 (≤ 14 يوم) → Level 2 (≤ 30 يوم) → Level 3 (> 30 يوم)
+- [x] Owner Transfer Automation: payments.markPaid ينشئ ownerTransfer تلقائياً (خصم عمولة + صافي مالك)
+
+### Payment Schedule Page
+- [x] إنشاء صفحة /payment-schedule احترافية
+- [x] عرض حالة كل دفعة (Paid/Pending/Overdue) مع ألوان
+- [x] عرض late fees وescalation status وdaysOverdue
+- [x] إضافة route /payment-schedule في App.tsx + رابط في DashboardLayout
+
+### UX Dashboard تحسين
+- [x] KPIs مرتبة بشكل واضح في overview tab
+- [x] إضافة Top Overdue Tenants (Top 5 مستأجرين تأخراً) في Dashboard
+- [x] إضافة Top Properties by Revenue (Top 5 عقارات إيراداً) في Dashboard
+- [x] إضافة رابط جدول الدفعات في DashboardLayout
+
+### Phase 4 Tests + Checkpoint
+- [x] Vitest: 45/45 ✅
+- [x] TypeScript: 0 errors ✅
 - [ ] Checkpoint نهائي

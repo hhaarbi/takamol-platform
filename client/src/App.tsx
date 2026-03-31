@@ -53,6 +53,7 @@ import Subscription from "./pages/Subscription";
 import Pricing from "./pages/Pricing";
 import SuperAdmin from "./pages/SuperAdmin";
 import Billing from "./pages/Billing";
+import PaymentSchedule from "./pages/PaymentSchedule";
 
 function Router() {
   return (
@@ -110,6 +111,7 @@ function Router() {
       <Route path={"/pricing"} component={Pricing} />
       <Route path={"/super-admin"} component={SuperAdmin} />
       <Route path={"/billing"} component={Billing} />
+      <Route path={"/payment-schedule"} component={PaymentSchedule} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

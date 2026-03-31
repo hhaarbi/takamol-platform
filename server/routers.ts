@@ -509,15 +509,48 @@ export const appRouter = router({
     markPaid: adminProcedure.input(z.object({
       id: z.number(), paymentMethod: z.enum(["bank_transfer", "cash", "check", "online"]),
       referenceNumber: z.string().optional(), paidDate: z.string().optional(),
-    })).mutation(async ({ input }) => {
+    })).mutation(async ({ input, ctx }) => {
       const receiptNumber = await generateReceiptNumber();
+      const paidDateStr = (input.paidDate ?? new Date().toISOString().split("T")[0]) as any;
       await updatePayment(input.id, {
         status: "paid",
-        paidDate: (input.paidDate ?? new Date().toISOString().split("T")[0]) as any,
+        paidDate: paidDateStr,
         paymentMethod: input.paymentMethod,
         referenceNumber: input.referenceNumber,
         receiptNumber,
       });
+
+      // أتمتة التحويل للمالك تلقائياً عند تسجيل دفعة إيجار مدفوعة
+      try {
+        const payment = await getPaymentById(input.id);
+        if (payment && payment.type === "rent" && payment.contractId && payment.ownerId) {
+          const contract = await getContractById(payment.contractId);
+          if (contract) {
+            const rentAmount = parseFloat(payment.amount ?? "0");
+            // حساب رسوم الإدارة
+            let managementFee = 0;
+            if (contract.managementFeeType === "percentage") {
+              managementFee = rentAmount * (parseFloat(contract.managementFeeValue ?? "5") / 100);
+            } else if (contract.managementFeeType === "fixed") {
+              managementFee = parseFloat(contract.managementFeeValue ?? "0");
+            }
+            const netAmount = rentAmount - managementFee;
+            if (netAmount > 0 && payment.ownerId) {
+              await createOwnerTransfer({
+                ownerId: payment.ownerId,
+                amount: netAmount.toFixed(2),
+                transferDate: paidDateStr,
+                status: "pending",
+                notes: `تحويل تلقائي - إيجار عقد ${contract.contractNumber} - إيصال: ${receiptNumber} - رسوم إدارة: ${managementFee.toFixed(2)} ريال`,
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // عدم إيقاف عملية التحصيل بسبب خطأ في التحويل
+        console.warn("[Owner Transfer] Failed to auto-create transfer:", e);
+      }
+
       await logActivity({ action: "payment_collected", entityType: "payment", entityId: input.id, description: `تم تحصيل دفعة - إيصال: ${receiptNumber}` });
       return { success: true, receiptNumber };
     }),

@@ -247,6 +247,49 @@ export default function Dashboard() {
     return { total, collected, pending, overdue: overdueAmt, rate: total > 0 ? Math.round((collected / total) * 100) : 0 };
   }, [monthlyCollection]);
 
+  // أكثر المستأجرين تأخراً — Top 5 مرتبة حسب مجموع المتأخرات
+  const topOverdueTenants = useMemo(() => {
+    const overduePayments = payments.filter((p: any) => p.status === "overdue");
+    const tenantTotals: Record<number, { tenantId: number; total: number; count: number; maxDays: number }> = {};
+    overduePayments.forEach((p: any) => {
+      if (!p.tenantId) return;
+      if (!tenantTotals[p.tenantId]) tenantTotals[p.tenantId] = { tenantId: p.tenantId, total: 0, count: 0, maxDays: 0 };
+      tenantTotals[p.tenantId].total += parseFloat(p.amount ?? "0");
+      tenantTotals[p.tenantId].count += 1;
+      tenantTotals[p.tenantId].maxDays = Math.max(tenantTotals[p.tenantId].maxDays, (p.daysOverdue ?? 0) as number);
+    });
+    return Object.values(tenantTotals)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5)
+      .map(t => ({
+        ...t,
+        name: (tenants as any[]).find((ten: any) => ten.id === t.tenantId)?.nameAr ||
+              (tenants as any[]).find((ten: any) => ten.id === t.tenantId)?.name ||
+              `مستأجر #${t.tenantId}`,
+      }));
+  }, [payments, tenants]);
+
+  // أعلى العقارات إيراداً — Top 5 مرتبة حسب مجموع الدفعات المحصلة
+  const topPropertiesByRevenue = useMemo(() => {
+    const paidPayments = payments.filter((p: any) => p.status === "paid");
+    const propTotals: Record<number, { propertyId: number; total: number; count: number }> = {};
+    paidPayments.forEach((p: any) => {
+      if (!p.propertyId) return;
+      if (!propTotals[p.propertyId]) propTotals[p.propertyId] = { propertyId: p.propertyId, total: 0, count: 0 };
+      propTotals[p.propertyId].total += parseFloat(p.amount ?? "0");
+      propTotals[p.propertyId].count += 1;
+    });
+    return Object.values(propTotals)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5)
+      .map(t => ({
+        ...t,
+        name: (properties as any[]).find((pr: any) => pr.id === t.propertyId)?.nameAr ||
+              (properties as any[]).find((pr: any) => pr.id === t.propertyId)?.name ||
+              `عقار #${t.propertyId}`,
+      }));
+  }, [payments, properties]);
+
   // ─── FORMS ────────────────────────────────────────────────────────────────
   const [propertyForm, setPropertyForm] = useState({ titleAr: "", type: "apartment" as "apartment" | "villa" | "land" | "commercial" | "office" | "warehouse" | "building" | "farm", listingType: "rent" as "rent" | "sale" | "managed", price: "", area: "", bedrooms: "", bathrooms: "", district: "", descriptionAr: "", featuresAr: "" });
   const [ownerForm, setOwnerForm] = useState({ name: "", phone: "", email: "", nationalId: "", managementFeeType: "percentage" as "fixed" | "percentage", managementFeeValue: "5.00", notes: "" });
@@ -535,6 +578,69 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Top Overdue Tenants + Top Properties by Revenue */}
+              {(topOverdueTenants.length > 0 || topPropertiesByRevenue.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Top Overdue Tenants */}
+                  {topOverdueTenants.length > 0 && (
+                    <Card className="border-0 shadow-sm border-r-4 border-r-red-400">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2 text-red-700">
+                          <AlertTriangle size={15} />
+                          أكثر المستأجرين تأخراً
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {topOverdueTenants.map((t, i) => (
+                          <div key={t.tenantId} className="flex items-center justify-between p-2 bg-red-50/60 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-red-200 text-red-700 text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                              <div>
+                                <p className="text-sm font-medium text-slate-800">{t.name}</p>
+                                <p className="text-xs text-slate-500">{t.count} دفعة • {t.maxDays} يوم تأخر</p>
+                              </div>
+                            </div>
+                            <span className="text-red-700 font-bold text-sm">{formatCurrency(t.total)}</span>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Top Properties by Revenue */}
+                  {topPropertiesByRevenue.length > 0 && (
+                    <Card className="border-0 shadow-sm border-r-4 border-r-green-400">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2 text-green-700">
+                          <TrendingUp size={15} />
+                          أعلى العقارات إيراداً
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {topPropertiesByRevenue.map((p, i) => {
+                          const maxRev = topPropertiesByRevenue[0]?.total || 1;
+                          const pct = Math.round((p.total / maxRev) * 100);
+                          return (
+                            <div key={p.propertyId} className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-green-200 text-green-700 text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                                  <p className="text-sm font-medium text-slate-800 truncate max-w-[120px]">{p.name}</p>
+                                </div>
+                                <span className="text-green-700 font-bold text-sm">{formatCurrency(p.total)}</span>
+                              </div>
+                              <div className="w-full bg-slate-100 rounded-full h-1.5">
+                                <div className="h-1.5 rounded-full bg-green-400" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

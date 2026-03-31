@@ -1763,6 +1763,9 @@ export async function processOverdueEscalation(companyId?: number | null): Promi
     id: payments.id,
     dueDate: payments.dueDate,
     escalationLevel: payments.escalationLevel,
+    amount: payments.amount,
+    lateFeeRate: payments.lateFeeRate,
+    lateFeeAmount: payments.lateFeeAmount,
   }).from(payments).where(and(...cond));
 
   let updated = 0;
@@ -1774,12 +1777,22 @@ export async function processOverdueEscalation(companyId?: number | null): Promi
     else if (daysOverdue >= 8) newLevel = 2;
     else if (daysOverdue >= 1) newLevel = 1;
 
+    // احتساب غرامة التأخير: lateFeeRate% من المبلغ الأصلي × عدد الأسابيع (بحد أقصى 30% من المبلغ)
+    const rate = parseFloat(p.lateFeeRate ?? "0");
+    const baseAmount = parseFloat(p.amount ?? "0");
+    const weeksOverdue = Math.ceil(daysOverdue / 7);
+    const rawFee = rate > 0 ? Math.min(baseAmount * (rate / 100) * weeksOverdue, baseAmount * 0.3) : 0;
+    const newLateFeeAmount = parseFloat(rawFee.toFixed(2));
+    const currentFee = parseFloat(p.lateFeeAmount ?? "0");
+
     const shouldUpdate = newLevel !== (p.escalationLevel ?? 0) || daysOverdue > 0;
     if (shouldUpdate) {
       await db.update(payments).set({
         status: "overdue" as any,
         daysOverdue,
         escalationLevel: newLevel,
+        // تحديث غرامة التأخير فقط إذا ارتفعت (لا تنخفض أبداً)
+        ...(newLateFeeAmount > currentFee ? { lateFeeAmount: newLateFeeAmount.toString() } : {}),
       }).where(eq(payments.id, p.id));
       updated++;
     }
