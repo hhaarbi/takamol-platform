@@ -279,8 +279,8 @@ export default function OpenAPI() {
             </CardHeader>
             <CardContent>
               <div className="bg-gray-900 text-blue-400 rounded-lg p-4 font-mono text-sm flex items-center justify-between" dir="ltr">
-                <span>https://your-domain.manus.space/api/v1</span>
-                <Button size="sm" variant="ghost" onClick={() => copyToClipboard("https://your-domain.manus.space/api/v1")}>
+                <span>https://yourdomain.com/api/v1</span>
+                <Button size="sm" variant="ghost" onClick={() => copyToClipboard("https://yourdomain.com/api/v1")}>
                   <Copy className="w-3 h-3" />
                 </Button>
               </div>
@@ -325,7 +325,7 @@ export default function OpenAPI() {
               <div className="bg-gray-900 text-gray-100 rounded-lg p-4 font-mono text-sm space-y-1" dir="ltr">
                 <div className="text-green-400"># جلب قائمة العقارات</div>
                 <div>curl -X GET \</div>
-                <div className="pr-4">https://your-domain.manus.space/api/v1/properties \</div>
+                <div className="pr-4">https://yourdomain.com/api/v1/properties \</div>
                 <div className="pr-4">-H "Authorization: Bearer tk_your_key" \</div>
                 <div className="pr-4">-H "Content-Type: application/json"</div>
               </div>

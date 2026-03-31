@@ -743,4 +743,36 @@
 ### Phase 4 Tests + Checkpoint
 - [x] Vitest: 45/45 ✅
 - [x] TypeScript: 0 errors ✅
+- [x] Checkpoint نهائي (ee40b60d)
+
+## Phase 5: Full Production Migration (31 مارس 2026)
+
+### Decoupling — تنظيف Manus dependencies
+- [x] فحص جميع imports وreferences لـ Manus في الكود
+- [x] Manus OAuth: يعمل بدون Manus عبر JWT_SECRET مستقل في .env
+- [x] Manus LLM: متوافق مع OpenAI API (تغيير OPENAI_BASE_URL فقط)
+- [x] Manus Notification: مستبدل بـ Telegram Bot مباشرة (TELEGRAM_BOT_TOKEN)
+- [x] Manus Storage: موثق في README ببديل AWS S3 / Cloudflare R2
+- [x] إصلاح OpenAPI.tsx: manus.space → yourdomain.com
+
+### Production Files
+- [x] إنشاء env.example شامل (جميع المتغيرات موثقة)
+- [x] تحديث .gitignore
+- [x] إنشاء ecosystem.config.js (PM2 cluster mode)
+- [x] إنشاء deploy/nginx.conf (مع SSL + rate limiting + gzip)
+- [x] إنشاء deploy/setup-vps.sh (Ubuntu 22.04 كامل)
+- [x] إنشاء deploy/deploy.sh (نشر بأمر واحد)
+
+### Database Migration
+- [x] إنشاء deploy/migration.sql كامل (جميع الجداول + indexes + constraints)
+- [x] README.md يتضمن خطوات seed البيانات الأولية
+
+### Documentation
+- [x] إنشاء README.md احترافي (عربي + جداول واضحة)
+- [x] توثيق خطوات النشر على VPS في README.md
+- [x] توثيق جميع Environment Variables في env.example
+
+### Phase 5 Tests + Checkpoint
+- [x] TypeScript: 0 errors ✅
+- [x] Vitest: 45/45 ✅
 - [ ] Checkpoint نهائي

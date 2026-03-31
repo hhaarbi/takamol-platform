@@ -111,3 +111,17 @@ temp/
 
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
+
+# Production artifacts
+uploads/
+*.backup
+*.dump
+
+# PM2
+.pm2/
+
+# Drizzle generated migrations (keep schema, not generated SQL)
+drizzle/meta/
+
+# Screenshots
+screenshots/
