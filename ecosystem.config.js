@@ -6,7 +6,8 @@ module.exports = {
   apps: [
     {
       name: "realestate-bot",
-      script: "./dist/server/index.js",
+      // المسار الصحيح بعد pnpm build (esbuild → dist/index.js)
+      script: "./dist/index.js",
       cwd: "/var/www/realestate-bot",
 
       // بيئة الإنتاج
@@ -32,9 +33,15 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
       restart_delay: 4000,
+      min_uptime: "10s",
+      kill_timeout: 5000,
+      listen_timeout: 10000,
 
-      // متغيرات البيئة من ملف .env
-      env_file: "/var/www/realestate-bot/.env",
+      // بيئة التطوير (للاختبار المحلي)
+      env_development: {
+        NODE_ENV: "development",
+        PORT: 3000,
+      },
     },
   ],
 };

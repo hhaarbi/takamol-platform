@@ -209,15 +209,42 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
-
-const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+/**
+ * Resolve the LLM API URL.
+ * Priority:
+ *   1. OPENAI_BASE_URL (standalone — any OpenAI-compatible API)
+ *   2. BUILT_IN_FORGE_API_URL (Manus platform only)
+ *   3. Default: OpenAI
+ */
+const resolveApiUrl = () => {
+  // Standalone mode: use OPENAI_BASE_URL
+  if (ENV.openAiBaseUrl && ENV.openAiBaseUrl.trim().length > 0) {
+    return `${ENV.openAiBaseUrl.replace(/\/$/, "")}/chat/completions`;
   }
+  // Manus platform fallback
+  if (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0) {
+    return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  }
+  // Default: OpenAI
+  return "https://api.openai.com/v1/chat/completions";
+};
+
+/**
+ * Resolve the API key.
+ * Priority:
+ *   1. OPENAI_API_KEY (standalone)
+ *   2. BUILT_IN_FORGE_API_KEY (Manus platform)
+ */
+const resolveApiKey = (): string => {
+  if (ENV.openAiApiKey && ENV.openAiApiKey.trim().length > 0) {
+    return ENV.openAiApiKey;
+  }
+  if (ENV.forgeApiKey && ENV.forgeApiKey.trim().length > 0) {
+    return ENV.forgeApiKey;
+  }
+  throw new Error(
+    "LLM API key is not configured. Set OPENAI_API_KEY in your .env file."
+  );
 };
 
 const normalizeResponseFormat = ({
@@ -266,7 +293,7 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+  const apiKey = resolveApiKey();
 
   const {
     messages,
@@ -316,7 +343,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(payload),
   });

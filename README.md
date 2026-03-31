@@ -19,11 +19,14 @@
 
 ## المتطلبات التقنية
 
-- Node.js 20 LTS
-- MySQL 8.0+ أو MariaDB 10.6+
-- pnpm 8+
-- PM2 (للإنتاج)
-- Nginx (للإنتاج)
+| المكوّن | الإصدار |
+|---------|----------|
+| Node.js | 20 LTS |
+| MySQL | 8.0+ أو MariaDB 10.6+ |
+| pnpm | 8+ |
+| Nginx | 1.18+ (للإنتاج) |
+| PM2 | 5+ (للإنتاج) |
+| Ubuntu | 22.04 LTS (للإنتاج) |
 
 ## التثبيت المحلي
 
@@ -49,23 +52,70 @@ pnpm dev
 
 ## النشر على VPS (Ubuntu 22.04)
 
-```bash
-# 1. إعداد السيرفر (مرة واحدة فقط)
-sudo bash deploy/setup-vps.sh
+### الخطوة 1: إعداد السيرفر (مرة واحدة)
 
-# 2. رفع الكود
+```bash
+# استنساخ المشروع أولاً
 git clone https://github.com/your-org/realestate-bot.git /var/www/realestate-bot
 cd /var/www/realestate-bot
 
-# 3. إعداد .env
-cp env.example .env
-nano .env  # عبّئ القيم الحقيقية
+# تشغيل سكريبت الإعداد (يثبت Node.js 20, MySQL, Nginx, PM2, Certbot, UFW)
+sudo bash deploy/setup-vps.sh
+```
 
-# 4. النشر
+### الخطوة 2: إعداد متغيرات البيئة
+
+```bash
+cp /var/www/realestate-bot/env.example /var/www/realestate-bot/.env
+nano /var/www/realestate-bot/.env
+```
+
+**المتغيرات الإلزامية:**
+
+```env
+DATABASE_URL="mysql://realestate_user:YOUR_PASSWORD@localhost:3306/realestate_db"
+JWT_SECRET="your-random-32-char-secret"
+APP_URL="https://yourdomain.com"
+OPENAI_API_KEY="sk-..."
+TELEGRAM_BOT_TOKEN="123456789:AAF..."
+TELEGRAM_OWNER_CHAT_ID="123456789"
+```
+
+### الخطوة 3: تطبيق Migration
+
+```bash
+mysql -u realestate_user -p realestate_db < /var/www/realestate-bot/deploy/migration.sql
+```
+
+### الخطوة 4: نشر التطبيق
+
+```bash
+cd /var/www/realestate-bot
 bash deploy/deploy.sh
+```
 
-# 5. تفعيل SSL
+### الخطوة 5: تفعيل SSL
+
+```bash
+# تأكد أن DNS يشير إلى IP السيرفر أولاً
 sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+```
+
+### الخطوة 6: التحقق
+
+```bash
+pm2 status realestate-bot
+pm2 logs realestate-bot
+curl https://yourdomain.com/api/trpc/auth.me
+```
+
+### التحديث (Update)
+
+```bash
+cd /var/www/realestate-bot
+git pull origin main
+bash deploy/deploy.sh
+# يقوم تلقائياً بـ: install → build → migrate → reload PM2
 ```
 
 ## متغيرات البيئة المطلوبة
@@ -126,12 +176,28 @@ deploy/
 | Notifications | Manus Notifications | Telegram Bot (مُفعَّل بالفعل) |
 | Auth | Manus OAuth | JWT مستقل (مدعوم) |
 
-## الاختبارات
+## الأوامر المتاحة
 
 ```bash
-pnpm test          # تشغيل جميع الاختبارات
-pnpm test --run    # تشغيل مرة واحدة بدون watch
+pnpm dev          # تشغيل development server
+pnpm build        # بناء للإنتاج (dist/)
+pnpm start        # تشغيل production server
+pnpm test         # تشغيل Vitest tests
+pnpm test --run   # تشغيل مرة واحدة بدون watch
 ```
+
+## الأمان
+
+| الطبقة | الحماية |
+|--------|----------|
+| **CORS** | مقيّد بـ `APP_URL` في الإنتاج |
+| **Cookies** | `sameSite=strict`, `secure=true`, `httpOnly=true` |
+| **Rate Limiting** | Nginx (30 req/min للـ API) + Express |
+| **SQL Injection** | Drizzle ORM (parameterized queries) |
+| **XSS** | CSP headers في Nginx |
+| **HTTPS** | Let's Encrypt (certbot) |
+| **Firewall** | UFW (SSH + HTTP + HTTPS فقط) |
+| **Fail2ban** | حماية من brute force |
 
 ## الترخيص
 

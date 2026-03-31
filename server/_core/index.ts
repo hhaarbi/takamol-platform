@@ -10,6 +10,8 @@ import { serveStatic, setupVite } from "./vite";
 import { initTelegramBot } from "../telegram";
 import { initScheduler } from "../scheduler";
 import rateLimit from "express-rate-limit";
+import cors from "cors";
+import { ENV } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -33,8 +35,29 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Trust proxy for rate limiting behind reverse proxy (Manus gateway)
+  // Trust proxy for rate limiting behind reverse proxy (Nginx)
   app.set("trust proxy", 1);
+
+  // ─── CORS ─────────────────────────────────────────────────────────────────
+  // In production: allow only APP_URL (e.g. https://yourdomain.com)
+  // In development: allow all origins
+  const allowedOrigins = ENV.appUrl && ENV.isProduction
+    ? [
+        ENV.appUrl.replace(/\/$/, ""),
+        ENV.appUrl.replace(/\/$/, "").replace("://", "://www."),
+      ]
+    : true; // allow all in development
+
+  app.use(
+    cors({
+      origin: allowedOrigins,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+      maxAge: 86400, // 24h preflight cache
+    })
+  );
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
