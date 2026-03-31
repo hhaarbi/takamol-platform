@@ -775,4 +775,24 @@
 ### Phase 5 Tests + Checkpoint
 - [x] TypeScript: 0 errors ✅
 - [x] Vitest: 45/45 ✅
-- [ ] Checkpoint نهائي
+- [x] Checkpoint نهائي (73426a84)
+
+## Phase 6: Final Production Hardening (31 مارس 2026)
+
+### Manus Dependencies Removal — الإزالة الكاملة
+- [x] llm.ts: إضافة resolveApiUrl() يدعم OPENAI_BASE_URL + OPENAI_API_KEY (بديل Manus Forge)
+- [x] llm.ts: إضافة resolveApiKey() يدعم OPENAI_API_KEY كبديل BUILT_IN_FORGE_API_KEY
+- [x] storage.ts: إعادة كتابة كاملة بدعم AWS S3 / Cloudflare R2 مباشر (AWS Signature V4)
+- [x] storage.ts: Manus Forge storage كـ fallback (للمنصة فقط)
+- [x] env.ts: إضافة APP_URL, OPENAI_BASE_URL, OPENAI_API_KEY, S3_* متغيرات
+- [x] index.ts: CORS middleware يستخدم APP_URL من env (تم في Phase 5)
+- [x] cookies.ts: إعادة كتابة production-ready (sameSite=strict في production, lax في dev, none في cross-origin)
+- [x] cors package: تثبيت @types/cors
+
+### Production Build Verification
+- [x] pnpm run build: نجح بدون أخطاء (✓ 2721 modules)
+- [x] Vitest: 45/45 ✅
+- [x] TypeScript: 0 errors ✅
+
+### Phase 6 Checkpoint
+- [x] Checkpoint نهائي Phase 6
