@@ -603,3 +603,39 @@
 - [x] TypeScript: 0 errors
 - [x] Checkpoint: 68beaaae (قبل المرحلة الاحترافية)
 - [ ] Checkpoint نهائي للمرحلة الاحترافية
+
+## إصلاحات حرجة — تسلسل منطقي (31 مارس 2026)
+
+### Phase 1: Multi-tenancy Filtering
+- [x] إضافة companyId filtering في db.ts لـ getProperties
+- [x] إضافة companyId filtering في db.ts لـ getContracts
+- [x] إضافة companyId filtering في db.ts لـ getPayments
+- [x] إضافة companyId filtering في db.ts لـ getTenants
+- [x] إضافة companyId filtering في db.ts لـ getExpenses
+- [x] تمرير companyId من ctx.user في routers.ts
+
+### Phase 2: Delete للكيانات الأساسية
+- [x] إضافة deleteTenant في db.ts + tenants.delete في routers.ts
+- [x] إضافة deleteContract في db.ts + contracts.delete في routers.ts
+- [x] إضافة deletePayment في db.ts + payments.delete في routers.ts
+- [x] إضافة deleteOwner في db.ts + owners.delete في routers.ts
+- [x] إضافة deleteExpense في db.ts + expenses.delete في routers.ts
+- [x] إضافة deleteMaintenance في db.ts + maintenance.delete في routers.ts
+
+### Phase 3: إصلاح الصلاحيات
+- [ ] تطبيق tenantProcedure على tenantPortal procedures
+- [ ] تحويل exportBackup إلى adminProcedure
+- [ ] إضافة companyId لـ units في DB (ALTER TABLE)
+
+### Phase 4: إصلاح UI
+- [x] إصلاح React child error في Pricing.tsx (features object)
+- [x] إصلاح خطأ إملائي "التدق" → "التدفق" في DashboardLayout
+- [x] إضافة requireFeatureAccess middleware في Backend (vouchers router)
+- [x] إنشاء صفحة /billing لسجل فواتير الاشتراك
+- [x] إنشاء SubscriptionBanner للتحذير من انتهاء الاشتراك
+- [x] تحسين PDF السندات (تصميم احترافي + واترمارك + 3 توقيعات)
+
+### Phase 5: Tests + Checkpoint
+- [x] تشغيل Vitest
+- [x] فحص TypeScript: 0 errors
+- [x] حفظ Checkpoint نهائي

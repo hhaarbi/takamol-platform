@@ -26,6 +26,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import SubscriptionBanner from "./SubscriptionBanner";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "لوحة التحكم", path: "/dashboard" },
@@ -49,7 +50,7 @@ const menuItems = [
   { icon: RefreshCw, label: "طلبات التجديد", path: "/renewal-requests" },
   { icon: Activity, label: "إحصائيات API", path: "/api-stats" },
   { icon: Flame, label: "خريطة المتأخرات", path: "/arrears-heatmap" },
-  { icon: TrendingUp, label: "توقع التدق النقدي", path: "/cashflow-forecast" },
+  { icon: TrendingUp, label: "توقع التدفق النقدي", path: "/cashflow-forecast" },
   { icon: DoorOpen, label: "الوحدات الشاغرة", path: "/vacant-units" },
   { icon: Archive, label: "أرشيف العقود", path: "/archived-contracts" },
   { icon: ClipboardCheck, label: "امتثال فال", path: "/fal-compliance" },
@@ -67,6 +68,7 @@ const menuItems = [
   { icon: Crown, label: "إدارة المستخدمين", path: "/user-management", superAdminOnly: true },
   { icon: LayoutGrid, label: "Super Admin", path: "/super-admin", superAdminOnly: true },
   { icon: CreditCard, label: "الاشتراك والباقات", path: "/subscription" },
+  { icon: Receipt, label: "سجل الفواتير", path: "/billing" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -303,7 +305,10 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1 p-4">
+          <SubscriptionBanner />
+          {children}
+        </main>
       </SidebarInset>
     </>
   );

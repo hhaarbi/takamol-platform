@@ -146,6 +146,7 @@ export type InsertProperty = typeof properties.$inferInsert;
 // ─── UNITS (الوحدات) ──────────────────────────────────────────────────────────
 export const units = mysqlTable("units", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   propertyId: int("propertyId").notNull(),
   unitNumber: varchar("unitNumber", { length: 50 }).notNull(),
   floor: int("floor"),

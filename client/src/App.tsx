@@ -52,6 +52,7 @@ import Onboarding from "./pages/Onboarding";
 import Subscription from "./pages/Subscription";
 import Pricing from "./pages/Pricing";
 import SuperAdmin from "./pages/SuperAdmin";
+import Billing from "./pages/Billing";
 
 function Router() {
   return (
@@ -108,6 +109,7 @@ function Router() {
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/pricing"} component={Pricing} />
       <Route path={"/super-admin"} component={SuperAdmin} />
+      <Route path={"/billing"} component={Billing} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

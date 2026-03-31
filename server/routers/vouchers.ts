@@ -3,6 +3,7 @@ import { router, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { eq, desc, and, like, or, gte, lte, sql } from "drizzle-orm";
 import { getDb } from "../db";
+import { requireFeatureAccess } from "./subscriptions";
 
 export const vouchersRouter = router({
   // ─── قائمة السندات مع pagination ─────────────────────────────────────────
@@ -14,7 +15,10 @@ export const vouchersRouter = router({
     fromDate: z.number().optional(),
     toDate: z.number().optional(),
     status: z.enum(["draft", "issued", "cancelled", "all"]).default("all"),
-  })).query(async ({ input }) => {
+  })).query(async ({ input, ctx }) => {
+    // Feature Gating: vouchers متاح في الباقة الاحترافية فما فوق
+    await requireFeatureAccess(ctx.user.companyId, "vouchers");
+
     const db = await getDb();
     if (!db) return { items: [], total: 0, page: input.page, totalPages: 0 };
     const { vouchers } = await import("../../drizzle/schema");
@@ -42,7 +46,9 @@ export const vouchersRouter = router({
   }),
 
   // ─── تفاصيل سند واحد ─────────────────────────────────────────────────────
-  getById: protectedProcedure.input(z.number()).query(async ({ input }) => {
+  getById: protectedProcedure.input(z.number()).query(async ({ input, ctx }) => {
+    await requireFeatureAccess(ctx.user.companyId, "vouchers");
+
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "NOT_FOUND" });
     const { vouchers } = await import("../../drizzle/schema");
@@ -68,6 +74,9 @@ export const vouchersRouter = router({
     notes: z.string().optional(),
     issuedAt: z.number().optional(),
   })).mutation(async ({ input, ctx }) => {
+    // Feature Gating: يجب أن تكون الباقة تدعم vouchers
+    await requireFeatureAccess(ctx.user.companyId, "vouchers");
+
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     const { vouchers } = await import("../../drizzle/schema");
@@ -113,7 +122,9 @@ export const vouchersRouter = router({
     checkNumber: z.string().optional(),
     notes: z.string().optional(),
     status: z.enum(["draft", "issued", "cancelled"]).optional(),
-  })).mutation(async ({ input }) => {
+  })).mutation(async ({ input, ctx }) => {
+    await requireFeatureAccess(ctx.user.companyId, "vouchers");
+
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     const { vouchers } = await import("../../drizzle/schema");
@@ -123,7 +134,9 @@ export const vouchersRouter = router({
   }),
 
   // ─── إلغاء سند ───────────────────────────────────────────────────────────
-  cancel: protectedProcedure.input(z.number()).mutation(async ({ input }) => {
+  cancel: protectedProcedure.input(z.number()).mutation(async ({ input, ctx }) => {
+    await requireFeatureAccess(ctx.user.companyId, "vouchers");
+
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     const { vouchers } = await import("../../drizzle/schema");
@@ -132,7 +145,12 @@ export const vouchersRouter = router({
   }),
 
   // ─── إحصائيات السندات ────────────────────────────────────────────────────
-  stats: protectedProcedure.query(async () => {
+  stats: protectedProcedure.query(async ({ ctx }) => {
+    // Stats يمكن رؤيتها دون feature gate (للعرض في dashboard)
+    // لكن البيانات الحقيقية تتطلب الميزة
+    const hasAccess = ctx.user.companyId !== null && ctx.user.companyId !== undefined;
+    if (!hasAccess) return { totalReceipts: 0, totalPayments: 0, receiptAmount: 0, paymentAmount: 0, balance: 0 };
+
     const db = await getDb();
     if (!db) return { totalReceipts: 0, totalPayments: 0, receiptAmount: 0, paymentAmount: 0, balance: 0 };
     const { vouchers } = await import("../../drizzle/schema");

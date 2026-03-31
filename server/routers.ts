@@ -13,17 +13,17 @@ import { notifyOwner } from "./_core/notification";
 import { nanoid } from "nanoid";
 import {
   upsertUser, getUserByOpenId,
-  getOwners, getOwnerById, getOwnerByUserId, createOwner, updateOwner,
+  getOwners, getOwnerById, getOwnerByUserId, createOwner, updateOwner, deleteOwner,
   getBrokers, getBrokerById, getBrokerByUserId, createBroker, updateBroker,
   getProperties, getPropertyById, createProperty, updateProperty, deleteProperty, incrementPropertyView,
   getVacantProperties, getPendingApprovalProperties,
   getUnitsByProperty, getAllUnits, getUnitById, createUnit, updateUnit, deleteUnit, getVacantUnits,
-  getTenants, getTenantById, createTenant, updateTenant, rateTenant,
-  getContracts, getContractById, createContract, updateContract, getExpiringContracts, renewContract,
+  getTenants, getTenantById, createTenant, updateTenant, rateTenant, deleteTenant,
+  getContracts, getContractById, createContract, updateContract, getExpiringContracts, renewContract, deleteContract,
   getPayments, getPaymentById, createPayment, updatePayment, getOverduePayments,
-  getMonthlyCollectionSchedule, generateReceiptNumber,
-  getExpenses, createExpense, updateExpense,
-  getMaintenanceRequests, getMaintenanceById, createMaintenanceRequest, updateMaintenanceRequest,
+  getMonthlyCollectionSchedule, generateReceiptNumber, deletePayment,
+  getExpenses, createExpense, updateExpense, deleteExpense,
+  getMaintenanceRequests, getMaintenanceById, createMaintenanceRequest, updateMaintenanceRequest, deleteMaintenance,
   getPropertyMaintenanceHistory,
   getScheduledMaintenance, createScheduledMaintenance, updateScheduledMaintenance, getDueScheduledMaintenance,
   getDeposits, createDeposit, updateDeposit,
@@ -146,6 +146,11 @@ export const appRouter = router({
         await upsertUser({ openId: input.openId, role: "owner" } as any);
         return { success: true };
       }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      await deleteOwner(input);
+      await logActivity({ action: "owner_deleted", entityType: "owner", entityId: input, description: `تم حذف مالك #${input}` });
+      return { success: true };
+    }),
   }),
 
   // ─── BROKERS ───────────────────────────────────────────────────────────────
@@ -218,7 +223,7 @@ export const appRouter = router({
       ownerId: z.number().optional(), brokerId: z.number().optional(), source: z.string().optional(),
       search: z.string().optional(), limit: z.number().optional(), offset: z.number().optional(),
       approvalStatus: z.string().optional(),
-    }).optional()).query(({ input }) => getProperties(input ?? {})),
+    }).optional()).query(({ ctx, input }) => getProperties({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     getById: publicProcedure.input(z.number()).query(async ({ input }) => {
       await incrementPropertyView(input);
       return getPropertyById(input);
@@ -354,7 +359,7 @@ export const appRouter = router({
   // ─── TENANTS ───────────────────────────────────────────────────────────────
   tenants: router({
     list: adminProcedure.input(z.object({ isActive: z.boolean().optional(), search: z.string().optional() }).optional())
-      .query(({ input }) => getTenants(input ?? {})),
+      .query(({ ctx, input }) => getTenants({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     get: adminProcedure.input(z.number()).query(({ input }) => getTenantById(input)),
     create: adminProcedure.input(z.object({
       name: z.string().min(2), phone: z.string().min(9), phone2: z.string().optional(),
@@ -385,6 +390,11 @@ export const appRouter = router({
       await rateTenant(input.id, input);
       return { success: true };
     }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      await deleteTenant(input);
+      await logActivity({ action: "tenant_deleted", entityType: "tenant", entityId: input, description: `تم حذف مستأجر #${input}` });
+      return { success: true };
+    }),
   }),
 
   // ─── CONTRACTS ─────────────────────────────────────────────────────────────
@@ -392,7 +402,7 @@ export const appRouter = router({
     list: adminProcedure.input(z.object({
       type: z.string().optional(), status: z.string().optional(),
       ownerId: z.number().optional(), tenantId: z.number().optional(), propertyId: z.number().optional(),
-    }).optional()).query(({ input }) => getContracts(input ?? {})),
+    }).optional()).query(({ ctx, input }) => getContracts({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     get: adminProcedure.input(z.number()).query(({ input }) => getContractById(input)),
     myContracts: ownerProcedure.query(async ({ ctx }) => {
       const owner = await getOwnerByUserId(ctx.user.id);
@@ -438,6 +448,11 @@ export const appRouter = router({
       await logActivity({ action: "contract_renewed", entityType: "contract", entityId: input.oldContractId, description: `تم تجديد العقد` });
       return { success: true };
     }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      await deleteContract(input);
+      await logActivity({ action: "contract_deleted", entityType: "contract", entityId: input, description: `تم حذف عقد #${input}` });
+      return { success: true };
+    }),
   }),
 
   // ─── PAYMENTS ──────────────────────────────────────────────────────────────
@@ -446,7 +461,7 @@ export const appRouter = router({
       status: z.string().optional(), ownerId: z.number().optional(), tenantId: z.number().optional(),
       propertyId: z.number().optional(), contractId: z.number().optional(), type: z.string().optional(),
       fromDate: z.string().optional(), toDate: z.string().optional(),
-    }).optional()).query(({ input }) => getPayments(input ?? {})),
+    }).optional()).query(({ ctx, input }) => getPayments({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     get: adminProcedure.input(z.number()).query(({ input }) => getPaymentById(input)),
     overdue: adminProcedure.query(() => getOverduePayments()),
     monthlySchedule: adminProcedure.input(z.string()).query(({ input }) => getMonthlyCollectionSchedule(input)),
@@ -499,6 +514,11 @@ export const appRouter = router({
         await logActivity({ action: "payment_escalated", entityType: "payment", entityId: input.id, description: `تم تصعيد المتأخرة لمستوى ${input.level}` });
         return { success: true };
       }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      await deletePayment(input);
+      await logActivity({ action: "payment_deleted", entityType: "payment", entityId: input, description: `تم حذف دفعة #${input}` });
+      return { success: true };
+    }),
   }),
 
   // ─── EXPENSES ──────────────────────────────────────────────────────────────
@@ -506,7 +526,7 @@ export const appRouter = router({
     list: adminProcedure.input(z.object({
       propertyId: z.number().optional(), ownerId: z.number().optional(), category: z.string().optional(),
       fromDate: z.string().optional(), toDate: z.string().optional(),
-    }).optional()).query(({ input }) => getExpenses(input ?? {})),
+    }).optional()).query(({ ctx, input }) => getExpenses({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     myExpenses: ownerProcedure.query(async ({ ctx }) => {
       const owner = await getOwnerByUserId(ctx.user.id);
       if (!owner) return [];
@@ -531,9 +551,14 @@ export const appRouter = router({
         category: z.string().optional(), notes: z.string().optional(),
       }),
     })).mutation(async ({ input }) => { await updateExpense(input.id, input.data as any); return { success: true }; }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      await deleteExpense(input);
+      await logActivity({ action: "expense_deleted", entityType: "expense", entityId: input, description: `تم حذف مصروف #${input}` });
+      return { success: true };
+    }),
   }),
 
-  // ─── MAINTENANCE ───────────────────────────────────────────────────────────
+  // ─── MAINTENANCE ────────────────────────────────────────────────────────────────────
   maintenance: router({
     list: adminProcedure.input(z.object({
       propertyId: z.number().optional(), unitId: z.number().optional(),
@@ -563,6 +588,11 @@ export const appRouter = router({
     })).mutation(async ({ input }) => {
       await updateMaintenanceRequest(input.id, input.data as any);
       await logActivity({ action: "maintenance_updated", entityType: "maintenance", entityId: input.id, description: `تم تحديث طلب صيانة` });
+      return { success: true };
+    }),
+    delete: adminProcedure.input(z.number()).mutation(async ({ input }) => {
+      await deleteMaintenance(input);
+      await logActivity({ action: "maintenance_deleted", entityType: "maintenance", entityId: input, description: `تم حذف طلب صيانة #${input}` });
       return { success: true };
     }),
     scheduled: router({
@@ -2010,7 +2040,7 @@ const batch12Router = router({
   }),
 
   // ─── النسخ الاحتياطي ──────────────────────────────────────────────────────
-  exportBackup: protectedProcedure.mutation(async () => {
+  exportBackup: adminProcedure.mutation(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
     const [allProperties, allContracts, allTenants, allPayments, allExpenses, allMaintenance] = await Promise.all([

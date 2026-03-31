@@ -160,7 +160,7 @@ export async function updateBroker(id: number, data: Partial<InsertBroker>) {
 export async function getProperties(filters?: {
   listingType?: string; status?: string; type?: string; ownerId?: number;
   brokerId?: number; source?: string; search?: string; limit?: number; offset?: number;
-  approvalStatus?: string;
+  approvalStatus?: string; companyId?: number | null;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -172,6 +172,7 @@ export async function getProperties(filters?: {
   if (filters?.brokerId) conditions.push(eq(properties.brokerId, filters.brokerId));
   if (filters?.source) conditions.push(eq(properties.source, filters.source as any));
   if (filters?.approvalStatus) conditions.push(eq(properties.approvalStatus, filters.approvalStatus as any));
+  if (filters?.companyId != null) conditions.push(eq(properties.companyId, filters.companyId));
   if (filters?.search) {
     conditions.push(or(
       like(properties.titleAr, `%${filters.search}%`),
@@ -280,12 +281,13 @@ export async function getVacantUnits() {
   return db.select().from(units).where(eq(units.status, "vacant")).orderBy(units.vacantSince);
 }
 
-// ─── TENANTS ──────────────────────────────────────────────────────────────────
-export async function getTenants(filters?: { isActive?: boolean; search?: string; limit?: number; offset?: number }) {
+// ─── TENANTS ───────────────────────────────────────────────────────────────────
+export async function getTenants(filters?: { isActive?: boolean; search?: string; limit?: number; offset?: number; companyId?: number | null }) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [];
   if (filters?.isActive !== undefined) conditions.push(eq(tenants.isActive, filters.isActive));
+  if (filters?.companyId != null) conditions.push(eq(tenants.companyId, filters.companyId));
   if (filters?.search) {
     conditions.push(or(
       like(tenants.name, `%${filters.search}%`),
@@ -333,7 +335,7 @@ export async function rateTenant(id: number, ratings: { paymentRating: number; p
 // ─── CONTRACTS ────────────────────────────────────────────────────────────────
 export async function getContracts(filters?: {
   type?: string; status?: string; ownerId?: number; tenantId?: number; propertyId?: number;
-  limit?: number; offset?: number;
+  limit?: number; offset?: number; companyId?: number | null;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -343,6 +345,7 @@ export async function getContracts(filters?: {
   if (filters?.ownerId) conditions.push(eq(contracts.ownerId, filters.ownerId));
   if (filters?.tenantId) conditions.push(eq(contracts.tenantId, filters.tenantId));
   if (filters?.propertyId) conditions.push(eq(contracts.propertyId, filters.propertyId));
+  if (filters?.companyId != null) conditions.push(eq(contracts.companyId, filters.companyId));
   const q = db.select().from(contracts).orderBy(desc(contracts.createdAt))
     .limit(filters?.limit ?? 50).offset(filters?.offset ?? 0);
   return conditions.length ? q.where(and(...conditions)) : q;
@@ -391,11 +394,11 @@ export async function renewContract(oldId: number, newData: InsertContract) {
   return db.insert(contracts).values({ ...newData, renewedFromId: oldId });
 }
 
-// ─── PAYMENTS ─────────────────────────────────────────────────────────────────
+// ─── PAYMENTS ────────────────────────────────────────────────────────────────
 export async function getPayments(filters?: {
   status?: string; ownerId?: number; tenantId?: number; propertyId?: number;
   contractId?: number; type?: string; fromDate?: string; toDate?: string;
-  limit?: number; offset?: number;
+  limit?: number; offset?: number; companyId?: number | null;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -408,6 +411,7 @@ export async function getPayments(filters?: {
   if (filters?.type) conditions.push(eq(payments.type, filters.type as any));
   if (filters?.fromDate) conditions.push(gte(payments.dueDate, filters.fromDate as any));
   if (filters?.toDate) conditions.push(lte(payments.dueDate, filters.toDate as any));
+  if (filters?.companyId != null) conditions.push(eq(payments.companyId, filters.companyId));
   const q = db.select().from(payments).orderBy(desc(payments.dueDate))
     .limit(filters?.limit ?? 50).offset(filters?.offset ?? 0);
   return conditions.length ? q.where(and(...conditions)) : q;
@@ -463,7 +467,7 @@ export async function generateReceiptNumber() {
 
 // ─── EXPENSES ─────────────────────────────────────────────────────────────────
 export async function getExpenses(filters?: {
-  propertyId?: number; ownerId?: number; category?: string; fromDate?: string; toDate?: string;
+  propertyId?: number; ownerId?: number; category?: string; fromDate?: string; toDate?: string; companyId?: number | null;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -473,6 +477,7 @@ export async function getExpenses(filters?: {
   if (filters?.category) conditions.push(eq(expenses.category, filters.category as any));
   if (filters?.fromDate) conditions.push(gte(expenses.expenseDate, filters.fromDate as any));
   if (filters?.toDate) conditions.push(lte(expenses.expenseDate, filters.toDate as any));
+  if (filters?.companyId != null) conditions.push(eq(expenses.companyId, filters.companyId));
   const q = db.select().from(expenses).orderBy(desc(expenses.expenseDate));
   return conditions.length ? q.where(and(...conditions)) : q;
 }
@@ -1583,4 +1588,42 @@ export async function getAnnualReport(year: number) {
     totalProperties: totalProperties?.count || 0,
     occupancyRate,
   };
+}
+
+// ─── DELETE HELPERS ───────────────────────────────────────────────────────────
+
+export async function deleteTenant(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(tenants).where(eq(tenants.id, id));
+}
+
+export async function deleteContract(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(contracts).where(eq(contracts.id, id));
+}
+
+export async function deletePayment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(payments).where(eq(payments.id, id));
+}
+
+export async function deleteOwner(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(propertyOwners).where(eq(propertyOwners.id, id));
+}
+
+export async function deleteExpense(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(expenses).where(eq(expenses.id, id));
+}
+
+export async function deleteMaintenance(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(maintenanceRequests).where(eq(maintenanceRequests.id, id));
 }

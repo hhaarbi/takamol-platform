@@ -143,6 +143,11 @@ export default function Vouchers() {
     const win = window.open("", "_blank");
     if (!win) return;
     const typeLabel = voucher.type === "receipt" ? "سند قبض" : "سند صرف";
+    const typeColor = voucher.type === "receipt" ? "#16a34a" : "#dc2626";
+    const typeBg = voucher.type === "receipt" ? "#f0fdf4" : "#fef2f2";
+    const typeBorder = voucher.type === "receipt" ? "#bbf7d0" : "#fecaca";
+    const statusLabel = voucher.status === "issued" ? "صادر" : voucher.status === "cancelled" ? "ملغي" : "مسودة";
+    const printDate = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
     const html = `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -150,45 +155,87 @@ export default function Vouchers() {
         <meta charset="UTF-8">
         <title>${typeLabel} رقم ${voucher.voucherNumber}</title>
         <style>
-          body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; margin: 0; padding: 20px; color: #1a1a1a; }
-          .header { text-align: center; border-bottom: 3px double #1a1a1a; padding-bottom: 15px; margin-bottom: 20px; }
-          .header h1 { font-size: 28px; margin: 0 0 5px; }
-          .header h2 { font-size: 18px; margin: 0; color: #555; }
-          .voucher-number { font-size: 14px; color: #777; margin-top: 5px; }
-          .amount-box { background: #f0f0f0; border: 2px solid #333; border-radius: 8px; padding: 15px; text-align: center; margin: 20px 0; }
-          .amount-box .label { font-size: 14px; color: #555; }
-          .amount-box .amount { font-size: 32px; font-weight: bold; color: #1a1a1a; }
-          .details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
-          .detail-row { display: flex; gap: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px; }
-          .detail-label { font-weight: bold; color: #555; min-width: 120px; }
-          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 60px; }
-          .sig-box { text-align: center; border-top: 1px solid #333; padding-top: 10px; }
-          @media print { body { padding: 10px; } }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 30px 40px; color: #1a1a1a; direction: rtl; background: #fff; }
+          .page-border { border: 2px solid #e5e7eb; border-radius: 12px; padding: 30px; min-height: 90vh; position: relative; overflow: hidden; }
+          .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 80px; font-weight: bold; color: rgba(0,0,0,0.04); pointer-events: none; white-space: nowrap; z-index: 0; }
+          .content { position: relative; z-index: 1; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a1a1a; padding-bottom: 20px; margin-bottom: 24px; }
+          .company-name { font-size: 22px; font-weight: bold; }
+          .company-sub { font-size: 12px; color: #666; margin-top: 4px; }
+          .print-date { font-size: 11px; color: #aaa; margin-top: 4px; }
+          .voucher-meta { text-align: left; }
+          .type-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 15px; font-weight: bold; background: ${typeBg}; color: ${typeColor}; border: 2px solid ${typeBorder}; margin-bottom: 8px; }
+          .voucher-num { font-size: 13px; color: #555; }
+          .voucher-num strong { font-size: 15px; color: #1a1a1a; }
+          .status-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 16px; }
+          .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; }
+          .amount-section { background: ${typeBg}; border: 2px solid ${typeBorder}; border-radius: 10px; padding: 20px 24px; text-align: center; margin: 20px 0; }
+          .amount-label { font-size: 13px; color: #555; margin-bottom: 6px; }
+          .amount-value { font-size: 40px; font-weight: bold; color: ${typeColor}; }
+          .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+          .detail-item { padding: 10px 14px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+          .detail-item.full { grid-column: span 2; }
+          .detail-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+          .detail-value { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 50px; }
+          .sig-box { text-align: center; }
+          .sig-line { border-top: 1.5px solid #333; margin-bottom: 8px; margin-top: 40px; }
+          .sig-label { font-size: 12px; color: #555; font-weight: bold; }
+          .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #aaa; border-top: 1px solid #e5e7eb; padding-top: 14px; }
+          @media print { body { padding: 15px 20px; } .page-border { border: none; padding: 0; } }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h1>شركة تكامل لإدارة الأملاك</h1>
-          <h2>${typeLabel}</h2>
-          <div class="voucher-number">رقم السند: ${voucher.voucherNumber}</div>
-        </div>
-        <div class="amount-box">
-          <div class="label">المبلغ</div>
-          <div class="amount">${formatAmount(voucher.amount)}</div>
-        </div>
-        <div class="details">
-          <div class="detail-row"><span class="detail-label">التاريخ:</span><span>${formatDate(voucher.issuedAt)}</span></div>
-          <div class="detail-row"><span class="detail-label">طريقة الدفع:</span><span>${PAYMENT_METHOD_LABELS[voucher.paymentMethod ?? "cash"] ?? "—"}</span></div>
-          ${voucher.payerName ? `<div class="detail-row"><span class="detail-label">المدفوع من:</span><span>${voucher.payerName}</span></div>` : ""}
-          ${voucher.receiverName ? `<div class="detail-row"><span class="detail-label">المدفوع لـ:</span><span>${voucher.receiverName}</span></div>` : ""}
-          ${voucher.bankName ? `<div class="detail-row"><span class="detail-label">البنك:</span><span>${voucher.bankName}</span></div>` : ""}
-          ${voucher.checkNumber ? `<div class="detail-row"><span class="detail-label">رقم الشيك:</span><span>${voucher.checkNumber}</span></div>` : ""}
-          ${voucher.description ? `<div class="detail-row" style="grid-column:span 2"><span class="detail-label">البيان:</span><span>${voucher.description}</span></div>` : ""}
-          ${voucher.notes ? `<div class="detail-row" style="grid-column:span 2"><span class="detail-label">ملاحظات:</span><span>${voucher.notes}</span></div>` : ""}
-        </div>
-        <div class="signatures">
-          <div class="sig-box"><p>توقيع المستلم</p></div>
-          <div class="sig-box"><p>توقيع المحاسب</p></div>
+        <div class="page-border">
+          <div class="watermark">${typeLabel}</div>
+          <div class="content">
+            <div class="header">
+              <div>
+                <div class="company-name">تكامل لإدارة الأملاك</div>
+                <div class="company-sub">نظام إدارة العقارات المتكامل</div>
+                <div class="print-date">تاريخ الطباعة: ${printDate}</div>
+              </div>
+              <div class="voucher-meta">
+                <div class="type-badge">${typeLabel}</div>
+                <div class="voucher-num">رقم السند: <strong>${voucher.voucherNumber}</strong></div>
+              </div>
+            </div>
+            <div class="status-row">
+              <span style="font-size:13px;color:#555;">حالة السند</span>
+              <span class="status-badge">${statusLabel}</span>
+            </div>
+            <div class="amount-section">
+              <div class="amount-label">إجمالي المبلغ</div>
+              <div class="amount-value">${formatAmount(voucher.amount)}</div>
+            </div>
+            <div class="details-grid">
+              <div class="detail-item">
+                <div class="detail-label">تاريخ السند</div>
+                <div class="detail-value">${formatDate(voucher.issuedAt)}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">طريقة الدفع</div>
+                <div class="detail-value">${PAYMENT_METHOD_LABELS[voucher.paymentMethod ?? "cash"] ?? "—"}</div>
+              </div>
+              ${voucher.payerName ? `<div class="detail-item"><div class="detail-label">المدفوع من</div><div class="detail-value">${voucher.payerName}</div></div>` : ""}
+              ${voucher.payerPhone ? `<div class="detail-item"><div class="detail-label">هاتف الدافع</div><div class="detail-value">${voucher.payerPhone}</div></div>` : ""}
+              ${voucher.receiverName ? `<div class="detail-item"><div class="detail-label">المدفوع لـ</div><div class="detail-value">${voucher.receiverName}</div></div>` : ""}
+              ${voucher.bankName ? `<div class="detail-item"><div class="detail-label">البنك</div><div class="detail-value">${voucher.bankName}</div></div>` : ""}
+              ${voucher.checkNumber ? `<div class="detail-item"><div class="detail-label">رقم الشيك</div><div class="detail-value">${voucher.checkNumber}</div></div>` : ""}
+              ${voucher.description ? `<div class="detail-item full"><div class="detail-label">البيان / الوصف</div><div class="detail-value">${voucher.description}</div></div>` : ""}
+              ${voucher.notes ? `<div class="detail-item full"><div class="detail-label">ملاحظات</div><div class="detail-value" style="color:#555;font-weight:400;">${voucher.notes}</div></div>` : ""}
+            </div>
+            <div class="signatures">
+              <div class="sig-box"><div class="sig-line"></div><div class="sig-label">توقيع المستلم</div></div>
+              <div class="sig-box"><div class="sig-line"></div><div class="sig-label">توقيع المحاسب</div></div>
+              <div class="sig-box"><div class="sig-line"></div><div class="sig-label">توقيع المدير</div></div>
+            </div>
+            <div class="footer">
+              <p>تكامل لإدارة الأملاك — المملكة العربية السعودية</p>
+              <p style="margin-top:4px;">هذا السند صادر إلكترونياً ولا يحتاج إلى ختم أو توقيع يدوي</p>
+            </div>
+          </div>
         </div>
         <script>window.onload = () => { window.print(); }</script>
       </body>
