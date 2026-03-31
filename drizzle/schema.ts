@@ -1249,3 +1249,41 @@ export const subscriptionInvoices = mysqlTable("subscription_invoices", {
 });
 export type SubscriptionInvoice = typeof subscriptionInvoices.$inferSelect;
 export type InsertSubscriptionInvoice = typeof subscriptionInvoices.$inferInsert;
+
+// ─── AUTH EXTENSIONS (Standalone — no Manus OAuth required) ─────────────────
+
+/** OTP codes for email verification, password reset, and 2FA */
+export const otpCodes = mysqlTable("otp_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  code: varchar("code", { length: 10 }).notNull(),
+  purpose: mysqlEnum("purpose", ["verify_email", "reset_password", "login_2fa"]).notNull(),
+  attempts: int("attempts").default(0).notNull(),
+  expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
+  usedAt: bigint("used_at", { mode: "number" }),
+  createdAt: bigint("created_at_otp", { mode: "number" }).notNull(),
+});
+export type OtpCode = typeof otpCodes.$inferSelect;
+export type InsertOtpCode = typeof otpCodes.$inferInsert;
+
+/** Refresh tokens for JWT rotation */
+export const refreshTokens = mysqlTable("refresh_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id_rt").notNull(),
+  tokenHash: varchar("token_hash", { length: 128 }).notNull().unique(),
+  expiresAt: bigint("expires_at_rt", { mode: "number" }).notNull(),
+  createdAt: bigint("created_at_rt", { mode: "number" }).notNull(),
+  revokedAt: bigint("revoked_at_rt", { mode: "number" }),
+  userAgent: text("user_agent_rt"),
+  ipAddress: varchar("ip_address_rt", { length: 45 }),
+});
+export type RefreshToken = typeof refreshTokens.$inferSelect;
+
+/** Password credentials (for standalone email+password auth) */
+export const userPasswords = mysqlTable("user_passwords", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id_pw").notNull().unique(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  updatedAt: bigint("updated_at_pw", { mode: "number" }).notNull(),
+});
+export type UserPassword = typeof userPasswords.$inferSelect;

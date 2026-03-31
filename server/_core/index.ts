@@ -11,6 +11,8 @@ import { initTelegramBot } from "../telegram";
 import { initScheduler } from "../scheduler";
 import rateLimit from "express-rate-limit";
 import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
 import { ENV } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -39,17 +41,40 @@ async function startServer() {
   // Trust proxy for rate limiting behind reverse proxy (Nginx)
   app.set("trust proxy", 1);
 
+  // ─── Security Headers (Helmet) ────────────────────────────────────────────
+  app.use(
+    helmet({
+      contentSecurityPolicy: ENV.isProduction
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+              styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+              fontSrc: ["'self'", "https://fonts.gstatic.com"],
+              imgSrc: ["'self'", "data:", "https:", "blob:"],
+              connectSrc: ["'self'", ENV.appUrl || "*"],
+              frameSrc: ["'none'"],
+              objectSrc: ["'none'"],
+            },
+          }
+        : false, // Disable CSP in development (Vite HMR needs it)
+      crossOriginEmbedderPolicy: false, // Required for some map/media embeds
+    })
+  );
+
+  // ─── Request Logging (Morgan) ─────────────────────────────────────────────
+  // Production: combined format (Apache-style, good for log parsers)
+  // Development: dev format (colorized, concise)
+  app.use(morgan(ENV.isProduction ? "combined" : "dev"));
+
   // ─── CORS ─────────────────────────────────────────────────────────────────
-  // In production: set APP_URL=https://your-domain.com (and optionally CORS_ORIGIN)
-  // CORS_ORIGIN takes precedence over APP_URL for cross-origin scenarios
-  // In development: all origins allowed
   const corsBase = ENV.corsOrigin || ENV.appUrl;
   const allowedOrigins: string[] | boolean = corsBase && ENV.isProduction
     ? [
         corsBase.replace(/\/$/, ""),
         corsBase.replace(/\/$/, "").replace("://", "://www."),
       ]
-    : true; // allow all in development
+    : true;
 
   app.use(
     cors({
@@ -57,32 +82,55 @@ async function startServer() {
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-      maxAge: 86400, // 24h preflight cache
+      maxAge: 86400,
     })
   );
 
-  // Configure body parser with larger size limit for file uploads
+  // ─── Body Parser ─────────────────────────────────────────────────────────
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // ─── Rate Limiting ────────────────────────────────────────────────────────
+  // General API: 500 req / 15 min
   const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 500,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Too many requests, please try again later." },
   });
-  const strictLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
+  // Auth endpoints: 20 req / 1 min (brute force protection)
+  const authLimiter = rateLimit({
+    windowMs: 60 * 1000,
     max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many auth attempts, please wait." },
+  });
+  // Login specifically: 5 req / 15 min (strict brute force)
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many login attempts. Try again in 15 minutes." },
+    skipSuccessfulRequests: true, // Only count failed requests
+  });
+  // Bot endpoints: 30 req / 1 min
+  const botLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: "Rate limit exceeded." },
   });
+
   app.use("/api/trpc", generalLimiter);
-  app.use("/api/trpc/bot", strictLimiter);
-  app.use("/api/trpc/auth", strictLimiter);
+  app.use("/api/trpc/auth.login", loginLimiter);
+  app.use("/api/trpc/auth.sendOTP", authLimiter);
+  app.use("/api/trpc/auth.verifyOTP", authLimiter);
+  app.use("/api/trpc/auth.forgotPassword", authLimiter);
+  app.use("/api/trpc/bot", botLimiter);
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
@@ -96,7 +144,7 @@ async function startServer() {
     })
   );
 
-  // development mode uses Vite, production mode uses static files
+  // Development: Vite dev server | Production: static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {

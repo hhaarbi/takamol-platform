@@ -857,3 +857,16 @@
 ### GitHub + Checkpoint
 - [ ] رفع التغييرات على hhaarbi/takamol-platform
 - [ ] Checkpoint نهائي
+
+## Phase 9: Ultimate Go-Live Setup — Full Production SaaS
+
+- [ ] تثبيت الحزم: bcrypt + resend + helmet + morgan + zod (إذا لم تكن موجودة)
+- [ ] Auth System: JWT standalone + bcrypt password hashing + Refresh Token + Secure Cookies
+- [ ] Brute Force Protection: rate limit على login + lockout بعد 5 محاولات فاشلة
+- [ ] Email System: Resend/SMTP + HTML Templates (OTP + Welcome + Reset Password) + Branding Takamol
+- [ ] OTP System: جدول DB + expiration 5min + max attempts 3 + rate limit
+- [ ] Security: Helmet headers + CORS strict + Input validation (zod) + morgan request logging
+- [ ] SaaS Billing: plans table + subscriptions + expiration logic + feature gating middleware
+- [ ] DNS Setup Guide: A + MX + SPF + DKIM + DMARC records
+- [ ] TypeScript 0 errors + Vitest pass + production build
+- [ ] GitHub push + Checkpoint + تقرير Go-Live نهائي
