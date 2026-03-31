@@ -826,3 +826,34 @@
 - [x] TypeScript: 0 errors ✅
 - [x] Production Build: ✅ (dist/index.js + dist/public/)
 - [x] API Test: HTTP 200 + {"result":{"data":{"json":null}}} ✅
+
+## Phase 8: Final Go-Live Deployment — Contabo VPS Ready (1 أبريل 2026)
+
+### Manus Independence Audit
+- [ ] فحص شامل لجميع references لـ Manus في الكود والواجهة والـ config
+- [ ] إزالة/استبدال أي hardcoded URLs أو domains تخص Manus
+- [ ] التأكد أن جميع env variables مستقلة عن Manus
+
+### Deploy Files Update
+- [ ] تحديث env.example بجميع المتغيرات المطلوبة (CORS_ORIGIN, STORAGE_PROVIDER, etc.)
+- [ ] مراجعة وتحديث .gitignore
+- [ ] تحديث ecosystem.config.js (PM2 cluster + memory limit + env_file)
+- [ ] تحديث deploy/setup-vps.sh لـ Contabo Ubuntu 22.04
+- [ ] تحديث deploy/deploy.sh مع health check HTTP 200
+- [ ] تحديث deploy/nginx.conf مع SPA fallback + www redirect
+- [ ] مراجعة deploy/migration.sql للتأكد من اكتماله
+- [ ] تحديث README.md بخطوات Contabo + DNS + SSL + troubleshooting
+
+### Domain & CORS Hardening
+- [ ] التأكد أن CORS يعتمد على CORS_ORIGIN من env
+- [ ] التأكد أن cookies تعتمد على APP_URL
+- [ ] التأكد أن OpenAPI/Swagger يشير لـ APP_URL
+
+### Final Tests
+- [ ] TypeScript: 0 errors
+- [ ] Vitest: 45/45
+- [ ] Production Build ناجح
+
+### GitHub + Checkpoint
+- [ ] رفع التغييرات على hhaarbi/takamol-platform
+- [ ] Checkpoint نهائي

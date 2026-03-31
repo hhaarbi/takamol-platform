@@ -35,16 +35,19 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
   // Trust proxy for rate limiting behind reverse proxy (Nginx)
   app.set("trust proxy", 1);
 
   // ─── CORS ─────────────────────────────────────────────────────────────────
-  // In production: allow only APP_URL (e.g. https://yourdomain.com)
-  // In development: allow all origins
-  const allowedOrigins = ENV.appUrl && ENV.isProduction
+  // In production: set APP_URL=https://your-domain.com (and optionally CORS_ORIGIN)
+  // CORS_ORIGIN takes precedence over APP_URL for cross-origin scenarios
+  // In development: all origins allowed
+  const corsBase = ENV.corsOrigin || ENV.appUrl;
+  const allowedOrigins: string[] | boolean = corsBase && ENV.isProduction
     ? [
-        ENV.appUrl.replace(/\/$/, ""),
-        ENV.appUrl.replace(/\/$/, "").replace("://", "://www."),
+        corsBase.replace(/\/$/, ""),
+        corsBase.replace(/\/$/, "").replace("://", "://www."),
       ]
     : true; // allow all in development
 
@@ -83,6 +86,7 @@ async function startServer() {
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -91,6 +95,7 @@ async function startServer() {
       createContext,
     })
   );
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
