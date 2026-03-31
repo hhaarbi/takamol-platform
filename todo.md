@@ -796,3 +796,33 @@
 
 ### Phase 6 Checkpoint
 - [x] Checkpoint نهائي Phase 6
+
+## Phase 7: Full Production Deployment Ready (1 أبريل 2026)
+
+### Deploy Scripts — تحديث شامل
+- [x] deploy/nginx.conf: SSL + certbot + rate limiting + security headers + gzip + auth rate limit
+- [x] deploy/setup-vps.sh: Node.js 20 + MySQL 8 + Nginx + PM2 + Certbot + UFW + fail2ban
+- [x] deploy/deploy.sh: install → build → migrate → PM2 reload (بالألوان + تحقق من .env)
+- [x] ecosystem.config.js: تصحيح مسار dist/index.js + cluster mode + env_file
+
+### LLM Standalone — إزالة Manus Forge hardcoded
+- [x] llm.ts: resolveApiUrl() يعطي أولوية OPENAI_BASE_URL ثم BUILT_IN_FORGE_API_URL ثم OpenAI
+- [x] llm.ts: resolveApiKey() يعطي أولوية OPENAI_API_KEY ثم BUILT_IN_FORGE_API_KEY
+
+### CORS Production-Ready
+- [x] index.ts: cors middleware مقيّد بـ APP_URL في الإنتاج (allowedOrigins)
+- [x] cors + @types/cors مثبتان
+
+### Documentation
+- [x] env.example: توثيق شامل مع بدائل Manus (OpenAI, R2, Local Auth)
+- [x] README.md: جدول المتطلبات + خطوات نشر مفصلة + قسم الأمان + الأوامر
+
+### GitHub
+- [x] رفع المشروع على hhaarbi/takamol-platform (772 objects)
+- [x] node_modules و .env غير مرفوعين ✅
+
+### Phase 7 Tests + Checkpoint
+- [x] Vitest: 45/45 ✅
+- [x] TypeScript: 0 errors ✅
+- [x] Production Build: ✅ (dist/index.js + dist/public/)
+- [x] API Test: HTTP 200 + {"result":{"data":{"json":null}}} ✅
