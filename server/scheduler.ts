@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import TelegramBot from "node-telegram-bot-api";
-import { getSmartAlerts, getKPIs, getDb } from "./db";
+import { getSmartAlerts, getKPIs, getDb, processOverdueEscalation } from "./db";
 import { payments, contracts, tenants, units, properties } from "../drizzle/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 
@@ -160,8 +160,17 @@ export function initScheduler() {
     await checkUpcomingPayments();
   }, { timezone: "Asia/Riyadh" });
 
+  // Overdue escalation at 7:00 AM Riyadh time — يُحدّث daysOverdue وescalationLevel تلقائياً
+  cron.schedule("0 7 * * *", async () => {
+    try {
+      const result = await processOverdueEscalation();
+      if (result.updated > 0) console.log(`[Scheduler] Escalation: updated ${result.updated} overdue payments`);
+    } catch (err) { console.error("[Scheduler] Escalation error:", err); }
+  }, { timezone: "Asia/Riyadh" });
+
   console.log("[Scheduler] Daily report scheduled at 08:00 AM (Riyadh time)");
   console.log("[Scheduler] Payment reminders scheduled at 09:00 AM (Riyadh time)");
+  console.log("[Scheduler] Overdue escalation scheduled at 07:00 AM (Riyadh time)");
 }
 
 export { sendDailyReportToTelegram, checkUpcomingPayments };

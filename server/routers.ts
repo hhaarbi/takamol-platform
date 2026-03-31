@@ -53,6 +53,8 @@ import {
   getClientNotes, addClientNote, getUpcomingFollowUps,
   getMarketPrices, getPropertiesWithMarketComparison,
   getAnnualReport,
+  generatePaymentSchedule,
+  processOverdueEscalation,
 } from "./db";
 import { createHash, randomBytes } from "crypto";
 import { getDb } from "./db";
@@ -421,7 +423,18 @@ export const appRouter = router({
       managementFeeValue: z.string().optional(), notes: z.string().optional(),
       paymentDay: z.number().optional(), autoRenew: z.boolean().optional(),
     })).mutation(async ({ input }) => {
-      await createContract(input as any);
+      const result = await createContract(input as any);
+      // توليد جدول الدفعات تلقائياً لعقود الإيجار
+      try {
+        const db = await getDb();
+        if (db && input.type === "rent") {
+          const [newContract] = await db.select({ id: contracts.id })
+            .from(contracts)
+            .where(eq(contracts.contractNumber, input.contractNumber))
+            .limit(1);
+          if (newContract) await generatePaymentSchedule(newContract.id);
+        }
+      } catch (e) { console.warn("[PaymentSchedule] Failed to generate:", e); }
       await logActivity({ action: "contract_created", entityType: "contract", description: `تم إنشاء عقد: ${input.contractNumber}` });
       return { success: true };
     }),
@@ -778,8 +791,8 @@ export const appRouter = router({
 
   // ─── FINANCIAL ─────────────────────────────────────────────────────────────
   financial: router({
-    summary: adminProcedure.input(z.number().optional()).query(({ input }) => getFinancialSummary(input)),
-    dashboardStats: adminProcedure.query(() => getDashboardStats()),
+    summary: adminProcedure.input(z.number().optional()).query(({ ctx, input }) => getFinancialSummary(input, ctx.user?.companyId ?? null)),
+    dashboardStats: adminProcedure.query(({ ctx }) => getDashboardStats(ctx.user?.companyId ?? null)),
     monthlyRevenue: adminProcedure.input(z.number().default(12)).query(({ input }) => getMonthlyRevenue(input)),
     monthlyExpenses: adminProcedure.input(z.number().default(12)).query(({ input }) => getMonthlyExpenses(input)),
     myFinancials: ownerProcedure.query(async ({ ctx }) => {
@@ -1009,7 +1022,7 @@ export const appRouter = router({
 
   // ─── ADVANCED ANALYTICS (التحليلات المتقدمة) ──────────────────────────────
   analytics: router({
-    kpis: protectedProcedure.query(() => getKPIs()),
+    kpis: protectedProcedure.query(({ ctx }) => getKPIs(ctx.user?.companyId ?? null)),
     revenueByProperty: protectedProcedure.input(z.number().optional()).query(({ input, ctx }) => {
       const ownerId = ctx.user.role === "owner" ? ctx.user.id : input;
       return getRevenueByProperty(ownerId);
@@ -1100,7 +1113,72 @@ export const appRouter = router({
   }),
 
   // ─── SMART ALERTS (التنبيهات الذكية) ────────────────────────────────────────────────────────
-  smartAlerts: router({get: adminProcedure.query(() => getSmartAlerts()),
+  smartAlerts: router({
+    get: adminProcedure.query(({ ctx }) => getSmartAlerts(ctx.user?.companyId ?? null)),
+    getEnriched: adminProcedure.query(async ({ ctx }) => {
+      const raw = await getSmartAlerts(ctx.user?.companyId ?? null);
+      // تحويل كل تنبيه إلى كائن موحد مع priority وaction وstatus
+      const alerts: Array<{ id: string; type: string; priority: "critical" | "high" | "medium" | "low"; title: string; description: string; action: string; actionUrl: string; status: "open" | "acknowledged"; entityId: number }> = [];
+      raw.overduePayments.forEach(p => {
+        const days = Number(p.daysOverdue ?? 0);
+        alerts.push({
+          id: `overdue-${p.id}`,
+          type: "overdue_payment",
+          priority: days > 30 ? "critical" : days > 14 ? "high" : "medium",
+          title: `دفعة متأخرة — ${p.tenantName ?? "مستأجر"}`,
+          description: `متأخر ${days} يوم | المبلغ: ${Number(p.amount).toLocaleString("ar-SA")} ر.س | ${p.propertyTitle ?? ""}`,
+          action: "تحصيل الدفعة",
+          actionUrl: `/payments`,
+          status: "open",
+          entityId: p.id,
+        });
+      });
+      raw.expiringContracts.forEach(c => {
+        const days = Number(c.daysLeft ?? 0);
+        alerts.push({
+          id: `expiring-${c.id}`,
+          type: "expiring_contract",
+          priority: days <= 14 ? "high" : "medium",
+          title: `عقد ينتهي قريباً — ${c.tenantName ?? "مستأجر"}`,
+          description: `ينتهي خلال ${days} يوم | ${c.propertyTitle ?? ""}`,
+          action: "تجديد العقد",
+          actionUrl: `/contracts`,
+          status: "open",
+          entityId: c.id,
+        });
+      });
+      raw.pendingMaintenance.forEach(m => {
+        alerts.push({
+          id: `maint-${m.id}`,
+          type: "pending_maintenance",
+          priority: m.priority === "urgent" ? "critical" : "high",
+          title: `صيانة عاجلة — ${m.title}`,
+          description: `منذ ${Number(m.daysPending ?? 0)} يوم | ${m.propertyTitle ?? ""}`,
+          action: "متابعة الصيانة",
+          actionUrl: `/maintenance`,
+          status: "open",
+          entityId: m.id,
+        });
+      });
+      raw.vacantUnits.forEach(u => {
+        const days = Number(u.daysVacant ?? 0);
+        alerts.push({
+          id: `vacant-${u.id}`,
+          type: "vacant_unit",
+          priority: days > 60 ? "high" : "low",
+          title: `وحدة شاغرة — ${u.unitNumber}`,
+          description: `شاغرة منذ ${days} يوم | إيجار: ${Number(u.rentPrice ?? 0).toLocaleString("ar-SA")} ر.س | ${u.propertyTitle ?? ""}`,
+          action: "نشر إعلان",
+          actionUrl: `/units`,
+          status: "open",
+          entityId: u.id,
+        });
+      });
+      // ترتيب حسب الأولوية
+      const order = { critical: 0, high: 1, medium: 2, low: 3 };
+      alerts.sort((a, b) => order[a.priority] - order[b.priority]);
+      return alerts;
+    }),
     sendDailyReport: adminProcedure.mutation(async () => {
       const alerts = await getSmartAlerts();
       const kpisData = await getKPIs();

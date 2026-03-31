@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE payments ADD COLUMN IF NOT EXISTS lateFeeRate DECIMAL(5,2) DEFAULT 0.00;\nALTER TABLE payments ADD COLUMN IF NOT EXISTS lateFeeAmount DECIMAL(15,2) DEFAULT 0.00;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Mt2rCbAQLnPWFL.bdd25ffc5b42 --database EGvRBfpqPGe26TFrJFv9dm --execute \nALTER TABLE payments ADD COLUMN IF NOT EXISTS lateFeeRate DECIMAL(5,2) DEFAULT 0.00;\nALTER TABLE payments ADD COLUMN IF NOT EXISTS lateFeeAmount DECIMAL(15,2) DEFAULT 0.00;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2435
+}

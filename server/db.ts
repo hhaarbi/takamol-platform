@@ -838,24 +838,29 @@ export async function updateBrokerCommission(id: number, data: { status: "pendin
 }
 
 // ─── FINANCIAL SUMMARY ───────────────────────────────────────────────────────
-export async function getFinancialSummary(ownerId?: number) {
+export async function getFinancialSummary(ownerId?: number, companyId?: number | null) {
   const db = await getDb();
   if (!db) return { totalRevenue: 0, totalExpenses: 0, netProfit: 0, pendingPayments: 0, overduePayments: 0 };
-  const paymentCond = [eq(payments.status, "paid")];
+  const cid = companyId ?? null;
+  const paymentCond: any[] = [eq(payments.status, "paid")];
   if (ownerId) paymentCond.push(eq(payments.ownerId, ownerId));
+  if (cid != null) paymentCond.push(eq(payments.companyId, cid));
   const [paidResult] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` })
     .from(payments).where(and(...paymentCond));
   const expCond: any[] = [];
   if (ownerId) expCond.push(eq(expenses.ownerId, ownerId));
+  if (cid != null) expCond.push(eq(expenses.companyId, cid));
   const expQ = db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` }).from(expenses);
   const [expResult] = expCond.length ? await expQ.where(and(...expCond)) : await expQ;
-  const pendCond = [eq(payments.status, "pending")];
+  const pendCond: any[] = [eq(payments.status, "pending")];
   if (ownerId) pendCond.push(eq(payments.ownerId, ownerId));
+  if (cid != null) pendCond.push(eq(payments.companyId, cid));
   const [pendResult] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` })
     .from(payments).where(and(...pendCond));
   const today = new Date().toISOString().split("T")[0];
-  const overdueCond = [or(eq(payments.status, "pending"), eq(payments.status, "partial")), lte(payments.dueDate, today as any)];
+  const overdueCond: any[] = [or(eq(payments.status, "pending"), eq(payments.status, "partial")), lte(payments.dueDate, today as any)];
   if (ownerId) overdueCond.push(eq(payments.ownerId, ownerId));
+  if (cid != null) overdueCond.push(eq(payments.companyId, cid));
   const [overdueResult] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(15,2))),0)` })
     .from(payments).where(and(...(overdueCond.filter(Boolean) as any)));
   const totalRevenue = Number(paidResult?.total ?? 0);
@@ -894,21 +899,23 @@ export async function getMonthlyExpenses(months: number = 12) {
     .limit(months * 8);
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(companyId?: number | null) {
   const db = await getDb();
   if (!db) return { owners: 0, properties: 0, tenants: 0, activeContracts: 0, leads: 0, brokers: 0, vacantUnits: 0, overduePayments: 0, pendingMaintenance: 0 };
-  const [ownersC] = await db.select({ count: sql<number>`COUNT(*)` }).from(propertyOwners).where(eq(propertyOwners.isActive, true));
-  const [propsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(properties);
-  const [tenantsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(tenants).where(eq(tenants.isActive, true));
-  const [contractsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(contracts).where(eq(contracts.status, "active"));
+  const cid = companyId ?? null;
+  const cidCond = (table: any, col: any) => cid != null ? [eq(col, cid)] : [];
+  const [ownersC] = await db.select({ count: sql<number>`COUNT(*)` }).from(propertyOwners).where(and(eq(propertyOwners.isActive, true), ...cidCond(propertyOwners, propertyOwners.companyId)));
+  const [propsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(properties).where(cid != null ? eq(properties.companyId, cid) : sql`1=1`);
+  const [tenantsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(tenants).where(and(eq(tenants.isActive, true), ...cidCond(tenants, tenants.companyId)));
+  const [contractsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(contracts).where(and(eq(contracts.status, "active"), ...cidCond(contracts, contracts.companyId)));
   const [leadsC] = await db.select({ count: sql<number>`COUNT(*)` }).from(leads);
-  const [brokersC] = await db.select({ count: sql<number>`COUNT(*)` }).from(brokers).where(eq(brokers.isActive, true));
-  const [vacantC] = await db.select({ count: sql<number>`COUNT(*)` }).from(units).where(eq(units.status, "vacant"));
+  const [brokersC] = await db.select({ count: sql<number>`COUNT(*)` }).from(brokers).where(and(eq(brokers.isActive, true), ...cidCond(brokers, brokers.companyId)));
+  const [vacantC] = await db.select({ count: sql<number>`COUNT(*)` }).from(units).where(and(eq(units.status, "vacant"), ...cidCond(units, units.companyId)));
   const today = new Date().toISOString().split("T")[0];
   const [overdueC] = await db.select({ count: sql<number>`COUNT(*)` }).from(payments)
-    .where(and(eq(payments.status, "pending"), lte(payments.dueDate, today as any)));
+    .where(and(eq(payments.status, "pending"), lte(payments.dueDate, today as any), ...cidCond(payments, payments.companyId)));
   const [maintC] = await db.select({ count: sql<number>`COUNT(*)` }).from(maintenanceRequests)
-    .where(or(eq(maintenanceRequests.status, "open"), eq(maintenanceRequests.status, "in_progress")));
+    .where(and(or(eq(maintenanceRequests.status, "open"), eq(maintenanceRequests.status, "in_progress")), ...cidCond(maintenanceRequests, maintenanceRequests.companyId)));
   return {
     owners: Number(ownersC?.count ?? 0),
     properties: Number(propsC?.count ?? 0),
@@ -1168,7 +1175,7 @@ export async function upsertSystemSetting(key: string, value: string, descriptio
 }
 
 // ─── ADVANCED ANALYTICS ───────────────────────────────────────────────────────
-export async function getKPIs() {
+export async function getKPIs(companyId?: number | null) {
   const db = await getDb();
   if (!db) return null;
 
@@ -1176,17 +1183,19 @@ export async function getKPIs() {
   const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  const cid = companyId ?? null;
+  const pc = (col: any) => cid != null ? [eq(col, cid)] : [];
 
-  const [totalProps] = await db.select({ count: sql<number>`count(*)` }).from(properties);
-  const [vacantUnitsCount] = await db.select({ count: sql<number>`count(*)` }).from(units).where(eq(units.status, "vacant"));
-  const [totalUnitsCount] = await db.select({ count: sql<number>`count(*)` }).from(units);
-  const [overduePaymentsCount] = await db.select({ count: sql<number>`count(*)` }).from(payments).where(eq(payments.status, "overdue"));
-  const [overdueAmount] = await db.select({ total: sql<number>`coalesce(sum(amount - coalesce(paidAmount, 0)), 0)` }).from(payments).where(eq(payments.status, "overdue"));
-  const [thisMonthRevenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidDate, firstOfMonth)));
-  const [lastMonthRevenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidDate, lastMonth), lte(payments.paidDate, endLastMonth)));
-  const [openMaintenance] = await db.select({ count: sql<number>`count(*)` }).from(maintenanceRequests).where(inArray(maintenanceRequests.status, ["open", "in_progress"]));
-  const [activeContracts] = await db.select({ count: sql<number>`count(*)` }).from(contracts).where(eq(contracts.status, "active"));
-  const [expiringContracts] = await db.select({ count: sql<number>`count(*)` }).from(contracts).where(and(eq(contracts.status, "active"), lte(contracts.endDate, new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000))));
+  const [totalProps] = await db.select({ count: sql<number>`count(*)` }).from(properties).where(cid != null ? eq(properties.companyId, cid) : sql`1=1`);
+  const [vacantUnitsCount] = await db.select({ count: sql<number>`count(*)` }).from(units).where(and(eq(units.status, "vacant"), ...pc(units.companyId)));
+  const [totalUnitsCount] = await db.select({ count: sql<number>`count(*)` }).from(units).where(cid != null ? eq(units.companyId, cid) : sql`1=1`);
+  const [overduePaymentsCount] = await db.select({ count: sql<number>`count(*)` }).from(payments).where(and(eq(payments.status, "overdue"), ...pc(payments.companyId)));
+  const [overdueAmount] = await db.select({ total: sql<number>`coalesce(sum(amount - coalesce(paidAmount, 0)), 0)` }).from(payments).where(and(eq(payments.status, "overdue"), ...pc(payments.companyId)));
+  const [thisMonthRevenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidDate, firstOfMonth), ...pc(payments.companyId)));
+  const [lastMonthRevenue] = await db.select({ total: sql<number>`coalesce(sum(paidAmount), 0)` }).from(payments).where(and(eq(payments.status, "paid"), gte(payments.paidDate, lastMonth), lte(payments.paidDate, endLastMonth), ...pc(payments.companyId)));
+  const [openMaintenance] = await db.select({ count: sql<number>`count(*)` }).from(maintenanceRequests).where(and(inArray(maintenanceRequests.status, ["open", "in_progress"]), ...pc(maintenanceRequests.companyId)));
+  const [activeContracts] = await db.select({ count: sql<number>`count(*)` }).from(contracts).where(and(eq(contracts.status, "active"), ...pc(contracts.companyId)));
+  const [expiringContracts] = await db.select({ count: sql<number>`count(*)` }).from(contracts).where(and(eq(contracts.status, "active"), lte(contracts.endDate, new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)), ...pc(contracts.companyId)));
 
   const occupancyRate = totalUnitsCount.count > 0
     ? Math.round(((totalUnitsCount.count - vacantUnitsCount.count) / totalUnitsCount.count) * 100)
@@ -1340,11 +1349,12 @@ export async function getPropertyROI(propertyId: number) {
 }
 
 // ─── SMART ALERTS (التنبيهات الذكية) ──────────────────────────────────────────
-export async function getSmartAlerts() {
+export async function getSmartAlerts(companyId?: number | null) {
   const db = await getDb();
   if (!db) return { expiringContracts: [], overduePayments: [], pendingMaintenance: [], vacantUnits: [] };
 
   const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const cid = companyId ?? null;
 
   const expiringContracts = await db.select({
     id: contracts.id,
@@ -1355,7 +1365,11 @@ export async function getSmartAlerts() {
   }).from(contracts)
     .leftJoin(tenants, eq(contracts.tenantId, tenants.id))
     .leftJoin(properties, eq(contracts.propertyId, properties.id))
-    .where(and(eq(contracts.status, "active"), sql`endDate BETWEEN NOW() AND ${in60Days}`))
+    .where(and(
+      eq(contracts.status, "active"),
+      sql`endDate BETWEEN NOW() AND ${in60Days}`,
+      ...(cid != null ? [eq(contracts.companyId, cid)] : [])
+    ))
     .orderBy(contracts.endDate).limit(20);
 
   const overduePayments = await db.select({
@@ -1368,7 +1382,11 @@ export async function getSmartAlerts() {
   }).from(payments)
     .leftJoin(tenants, eq(payments.tenantId, tenants.id))
     .leftJoin(properties, eq(payments.propertyId, properties.id))
-    .where(and(eq(payments.status, "pending"), sql`dueDate < NOW()`))
+    .where(and(
+      eq(payments.status, "pending"),
+      sql`dueDate < NOW()`,
+      ...(cid != null ? [eq(payments.companyId, cid)] : [])
+    ))
     .orderBy(sql`dueDate ASC`).limit(20);
 
   const pendingMaintenance = await db.select({
@@ -1380,7 +1398,10 @@ export async function getSmartAlerts() {
     daysPending: sql<number>`DATEDIFF(NOW(), createdAt)`,
   }).from(maintenanceRequests)
     .leftJoin(properties, eq(maintenanceRequests.propertyId, properties.id))
-    .where(sql`status IN ('pending','in_progress') AND priority IN ('high','urgent')`)
+    .where(and(
+      sql`status IN ('pending','in_progress') AND priority IN ('high','urgent')`,
+      ...(cid != null ? [eq(maintenanceRequests.companyId, cid)] : [])
+    ))
     .orderBy(sql`FIELD(priority,'urgent','high'), createdAt ASC`).limit(10);
 
   const vacantUnits = await db.select({
@@ -1392,7 +1413,11 @@ export async function getSmartAlerts() {
     rentPrice: units.rentPrice,
   }).from(units)
     .leftJoin(properties, eq(units.propertyId, properties.id))
-    .where(and(eq(units.status, "vacant"), sql`vacantSince IS NOT NULL`))
+    .where(and(
+      eq(units.status, "vacant"),
+      sql`vacantSince IS NOT NULL`,
+      ...(cid != null ? [eq(units.companyId, cid)] : [])
+    ))
     .orderBy(sql`vacantSince ASC`).limit(10);
 
   return { expiringContracts, overduePayments, pendingMaintenance, vacantUnits };
@@ -1647,4 +1672,117 @@ export async function deleteMaintenance(id: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   await db.delete(maintenanceRequests).where(eq(maintenanceRequests.id, id));
+}
+
+// ─── PAYMENT SCHEDULE GENERATOR ──────────────────────────────────────────────
+/**
+ * ينشئ جدول دفعات تلقائياً عند إنشاء عقد إيجار.
+ * يحسب مواعيد الاستحقاق بناءً على rentPeriod ومدة العقد.
+ */
+export async function generatePaymentSchedule(contractId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+
+  const [contract] = await db.select().from(contracts).where(eq(contracts.id, contractId)).limit(1);
+  if (!contract || contract.type !== "rent" || !contract.startDate || !contract.endDate || !contract.rentAmount) return;
+
+  // حذف الجدول القديم إن وجد (لإعادة التوليد)
+  await db.delete(payments).where(and(eq(payments.contractId, contractId), eq(payments.status, "pending")));
+
+  const start = new Date(contract.startDate);
+  const end = new Date(contract.endDate);
+  const amount = Number(contract.rentAmount);
+  const period = contract.rentPeriod ?? "annual";
+
+  // تحديد عدد الأشهر لكل دفعة
+  const monthsPerPayment: Record<string, number> = {
+    monthly: 1,
+    quarterly: 3,
+    semi_annual: 6,
+    annual: 12,
+  };
+  const step = monthsPerPayment[period] ?? 12;
+
+  const paymentRows: InsertPayment[] = [];
+  let current = new Date(start);
+  let installmentNum = 1;
+
+  while (current <= end) {
+    const dueDate = current.toISOString().split("T")[0];
+    const monthEnd = new Date(current);
+    monthEnd.setMonth(monthEnd.getMonth() + step - 1);
+    const periodLabel = `${current.toLocaleDateString("ar-SA", { month: "long", year: "numeric" })} - ${monthEnd.toLocaleDateString("ar-SA", { month: "long", year: "numeric" })}`;
+
+    paymentRows.push({
+      companyId: contract.companyId,
+      contractId: contract.id,
+      tenantId: contract.tenantId ?? undefined,
+      propertyId: contract.propertyId ?? undefined,
+      unitId: contract.unitId ?? undefined,
+      ownerId: contract.ownerId ?? undefined,
+      type: "rent",
+      amount: amount.toFixed(2),
+      dueDate: dueDate as any,
+      status: "pending",
+      periodCovered: periodLabel,
+      notes: `دفعة ${installmentNum}`,
+    } as InsertPayment);
+
+    current.setMonth(current.getMonth() + step);
+    installmentNum++;
+    if (installmentNum > 60) break; // حماية من الحلقة اللانهائية
+  }
+
+  if (paymentRows.length > 0) {
+    await db.insert(payments).values(paymentRows as any);
+  }
+}
+
+// ─── OVERDUE ESCALATION PROCESSOR ────────────────────────────────────────────
+/**
+ * يُحدّث حالة الدفعات المتأخرة ويرفع مستوى التصعيد تلقائياً:
+ * - 0-7 أيام: escalationLevel = 1 (تذكير أول)
+ * - 8-30 يوم: escalationLevel = 2 (تذكير ثانٍ)
+ * - 31-60 يوم: escalationLevel = 3 (إشعار رسمي)
+ * - >60 يوم: escalationLevel = 4 (إجراء قانوني)
+ */
+export async function processOverdueEscalation(companyId?: number | null): Promise<{ updated: number }> {
+  const db = await getDb();
+  if (!db) return { updated: 0 };
+
+  const today = new Date();
+  const todayStr = today.toISOString().split("T")[0];
+
+  const cond: any[] = [
+    or(eq(payments.status, "pending"), eq(payments.status, "partial")),
+    lte(payments.dueDate, todayStr as any),
+  ];
+  if (companyId != null) cond.push(eq(payments.companyId, companyId));
+
+  const overdueList = await db.select({
+    id: payments.id,
+    dueDate: payments.dueDate,
+    escalationLevel: payments.escalationLevel,
+  }).from(payments).where(and(...cond));
+
+  let updated = 0;
+  for (const p of overdueList) {
+    const daysOverdue = Math.floor((today.getTime() - new Date(p.dueDate ?? "").getTime()) / (1000 * 60 * 60 * 24));
+    let newLevel = 0;
+    if (daysOverdue >= 60) newLevel = 4;
+    else if (daysOverdue >= 30) newLevel = 3;
+    else if (daysOverdue >= 8) newLevel = 2;
+    else if (daysOverdue >= 1) newLevel = 1;
+
+    const shouldUpdate = newLevel !== (p.escalationLevel ?? 0) || daysOverdue > 0;
+    if (shouldUpdate) {
+      await db.update(payments).set({
+        status: "overdue" as any,
+        daysOverdue,
+        escalationLevel: newLevel,
+      }).where(eq(payments.id, p.id));
+      updated++;
+    }
+  }
+  return { updated };
 }

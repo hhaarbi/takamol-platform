@@ -680,4 +680,43 @@
 ### Phase 2 Tests + Checkpoint
 - [x] Vitest: 45/45 تمر بنجاح
 - [x] TypeScript: 0 errors
+- [x] Checkpoint نهائي (a33dbf88)
+
+## Phase 3: Financial & Operational Logic (31 مارس 2026)
+
+### Financial Logic Review
+- [x] الدفعات مرتبطة بالعقود (contractId موجود في payments)
+- [x] إضافة generatePaymentSchedule في db.ts (توليد جدول دفعات آلي عند إنشاء عقد إيجار)
+- [x] إضافة lateFeeRate وlateFeeAmount لجدول payments في DB + schema.ts
+- [x] إضافة processOverdueEscalation في db.ts (تحديث daysOverdue وescalationLevel تلقائياً)
+- [x] getFinancialSummary تحسب Net Profit = Revenue - Expenses - Commissions
+- [x] ownerTransfers موجود ويعمل بشكل صحيح
+
+### Arrears & Collection System
+- [x] lateDays يُحسب من dueDate عبر processOverdueEscalation
+- [x] escalationLevel يتصاعد تلقائياً (1→14 يوم, 2→30 يوم, 3→+30 يوم)
+- [x] reminderSent يُسجَّل في checkUpcomingPayments
+- [x] تنبيهات تيليغرام فعلية للمتأخرات + المدفوعات القادمة
+
+### Owner Reporting
+- [x] ownerStatements موجودة وتعمل (إيرادات + مصروفات + صافي ربح)
+- [x] ownerMonthlyReport موجود في routers.ts
+- [x] Dashboard المالك موجود (financial.myFinancials)
+
+### Dashboard KPIs
+- [x] occupancy rate حقيقي من DB في getKPIs (units.status = vacant)
+- [x] revenue حقيقي من payments (thisMonthRevenue)
+- [x] collection rate حقيقي في getCollectionRate
+- [x] إضافة companyId filter لـ getKPIs وgetSmartAlerts وgetDashboardStats
+
+### Smart Alerts System
+- [x] تنبيه عقود منتهية مع Priority (high/medium) + Action "تجديد العقد"
+- [x] تنبيه متأخرات مع Priority (critical/high/medium) + Action "تحصيل الدفعة"
+- [x] تنبيه صيانة معلقة مع Status "open" + Action "متابعة الصيانة"
+- [x] تنبيه وحدات شاغرة مع Priority (high/low) + Action "نشر إعلان"
+- [x] smartAlerts.getEnriched يُرجع مصفوفة حسب الأولوية
+
+### Phase 3 Tests + Checkpoint
+- [x] Vitest: 45/45 ✅
+- [x] TypeScript: 0 errors ✅
 - [ ] Checkpoint نهائي

@@ -247,6 +247,9 @@ export const payments = mysqlTable("payments", {
   paymentMethod: mysqlEnum("paymentMethod", ["bank_transfer", "cash", "check", "online"]),
   referenceNumber: varchar("referenceNumber", { length: 100 }),
   status: mysqlEnum("status", ["pending", "paid", "overdue", "partial", "cancelled"]).default("pending").notNull(),
+  // Late fee tracking
+  lateFeeRate: decimal("lateFeeRate", { precision: 5, scale: 2 }).default("0.00"),
+  lateFeeAmount: decimal("lateFeeAmount", { precision: 15, scale: 2 }).default("0.00"),
   // Escalation tracking
   escalationLevel: int("escalationLevel").default(0),
   lastReminderSent: timestamp("lastReminderSent"),
