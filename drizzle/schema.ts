@@ -60,6 +60,7 @@ export type InsertPropertyOwner = typeof propertyOwners.$inferInsert;
 // ─── BROKERS (الوسطاء) ───────────────────────────────────────────────────────
 export const brokers = mysqlTable("brokers", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   userId: int("userId"),
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 30 }).notNull(),
@@ -283,6 +284,7 @@ export type InsertExpense = typeof expenses.$inferInsert;
 // ─── MAINTENANCE REQUESTS (طلبات الصيانة) ────────────────────────────────────
 export const maintenanceRequests = mysqlTable("maintenance_requests", {
   id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId"),
   propertyId: int("propertyId"),
   unitId: int("unitId"),
   tenantId: int("tenantId"),

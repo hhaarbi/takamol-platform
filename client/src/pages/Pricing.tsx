@@ -190,15 +190,19 @@ export default function Pricing() {
 
                   {/* Features */}
                   <div className="space-y-2 mb-6">
-                    {(plan.features as any[])
-                      ?.filter((f: any) => f?.enabled === 1)
+                    {Array.isArray(plan.features) && (plan.features as any[])
+                      .filter((f: any) => f != null && typeof f === 'object' && f?.enabled === 1)
                       .slice(0, 6)
-                      .map((f: any, i: number) => (
-                        <div key={i} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                          <span>{featureLabels[f?.featureKey as string] ?? f?.featureKey ?? "ميزة"}</span>
-                        </div>
-                      ))}
+                      .map((f: any, i: number) => {
+                        const key = typeof f?.featureKey === 'string' ? f.featureKey : '';
+                        const label = featureLabels[key] ?? key ?? 'ميزة';
+                        return (
+                          <div key={i} className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                            <span>{String(label)}</span>
+                          </div>
+                        );
+                      })}
                   </div>
 
                   {/* CTA */}

@@ -85,11 +85,12 @@ export async function getUserByOpenId(openId: string) {
 }
 
 // ─── PROPERTY OWNERS ──────────────────────────────────────────────────────────
-export async function getOwners(filters?: { isActive?: boolean }) {
+export async function getOwners(filters?: { isActive?: boolean; companyId?: number | null }) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [];
   if (filters?.isActive !== undefined) conditions.push(eq(propertyOwners.isActive, filters.isActive));
+  if (filters?.companyId != null) conditions.push(eq(propertyOwners.companyId, filters.companyId));
   const q = db.select().from(propertyOwners).orderBy(desc(propertyOwners.createdAt));
   return conditions.length ? q.where(and(...conditions)) : q;
 }
@@ -121,11 +122,12 @@ export async function updateOwner(id: number, data: Partial<InsertPropertyOwner>
 }
 
 // ─── BROKERS ──────────────────────────────────────────────────────────────────
-export async function getBrokers(filters?: { isActive?: boolean }) {
+export async function getBrokers(filters?: { isActive?: boolean; companyId?: number | null }) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [];
   if (filters?.isActive !== undefined) conditions.push(eq(brokers.isActive, filters.isActive));
+  if (filters?.companyId != null) conditions.push(eq(brokers.companyId, filters.companyId));
   const q = db.select().from(brokers).orderBy(desc(brokers.createdAt));
   return conditions.length ? q.where(and(...conditions)) : q;
 }
@@ -496,7 +498,7 @@ export async function updateExpense(id: number, data: Partial<InsertExpense>) {
 
 // ─── MAINTENANCE ──────────────────────────────────────────────────────────────
 export async function getMaintenanceRequests(filters?: {
-  propertyId?: number; unitId?: number; status?: string; priority?: string; tenantId?: number;
+  propertyId?: number; unitId?: number; status?: string; priority?: string; tenantId?: number; companyId?: number | null;
 }) {
   const db = await getDb();
   if (!db) return [];
@@ -506,6 +508,7 @@ export async function getMaintenanceRequests(filters?: {
   if (filters?.status) conditions.push(eq(maintenanceRequests.status, filters.status as any));
   if (filters?.priority) conditions.push(eq(maintenanceRequests.priority, filters.priority as any));
   if (filters?.tenantId) conditions.push(eq(maintenanceRequests.tenantId, filters.tenantId));
+  if (filters?.companyId != null) conditions.push(eq(maintenanceRequests.companyId, filters.companyId));
   const q = db.select().from(maintenanceRequests).orderBy(desc(maintenanceRequests.createdAt));
   return conditions.length ? q.where(and(...conditions)) : q;
 }
@@ -1595,12 +1598,24 @@ export async function getAnnualReport(year: number) {
 export async function deleteTenant(id: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
+  // حماية العلاقات: لا تحذف مستأجر لديه عقود نشطة
+  const activeContracts = await db.select({ id: contracts.id }).from(contracts)
+    .where(and(eq(contracts.tenantId, id), inArray(contracts.status, ['active', 'pending'] as any)));
+  if (activeContracts.length > 0) {
+    throw new Error(`لا يمكن حذف المستأجر: لديه ${activeContracts.length} عقد نشط`);
+  }
   await db.delete(tenants).where(eq(tenants.id, id));
 }
 
 export async function deleteContract(id: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
+  // حماية العلاقات: لا تحذف عقد له مدفوعات
+  const linkedPayments = await db.select({ id: payments.id }).from(payments)
+    .where(eq(payments.contractId, id)).limit(1);
+  if (linkedPayments.length > 0) {
+    throw new Error(`لا يمكن حذف العقد: لديه مدفوعات مرتبطة. احذف المدفوعات أولاً`);
+  }
   await db.delete(contracts).where(eq(contracts.id, id));
 }
 
@@ -1613,6 +1628,12 @@ export async function deletePayment(id: number) {
 export async function deleteOwner(id: number) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
+  // حماية العلاقات: لا تحذف مالك لديه عقارات
+  const linkedProperties = await db.select({ id: properties.id }).from(properties)
+    .where(eq(properties.ownerId, id)).limit(1);
+  if (linkedProperties.length > 0) {
+    throw new Error(`لا يمكن حذف المالك: لديه عقارات مرتبطة. نقل العقارات أولاً`);
+  }
   await db.delete(propertyOwners).where(eq(propertyOwners.id, id));
 }
 

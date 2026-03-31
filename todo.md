@@ -639,3 +639,45 @@
 - [x] تشغيل Vitest
 - [x] فحص TypeScript: 0 errors
 - [x] حفظ Checkpoint نهائي
+
+## Phase 2: Core Structure Fixes (31 مارس 2026)
+
+### Critical Fix 1: Multi-Tenancy الكامل
+- [x] فحص companyId في جميع جداول schema.ts (units, owners, brokers)
+- [x] units لديه companyId بالفعل في schema.ts
+- [x] owners (property_owners) لديه companyId بالفعل
+- [x] إضافة companyId لجدول brokers في DB + schema.ts
+- [x] إضافة companyId لجدول maintenance_requests في DB + schema.ts
+- [x] تحديث getOwners في db.ts بفلتر companyId
+- [x] تحديث getBrokers في db.ts بفلتر companyId
+- [x] تحديث getMaintenanceRequests في db.ts بفلتر companyId
+- [x] getProperties/getContracts/getPayments/getTenants/getExpenses لديها companyId filter بالفعل
+- [x] تحديث owners.list وbrokers.list وmaintenance.list في routers.ts لتمرير ctx.user.companyId
+
+### Critical Fix 2: Security — الصلاحيات
+- [x] تفعيل tenantProcedure في server/_core/trpc.ts (مستقل عن routers.ts)
+- [x] tenantPortal يستخدم publicProcedure بشكل متعمد (بوابة مستأجرين برمز عقد)
+- [x] تحويل exportNow → adminProcedure
+- [x] تحويل archiveContract/unarchiveContract → adminProcedure
+- [x] تحويل falCompliance.create → adminProcedure
+- [x] adminProcedure يقبل admin وsuper_admin عبر isAdmin()
+
+### Critical Fix 3: CRUD الناقص
+- [x] deleteTenant موجود بالفعل + أضفنا حماية عقود نشطة
+- [x] deleteContract موجود بالفعل + أضفنا حماية مدفوعات مرتبطة
+- [x] deletePayment موجود بالفعل
+- [x] deleteOwner موجود بالفعل + أضفنا حماية عقارات مرتبطة
+- [x] deleteExpense موجود بالفعل
+- [x] deleteMaintenance موجود بالفعل
+
+### High Priority Fix 4: Pricing Page
+- [x] إصلاح React rendering error في Pricing.tsx (Objects are not valid as React child)
+
+### High Priority Fix 5: Database Consistency
+- [x] brokers + maintenance_requests: أضفنا companyId في DB + schema.ts
+- [x] جميع الجداول الرئيسية لديها companyId
+
+### Phase 2 Tests + Checkpoint
+- [x] Vitest: 45/45 تمر بنجاح
+- [x] TypeScript: 0 errors
+- [ ] Checkpoint نهائي

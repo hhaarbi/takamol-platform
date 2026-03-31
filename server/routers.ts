@@ -104,7 +104,7 @@ export const appRouter = router({
   // ─── PROPERTY OWNERS ───────────────────────────────────────────────────────
   owners: router({
     list: adminProcedure.input(z.object({ isActive: z.boolean().optional() }).optional())
-      .query(({ input }) => getOwners(input ?? {})),
+      .query(({ ctx, input }) => getOwners({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     get: adminProcedure.input(z.number()).query(({ input }) => getOwnerById(input)),
     myProfile: ownerProcedure.query(({ ctx }) => getOwnerByUserId(ctx.user.id)),
     create: adminProcedure.input(z.object({
@@ -156,7 +156,7 @@ export const appRouter = router({
   // ─── BROKERS ───────────────────────────────────────────────────────────────
   brokers: router({
     list: adminProcedure.input(z.object({ isActive: z.boolean().optional() }).optional())
-      .query(({ input }) => getBrokers(input ?? {})),
+      .query(({ ctx, input }) => getBrokers({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     get: adminProcedure.input(z.number()).query(({ input }) => getBrokerById(input)),
     myProfile: brokerProcedure.query(({ ctx }) => getBrokerByUserId(ctx.user.id)),
     create: adminProcedure.input(z.object({
@@ -563,7 +563,7 @@ export const appRouter = router({
     list: adminProcedure.input(z.object({
       propertyId: z.number().optional(), unitId: z.number().optional(),
       status: z.string().optional(), priority: z.string().optional(), tenantId: z.number().optional(),
-    }).optional()).query(({ input }) => getMaintenanceRequests(input ?? {})),
+    }).optional()).query(({ ctx, input }) => getMaintenanceRequests({ ...(input ?? {}), companyId: ctx.user?.companyId ?? null })),
     get: adminProcedure.input(z.number()).query(({ input }) => getMaintenanceById(input)),
     propertyHistory: adminProcedure.input(z.number()).query(({ input }) => getPropertyMaintenanceHistory(input)),
     create: adminProcedure.input(z.object({
@@ -1939,7 +1939,7 @@ const batch11Router = router({
 const batch12Router = router({
 
   // ─── أرشفة العقود ─────────────────────────────────────────────────────────
-  archiveContract: protectedProcedure
+  archiveContract: adminProcedure
     .input(z.object({ contractId: z.number(), reason: z.string().optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -1950,7 +1950,7 @@ const batch12Router = router({
       return { success: true };
     }),
 
-  unarchiveContract: protectedProcedure
+  unarchiveContract: adminProcedure
     .input(z.object({ contractId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -2086,7 +2086,7 @@ export const batch13Router = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       return db.select().from(falLicenses).orderBy(desc(falLicenses.expiryDate));
     }),
-    create: protectedProcedure.input(z.object({
+    create: adminProcedure.input(z.object({
       licenseNumber: z.string().min(1),
       holderName: z.string().min(2),
       holderType: z.enum(['broker', 'company', 'agent']).default('broker'),
@@ -2097,7 +2097,6 @@ export const batch13Router = router({
       notes: z.string().optional(),
     })).mutation(async ({ input }) => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db.insert(falLicenses).values({
         ...input,
@@ -2729,7 +2728,7 @@ export const batch14Router = router({
 
   // ─── BACKUP ───────────────────────────────────────────────────────────────
   backup: router({
-    exportNow: protectedProcedure.mutation(async () => {
+    exportNow: adminProcedure.mutation(async ({ ctx }) => {
       const [allProperties, allTenants, allContracts, allPayments, allExpenses] = await Promise.all([
         getProperties({}),
         getTenants({}),
