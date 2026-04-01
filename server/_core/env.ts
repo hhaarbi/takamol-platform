@@ -69,4 +69,12 @@ export const ENV = {
   stripePriceIdStarter: process.env.STRIPE_PRICE_ID_STARTER ?? "price_1THKYAHf1Olb1MIWTuDzSsC9",
   stripePriceIdPro: process.env.STRIPE_PRICE_ID_PRO ?? "price_1THKYBHf1Olb1MIWoNnejnOY",
   stripePriceIdEnterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE ?? "price_1THKYDHf1Olb1MIWNPiwqag3",
+
+  // ─── WhatsApp Business API (Meta Cloud API) ────────────────────────────────
+  // Setup: https://developers.facebook.com/docs/whatsapp/cloud-api/get-started
+  // WHATSAPP_API_KEY: Permanent token from Meta Business Manager
+  // WHATSAPP_PHONE_NUMBER_ID: Phone Number ID from WhatsApp Business Account
+  whatsappApiKey: process.env.WHATSAPP_API_KEY ?? "",
+  whatsappPhoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? "",
+  whatsappApiVersion: process.env.WHATSAPP_API_VERSION ?? "v19.0",
 };

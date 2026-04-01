@@ -69,6 +69,7 @@ const menuItems = [
   { icon: LayoutGrid, label: "Super Admin", path: "/super-admin", superAdminOnly: true },
   { icon: CreditCard, label: "الاشتراك والباقات", path: "/subscription" },
   { icon: Receipt, label: "سجل الفواتير", path: "/billing" },
+  { icon: TrendingUp, label: "مراقبة الاستخدام", path: "/usage" },
   { icon: CalendarCheck, label: "جدول الدفعات", path: "/payment-schedule" },
 ];
 

@@ -972,3 +972,22 @@
 - [x] بناء Landing Page: Hero + Features + Pricing + FAQ + CTA
 - [x] توحيد UI components: buttons وinputs وcards
 - [x] تحديث SEO metadata لجميع الصفحات
+
+## Sprint 6 — Usage Page + Backup + WhatsApp Prep
+
+### Usage Page
+- [x] backend: billing.getUsage procedure — موجود مسبقاً
+- [x] صفحة /usage — progress bars لكل مورد مع warnings عند 70% وcritical عند 90%
+- [x] ربط /usage في Sidebar navigation
+
+### Backup System
+- [x] deploy/backup/backup.sh — mysqldump يومي مع gzip + 30-day retention + logging
+- [x] deploy/backup/restore.sh — استعادة مع confirmation وintegrity check
+- [x] deploy/backup/setup-backup-cron.sh — cron job يومي الساعة 02:00 AM
+- [x] logging لكل عملية backup + Telegram alert عند الفشل
+- [x] deploy/backup/README.md — توثيق شامل
+
+### WhatsApp Preparation
+- [x] server/services/whatsapp.ts — service layer stub مع جميع الدوال المساعدة
+- [x] تحديث env.ts بـ WHATSAPP_API_KEY + WHATSAPP_PHONE_NUMBER_ID + WHATSAPP_API_VERSION
+- [x] توثيق architecture في whatsapp.ts (JSDoc + templates + helpers)
