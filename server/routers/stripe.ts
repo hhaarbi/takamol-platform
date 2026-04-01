@@ -225,11 +225,21 @@ export const stripeRouter = router({
       .orderBy(desc(subscriptionInvoices.createdAt))
       .limit(50);
 
-    return invoices.map((inv) => ({
-      ...inv,
-      amountWithVat: Number(inv.amount) * (1 + VAT_RATE),
-      vatAmount: Number(inv.amount) * VAT_RATE,
-    }));
+    return invoices.map((inv) => {
+      // Use stored VAT fields if available, otherwise calculate from amount
+      const subtotal = Number(inv.subtotal ?? inv.amount ?? 0);
+      const vatRate = Number(inv.vatRate ?? VAT_RATE);
+      const vatAmount = Number(inv.vatAmount ?? (subtotal * vatRate).toFixed(2));
+      const totalWithVat = Number(inv.totalWithVat ?? (subtotal + vatAmount).toFixed(2));
+      return {
+        ...inv,
+        subtotal,
+        vatRate,
+        vatAmount,
+        totalWithVat,
+        amountWithVat: totalWithVat, // legacy compat
+      };
+    });
   }),
 
   /**

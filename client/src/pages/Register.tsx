@@ -201,11 +201,11 @@ export default function Register() {
           />
           <label htmlFor="agree" className="text-sm text-gray-600">
             أوافق على{" "}
-            <Link href="/terms" className="font-medium hover:underline" style={{ color: "#C4855A" }}>
+            <Link href="/terms-of-service" className="font-medium hover:underline" style={{ color: "#C4855A" }}>
               شروط الاستخدام
             </Link>{" "}
             و{" "}
-            <Link href="/privacy" className="font-medium hover:underline" style={{ color: "#C4855A" }}>
+            <Link href="/privacy-policy" className="font-medium hover:underline" style={{ color: "#C4855A" }}>
               سياسة الخصوصية
             </Link>
           </label>

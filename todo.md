@@ -933,3 +933,25 @@
 ### Testing
 - [x] Vitest tests لـ stripe router (62 tests passing)
 - [ ] اختبار سيناريو كامل (register → plan → checkout → webhook → subscription active) — يتطلب STRIPE_SECRET_KEY في env
+
+## Sprint 3 — VAT + Invoices + Legal Pages
+
+### قاعدة البيانات
+- [ ] تحديث جدول subscription_invoices بإضافة: vatRate, vatAmount, subtotal, totalWithVat, currency, invoiceNumber
+- [ ] تشغيل migration SQL
+
+### Backend
+- [ ] تحديث منطق إنشاء الفواتير في stripe-webhook.ts وrouters/stripe.ts
+- [ ] حساب subtotal + VAT 15% + total تلقائياً عند كل دفع
+- [ ] إضافة procedure لتوليد PDF الفاتورة
+
+### Frontend
+- [ ] عرض VAT بشكل واضح في /billing (subtotal + VAT + total)
+- [ ] تحديث print invoice function لتشمل VAT
+- [ ] صفحة /privacy-policy
+- [ ] صفحة /terms-of-service
+
+### الربط القانوني
+- [ ] رابط Privacy Policy في صفحة /register
+- [ ] رابط Terms في صفحة /billing
+- [ ] Footer مع روابط قانونية في جميع الصفحات

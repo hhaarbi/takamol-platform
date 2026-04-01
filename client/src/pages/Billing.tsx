@@ -113,10 +113,20 @@ function handlePrintInvoice(inv: any, planName: string) {
         </div>
       </div>
 
-      <div class="amount-box">
-        <div class="amount-label">المبلغ الإجمالي</div>
-        <div class="amount-value">${formatAmount(inv.inv?.amount)}</div>
-      </div>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <tr style="background:#f9fafb;">
+          <td style="padding:12px 16px;font-size:13px;color:#555;border-bottom:1px solid #e5e7eb;">المبلغ قبل الضريبة (Subtotal)</td>
+          <td style="padding:12px 16px;text-align:left;font-weight:600;border-bottom:1px solid #e5e7eb;">${Number(inv.subtotal ?? inv.inv?.amount ?? 0).toFixed(2)} ر.س</td>
+        </tr>
+        <tr style="background:#fffbeb;">
+          <td style="padding:12px 16px;font-size:13px;color:#d97706;border-bottom:1px solid #e5e7eb;">ضريبة القيمة المضافة (VAT 15%)</td>
+          <td style="padding:12px 16px;text-align:left;font-weight:600;color:#d97706;border-bottom:1px solid #e5e7eb;">${Number(inv.vatAmount ?? 0).toFixed(2)} ر.س</td>
+        </tr>
+        <tr style="background:#f0fdf4;">
+          <td style="padding:14px 16px;font-size:15px;font-weight:bold;color:#15803d;">الإجمالي شامل ضريبة القيمة المضافة</td>
+          <td style="padding:14px 16px;text-align:left;font-size:20px;font-weight:bold;color:#15803d;">${Number(inv.totalWithVat ?? inv.inv?.amount ?? 0).toFixed(2)} ر.س</td>
+        </tr>
+      </table>
 
       <div class="section">
         <div class="section-title">تفاصيل الاشتراك</div>
@@ -389,8 +399,10 @@ export default function Billing() {
                                 {billingCycleLabel[item.inv?.billingCycle ?? "monthly"]}
                               </span>
                             </TableCell>
-                            <TableCell className="font-semibold">
-                              {formatAmount(item.inv?.amount)}
+                            <TableCell>
+                              <div className="font-semibold text-sm">{formatAmount(item.totalWithVat ?? item.inv?.amount)}</div>
+                              <div className="text-xs text-muted-foreground">قبل VAT: {formatAmount(item.subtotal ?? item.inv?.amount)}</div>
+                              <div className="text-xs text-amber-600">VAT 15%: {formatAmount(item.vatAmount ?? 0)}</div>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">

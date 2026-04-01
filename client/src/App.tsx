@@ -63,6 +63,8 @@ import ResetPassword from "./pages/ResetPassword";
 import BillingSuccess from "./pages/BillingSuccess";
 import BillingCancel from "./pages/BillingCancel";
 import Upgrade from "./pages/Upgrade";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 function Router() {
   return (
@@ -129,6 +131,8 @@ function Router() {
       <Route path={"/billing/success"} component={BillingSuccess} />
       <Route path={"/billing/cancel"} component={BillingCancel} />
       <Route path={"/upgrade"}>{() => <AuthGuard><Upgrade /></AuthGuard>}</Route>
+      <Route path={"/privacy-policy"} component={PrivacyPolicy} />
+      <Route path={"/terms-of-service"} component={TermsOfService} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

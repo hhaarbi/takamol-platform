@@ -245,12 +245,18 @@ async function handleCheckoutCompleted(
 
   const sub = subRows[0];
   if (sub && amount) {
-    const amountNum = Number(amount);
+    const subtotal = Number(amount);
+    const vatAmount = parseFloat((subtotal * VAT_RATE).toFixed(2));
+    const totalWithVat = parseFloat((subtotal + vatAmount).toFixed(2));
     await db.insert(subscriptionInvoices).values({
       companyId,
       subscriptionId: sub.id,
       planId,
-      amount: String(amountNum),
+      subtotal: String(subtotal),
+      vatRate: String(VAT_RATE),
+      vatAmount: String(vatAmount),
+      amount: String(subtotal),
+      totalWithVat: String(totalWithVat),
       currency: "SAR",
       status: "paid",
       billingCycle,
@@ -258,7 +264,7 @@ async function handleCheckoutCompleted(
       periodEnd: endDate,
       paidAt: now(),
       invoiceNumber: generateInvoiceNumber(),
-      notes: `VAT 15%: ${(amountNum * VAT_RATE).toFixed(2)} SAR | Total: ${(amountNum * (1 + VAT_RATE)).toFixed(2)} SAR`,
+      notes: `Subtotal: ${subtotal} SAR | VAT 15%: ${vatAmount} SAR | Total: ${totalWithVat} SAR`,
       createdAt: now(),
     });
   }
@@ -294,13 +300,19 @@ async function handleInvoicePaid(
     .set({ endDate: newEndDate, status: "active", updatedAt: now() })
     .where(eq(subscriptions.id, sub.id));
 
-  // Create invoice record
-  const amount = (invoice.amount_paid / 100).toFixed(2);
+  // Create invoice record with VAT
+  const subtotalPaid = parseFloat((invoice.amount_paid / 100).toFixed(2));
+  const vatAmountPaid = parseFloat((subtotalPaid * VAT_RATE).toFixed(2));
+  const totalWithVatPaid = parseFloat((subtotalPaid + vatAmountPaid).toFixed(2));
   await db.insert(subscriptionInvoices).values({
     companyId,
     subscriptionId: sub.id,
     planId: sub.planId,
-    amount,
+    subtotal: String(subtotalPaid),
+    vatRate: String(VAT_RATE),
+    vatAmount: String(vatAmountPaid),
+    amount: String(subtotalPaid),
+    totalWithVat: String(totalWithVatPaid),
     currency: "SAR",
     status: "paid",
     billingCycle: sub.billingCycle ?? "monthly",
@@ -308,7 +320,7 @@ async function handleInvoicePaid(
     periodEnd: (invoice.period_end ?? 0) * 1000,
     paidAt: now(),
     invoiceNumber: generateInvoiceNumber(),
-    notes: `Stripe Invoice: ${invoice.id}`,
+    notes: `Stripe Invoice: ${invoice.id} | Subtotal: ${subtotalPaid} SAR | VAT 15%: ${vatAmountPaid} SAR | Total: ${totalWithVatPaid} SAR`,
     createdAt: now(),
   });
 
@@ -328,22 +340,27 @@ async function handleInvoiceFailed(
     .set({ status: "past_due", updatedAt: now() })
     .where(and(eq(subscriptions.companyId, companyId), eq(subscriptions.status, "active")));
 
-  // Create failed invoice record
-  const amount = (invoice.amount_due / 100).toFixed(2);
+   // Create failed invoice record with VAT
+  const subtotalFailed = parseFloat((invoice.amount_due / 100).toFixed(2));
+  const vatAmountFailed = parseFloat((subtotalFailed * VAT_RATE).toFixed(2));
+  const totalWithVatFailed = parseFloat((subtotalFailed + vatAmountFailed).toFixed(2));
   const subRows = await db
     .select()
     .from(subscriptions)
     .where(eq(subscriptions.companyId, companyId))
     .orderBy(desc(subscriptions.createdAt))
     .limit(1);
-
   const sub = subRows[0];
   if (sub) {
     await db.insert(subscriptionInvoices).values({
       companyId,
       subscriptionId: sub.id,
       planId: sub.planId,
-      amount,
+      subtotal: String(subtotalFailed),
+      vatRate: String(VAT_RATE),
+      vatAmount: String(vatAmountFailed),
+      amount: String(subtotalFailed),
+      totalWithVat: String(totalWithVatFailed),
       currency: "SAR",
       status: "failed",
       billingCycle: sub.billingCycle ?? "monthly",
@@ -351,7 +368,7 @@ async function handleInvoiceFailed(
       periodEnd: (invoice.period_end ?? 0) * 1000,
       paidAt: null,
       invoiceNumber: generateInvoiceNumber(),
-      notes: `Failed Stripe Invoice: ${invoice.id}`,
+      notes: `Failed Stripe Invoice: ${invoice.id} | Subtotal: ${subtotalFailed} SAR | VAT 15%: ${vatAmountFailed} SAR | Total: ${totalWithVatFailed} SAR`,
       createdAt: now(),
     });
   }

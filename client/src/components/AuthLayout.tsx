@@ -94,9 +94,16 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-xs text-gray-400 text-center">
-          © {new Date().getFullYear()} شركة تكامل لإدارة الأملاك · جميع الحقوق محفوظة
-        </p>
+        <div className="mt-6 text-center space-y-2">
+          <p className="text-xs text-gray-400">
+            © {new Date().getFullYear()} شركة تكامل لإدارة الأملاك · جميع الحقوق محفوظة
+          </p>
+          <div className="flex justify-center gap-4 text-xs">
+            <a href="/terms-of-service" className="text-gray-400 hover:text-gray-600 underline transition-colors">شروط الخدمة</a>
+            <span className="text-gray-300">|</span>
+            <a href="/privacy-policy" className="text-gray-400 hover:text-gray-600 underline transition-colors">سياسة الخصوصية</a>
+          </div>
+        </div>
       </div>
     </div>
   );
