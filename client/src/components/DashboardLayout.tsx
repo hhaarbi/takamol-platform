@@ -102,10 +102,10 @@ export default function DashboardLayout({
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
             <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
+                  سجّل دخولك للمتابعة
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
+              الوصول إلى لوحة التحكم يتطلب تسجيل الدخول أولاً.
             </p>
           </div>
           <Button
@@ -115,7 +115,7 @@ export default function DashboardLayout({
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
-            Sign in
+            تسجيل الدخول
           </Button>
         </div>
       </div>
@@ -210,11 +210,21 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
-                  </span>
+                  <img
+                    src="https://d2xsxph8kpxj0f.cloudfront.net/310519663082433191/EGvRBfpqPGe26TFrJFv9dm/logo-transparent_332d78c3.png"
+                    alt="تكامل لإدارة الأملاك"
+                    className="h-8 w-auto object-contain max-w-[140px]"
+                  />
                 </div>
-              ) : null}
+              ) : (
+                <div className="flex items-center justify-center w-full">
+                  <img
+                    src="https://d2xsxph8kpxj0f.cloudfront.net/310519663082433191/EGvRBfpqPGe26TFrJFv9dm/logo-transparent_332d78c3.png"
+                    alt="تكامل"
+                    className="h-7 w-7 object-contain"
+                  />
+                </div>
+              )}
             </div>
           </SidebarHeader>
 
@@ -275,7 +285,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>تسجيل الخروج</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -299,7 +309,7 @@ function DashboardLayoutContent({
               <div className="flex items-center gap-3">
                 <div className="flex flex-col gap-1">
                   <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
+                    {activeMenuItem?.label ?? "القائمة"}
                   </span>
                 </div>
               </div>

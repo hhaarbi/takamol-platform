@@ -937,27 +937,38 @@
 ## Sprint 3 — VAT + Invoices + Legal Pages
 
 ### قاعدة البيانات
-- [ ] تحديث جدول subscription_invoices بإضافة: vatRate, vatAmount, subtotal, totalWithVat, currency, invoiceNumber
-- [ ] تشغيل migration SQL
+- [x] تحديث جدول subscription_invoices بإضافة: vatRate, vatAmount, subtotal, totalWithVat, currency, invoiceNumber
+- [x] تشغيل migration SQL
 
 ### Backend
-- [ ] تحديث منطق إنشاء الفواتير في stripe-webhook.ts وrouters/stripe.ts
-- [ ] حساب subtotal + VAT 15% + total تلقائياً عند كل دفع
-- [ ] إضافة procedure لتوليد PDF الفاتورة
+- [x] تحديث منطق إنشاء الفواتير في stripe-webhook.ts وrouters/stripe.ts
+- [x] حساب subtotal + VAT 15% + total تلقائياً عند كل دفع
+- [x] إضافة procedure لتوليد PDF الفاتورة
 
 ### Frontend
-- [ ] عرض VAT بشكل واضح في /billing (subtotal + VAT + total)
-- [ ] تحديث print invoice function لتشمل VAT
-- [ ] صفحة /privacy-policy
-- [ ] صفحة /terms-of-service
+- [x] عرض VAT بشكل واضح في /billing (subtotal + VAT + total)
+- [x] تحديث print invoice function لتشمل VAT
+- [x] صفحة /privacy-policy
+- [x] صفحة /terms-of-service
 
 ### الربط القانوني
-- [ ] رابط Privacy Policy في صفحة /register
-- [ ] رابط Terms في صفحة /billing
-- [ ] Footer مع روابط قانونية في جميع الصفحات
+- [x] رابط Privacy Policy في صفحة /register
+- [x] رابط Terms في صفحة /billing
+- [x] Footer مع روابط قانونية في جميع الصفحات
 
 ## Sprint 4 — GitHub Actions CI/CD
 
 - [x] .github/workflows/deploy.yml — workflow كامل (install → test → build → SSH deploy → health check)
 - [x] deploy/deploy.sh — تحديث ليكون idempotent وآمن مع error handling
 - [x] README.md — إضافة قسم CI/CD Setup مع GitHub Secrets المطلوبة
+
+## Sprint 5 — Brand Identity + Landing Page
+
+- [x] رفع الشعار إلى CDN واستخدام URL في الكود
+- [x] تحديث Brand Tokens في index.css (primary, secondary, accent, neutral, success, warning, danger)
+- [x] تطبيق الشعار في Navbar وSidebar
+- [x] تطبيق الشعار في صفحات Auth (Login, Register, OTP, ForgotPassword, ResetPassword)
+- [x] تحديث favicon وindex.html metadata وOpen Graph
+- [x] بناء Landing Page: Hero + Features + Pricing + FAQ + CTA
+- [x] توحيد UI components: buttons وinputs وcards
+- [x] تحديث SEO metadata لجميع الصفحات

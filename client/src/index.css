@@ -103,6 +103,14 @@
   --input:                oklch(0.875 0.018 68);
   --ring:                 oklch(0.635 0.115 52);
 
+  /* ── Success / Warning / Danger ── */
+  --success:              oklch(0.55 0.15 145);   /* Green */
+  --success-foreground:   oklch(1 0 0);
+  --warning:              oklch(0.75 0.16 70);    /* Amber */
+  --warning-foreground:   oklch(0.22 0.05 264);
+  --danger:               oklch(0.577 0.245 27);  /* Red */
+  --danger-foreground:    oklch(1 0 0);
+
   /* ── Charts ── */
   --chart-1: oklch(0.635 0.115 52);
   --chart-2: oklch(0.285 0.105 264);

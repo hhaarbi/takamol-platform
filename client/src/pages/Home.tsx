@@ -124,14 +124,12 @@ export default function HomePage() {
         <div className="container">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <a href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-                <Building2 size={20} className="text-white" />
-              </div>
-              <div>
-                <p className="font-black text-sm leading-none text-foreground">تكامل</p>
-                <p className="text-xs text-muted-foreground">لإدارة الأملاك</p>
-              </div>
+            <a href="/" className="flex items-center group">
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663082433191/EGvRBfpqPGe26TFrJFv9dm/logo-transparent_332d78c3.png"
+                alt="تكامل لإدارة الأملاك"
+                className="h-10 w-auto object-contain group-hover:opacity-90 transition-opacity"
+              />
             </a>
 
             {/* Desktop Nav */}
@@ -140,6 +138,7 @@ export default function HomePage() {
               <a href="#services" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">خدماتنا</a>
               <a href="#testimonials" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">آراء العملاء</a>
               <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">عن الشركة</a>
+              <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">الباقات</a>
               <a href="/tenant-portal" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 font-medium">
                 <KeyRound size={14} />بوابة المستأجر
               </a>
@@ -594,6 +593,85 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ─── Pricing ─── */}
+      <section id="pricing" className="py-20 bg-muted/20">
+        <div className="container">
+          <div className="text-center mb-14">
+            <Badge variant="outline" className="mb-3 text-primary border-primary/30 px-4 py-1">باقات الاشتراك</Badge>
+            <h2 className="text-3xl md:text-4xl font-black text-foreground">اختر الباقة المناسبة</h2>
+            <p className="text-muted-foreground mt-2 max-w-xl mx-auto">جميع الباقات تشمل ضريبة القيمة المضافة 15% — فواتير رسمية مع كل اشتراك</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Starter */}
+            <div className="rounded-2xl border border-border bg-card p-8 flex flex-col gap-4 hover:shadow-lg transition-all">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">الباقة الأساسية</p>
+                <div className="flex items-end gap-1">
+                  <span className="text-4xl font-black text-foreground">299</span>
+                  <span className="text-muted-foreground mb-1">ر.س / شهر</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">شامل ضريبة 15%</p>
+              </div>
+              <ul className="space-y-2 flex-1">
+                {["حتى 50 وحدة عقارية","إدارة العقود والمستأجرين","تقارير أساسية","دعم عبر البريد"].map(f => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-foreground">
+                    <CheckCircle2 size={15} className="text-primary shrink-0" />{f}
+                  </li>
+                ))}
+              </ul>
+              <a href="/register" className="block w-full py-3 rounded-xl border-2 border-primary text-primary font-bold text-center hover:bg-primary hover:text-white transition-all">
+                ابدأ مجاناً
+              </a>
+            </div>
+            {/* Pro - Featured */}
+            <div className="rounded-2xl border-2 border-primary bg-card p-8 flex flex-col gap-4 shadow-xl relative">
+              <div className="absolute -top-4 right-1/2 translate-x-1/2">
+                <span className="gold-gradient text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md">الأكثر طلباً</span>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary mb-1">الباقة الاحترافية</p>
+                <div className="flex items-end gap-1">
+                  <span className="text-4xl font-black text-foreground">699</span>
+                  <span className="text-muted-foreground mb-1">ر.س / شهر</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">شامل ضريبة 15%</p>
+              </div>
+              <ul className="space-y-2 flex-1">
+                {["حتى 200 وحدة عقارية","جميع ميزات الباقة الأساسية","تقارير متقدمة وتحليلات","تكامل واتسآب وإشعارات","بوابة المستأجر الذكية","دعم أولوية 24/7"].map(f => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-foreground">
+                    <CheckCircle2 size={15} className="text-primary shrink-0" />{f}
+                  </li>
+                ))}
+              </ul>
+              <a href="/register" className="block w-full py-3 rounded-xl gold-gradient text-white font-bold text-center hover:opacity-90 transition-all shadow-md">
+                اشترك الآن
+              </a>
+            </div>
+            {/* Enterprise */}
+            <div className="rounded-2xl border border-border bg-card p-8 flex flex-col gap-4 hover:shadow-lg transition-all">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">باقة المؤسسات</p>
+                <div className="flex items-end gap-1">
+                  <span className="text-4xl font-black text-foreground">1,499</span>
+                  <span className="text-muted-foreground mb-1">ر.س / شهر</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">شامل ضريبة 15%</p>
+              </div>
+              <ul className="space-y-2 flex-1">
+                {["عدد غير محدود من الوحدات","جميع ميزات الباقة الاحترافية","تكامل API مفتوح","مدير حساب مخصص","إعداد مخصص وتدريب الفريق","عقد SLA مضمون"].map(f => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-foreground">
+                    <CheckCircle2 size={15} className="text-primary shrink-0" />{f}
+                  </li>
+                ))}
+              </ul>
+              <a href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="block w-full py-3 rounded-xl border-2 border-border text-foreground font-bold text-center hover:border-primary hover:text-primary transition-all">
+                تواصل معنا
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── FAQ ─── */}
       <section id="faq" className="py-20 bg-background">
         <div className="container max-w-3xl">
@@ -636,9 +714,11 @@ export default function HomePage() {
             {/* Brand */}
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl gold-gradient flex items-center justify-center shadow-md">
-                  <Building2 size={20} className="text-white" />
-                </div>
+                <img
+                  src="https://d2xsxph8kpxj0f.cloudfront.net/310519663082433191/EGvRBfpqPGe26TFrJFv9dm/logo-transparent_332d78c3.png"
+                  alt="تكامل لإدارة الأملاك"
+                  className="h-12 w-auto object-contain brightness-0 invert"
+                />
                 <div>
                   <p className="font-black text-white">تكامل لإدارة الأملاك</p>
                   <p className="text-xs text-white/40">المدينة المنورة، المملكة العربية السعودية</p>

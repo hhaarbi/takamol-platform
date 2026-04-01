@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 
-const LOGO_TRANSPARENT = "https://d2xsxph8kpxj0f.cloudfront.net/310519663082433191/EGvRBfpqPGe26TFrJFv9dm/logo-transparent_0676a3d2.png";
+const LOGO_TRANSPARENT = "https://d2xsxph8kpxj0f.cloudfront.net/310519663082433191/EGvRBfpqPGe26TFrJFv9dm/logo-transparent_332d78c3.png";
 
 interface AuthLayoutProps {
   children: ReactNode;
