@@ -870,3 +870,15 @@
 - [ ] DNS Setup Guide: A + MX + SPF + DKIM + DMARC records
 - [ ] TypeScript 0 errors + Vitest pass + production build
 - [ ] GitHub push + Checkpoint + تقرير Go-Live نهائي
+
+## Phase 10: Full Auto-Deploy Setup — GitHub Actions + VPS
+- [ ] فحص نهائي: TypeScript + Vitest + production build
+- [ ] إنشاء .github/workflows/deploy.yml (GitHub Actions CI/CD)
+- [ ] تحديث deploy/deploy.sh (آمن + rollback + health check + PM2 zero-downtime)
+- [ ] تحديث deploy/setup-vps.sh (SSH key setup + git + pm2 + nginx + certbot)
+- [ ] تحديث deploy/nginx.conf (server_name placeholder + SSL ready)
+- [ ] تحديث ecosystem.config.js (takamol + cluster + env_file)
+- [ ] تحديث env.example (كامل بدون hardcoded)
+- [ ] تحديث README.md (Auto-Deploy + GitHub Secrets + DNS)
+- [ ] GitHub push + Checkpoint
+- [ ] تقرير Auto-Deploy النهائي الشامل

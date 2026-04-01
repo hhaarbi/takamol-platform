@@ -109,7 +109,7 @@ bash deploy/deploy.sh
 ```bash
 # استبدل your-domain.com بدومينك الفعلي
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/takamol
-sudo sed -i 's/your-domain.com/ACTUAL_DOMAIN/g' /etc/nginx/sites-available/takamol
+sudo sed -i 's/YOUR_DOMAIN/ACTUAL_DOMAIN/g' /etc/nginx/sites-available/takamol
 sudo ln -s /etc/nginx/sites-available/takamol /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
@@ -119,7 +119,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ```bash
 # تأكد أن DNS يشير إلى IP السيرفر أولاً
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d ACTUAL_DOMAIN -d www.ACTUAL_DOMAIN
 # التجديد التلقائي مُفعَّل تلقائياً عبر systemd timer
 ```
 
@@ -127,7 +127,7 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 
 ```bash
 pm2 status takamol
-curl https://your-domain.com/api/trpc/auth.me?batch=1&input=%7B%7D
+curl https://ACTUAL_DOMAIN/api/trpc/auth.me?batch=1&input=%7B%7D
 ```
 
 ---
@@ -139,6 +139,56 @@ cd /var/www/takamol
 bash deploy/deploy.sh
 # git pull → build → migrate → PM2 zero-downtime reload → health check
 ```
+
+---
+
+## GitHub Actions — Auto Deploy
+
+كل push على `main` يُشغّل deploy تلقائياً عبر SSH.
+
+### إعداد GitHub Secrets
+
+اذهب إلى: **GitHub → Settings → Secrets → Actions** وأضف:
+
+| Secret | القيمة |
+|--------|--------|
+| `VPS_HOST` | IP السيرفر (مثال: `85.215.xxx.xxx`) |
+| `VPS_USER` | `root` |
+| `VPS_PORT` | `22` |
+| `VPS_SSH_KEY` | المفتاح الخاص (من `/root/.ssh/github_actions_deploy`) |
+| `APP_DIR` | `/var/www/takamol` |
+| `APP_URL` | `https://ACTUAL_DOMAIN` |
+
+```bash
+# الحصول على المفتاح الخاص من السيرفر:
+cat /root/.ssh/github_actions_deploy
+# انسخ المحتوى كاملاً (بما فيه BEGIN و END) إلى VPS_SSH_KEY
+```
+
+---
+
+## إعداد البريد الإلكتروني (Resend)
+
+```bash
+# 1. سجّل في https://resend.com (مجاني حتى 3000 إيميل/شهر)
+# 2. أضف دومينك وتحقق منه
+# 3. أنشئ API Key
+# 4. أضف في .env:
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=re_xxxxxxxxxxxx
+EMAIL_FROM=noreply@ACTUAL_DOMAIN
+```
+
+### DNS Records للبريد الإلكتروني
+
+| النوع | الاسم | القيمة |
+|-------|-------|--------|
+| `A` | `@` | `YOUR_VPS_IP` |
+| `A` | `www` | `YOUR_VPS_IP` |
+| `MX` | `@` | `feedback-smtp.us-east-1.amazonses.com` (تُعطى من Resend) |
+| `TXT` | `@` | `v=spf1 include:amazonses.com ~all` |
+| `TXT` | `_dmarc` | `v=DMARC1; p=quarantine; rua=mailto:admin@ACTUAL_DOMAIN` |
+| `CNAME` | (من Resend) | (من Resend — للـ DKIM) |
 
 ---
 
@@ -156,6 +206,10 @@ bash deploy/deploy.sh
 | `OPENAI_API_KEY` | لا | مفتاح LLM API |
 | `OPENAI_BASE_URL` | لا | رابط LLM API (OpenAI أو أي بديل متوافق) |
 | `STORAGE_PROVIDER` | لا | `local` أو `s3` أو `r2` |
+| `EMAIL_PROVIDER` | لا | `resend` أو `smtp` |
+| `RESEND_API_KEY` | لا | مفتاح Resend API |
+| `EMAIL_FROM` | لا | عنوان المرسل (مثال: `noreply@domain.com`) |
+| `OTP_EXPIRES_MINUTES` | لا | مدة صلاحية OTP (افتراضي: 5 دقائق) |
 
 ---
 
