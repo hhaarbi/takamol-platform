@@ -8,9 +8,14 @@
 #   bash deploy/deploy.sh
 #
 # Environment variables (override defaults):
-#   APP_DIR      — project directory (default: /var/www/takamol)
-#   APP_NAME     — PM2 process name (default: takamol)
-#   HEALTH_URL   — health check URL (default: http://localhost:3000/)
+#   APP_DIR        — project directory (default: /var/www/takamol)
+#   APP_NAME       — PM2 process name (default: takamol)
+#   HEALTH_URL     — health check URL (default: http://localhost:3000/)
+#
+# GitHub Actions sets automatically:
+#   DEPLOY_COMMIT  — git SHA being deployed
+#   DEPLOY_BRANCH  — branch name (e.g. main)
+#   DEPLOY_ACTOR   — GitHub username who triggered deploy
 # =============================================================================
 set -euo pipefail
 
@@ -41,6 +46,9 @@ echo ""
 echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}${BOLD}║   🚀  Takamol Platform — Deploy Script       ║${NC}"
 echo -e "${CYAN}${BOLD}║   $(date '+%Y-%m-%d %H:%M:%S')                      ║${NC}"
+info "Commit: ${DEPLOY_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo 'local')}"
+info "Branch: ${DEPLOY_BRANCH:-$(git branch --show-current 2>/dev/null || echo 'unknown')}"
+info "Actor:  ${DEPLOY_ACTOR:-$(whoami)}"
 echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -146,6 +154,7 @@ run_migration() {
 
 run_migration "deploy/migration.sql"
 run_migration "drizzle/auth-extensions.sql"
+run_migration "drizzle/vat_migration.sql"
 
 # ─── Step 7: Reload PM2 (zero-downtime) ───────────────────────────────────────
 step "7/7  Reloading PM2 (zero-downtime)"
@@ -206,6 +215,8 @@ echo ""
 echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}${BOLD}║   ✅  DEPLOY SUCCESSFUL                      ║${NC}"
 echo -e "${GREEN}${BOLD}║   Commit: $(git rev-parse --short HEAD 2>/dev/null || echo 'N/A')                          ║${NC}"
+echo -e "${GREEN}${BOLD}║   Branch: ${DEPLOY_BRANCH:-main}                               ║${NC}"
+echo -e "${GREEN}${BOLD}║   Actor:  ${DEPLOY_ACTOR:-manual}                              ║${NC}"
 echo -e "${GREEN}${BOLD}║   Time:   $(date '+%Y-%m-%d %H:%M:%S')                ║${NC}"
 echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
 echo ""

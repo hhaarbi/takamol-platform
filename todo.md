@@ -955,3 +955,9 @@
 - [ ] رابط Privacy Policy في صفحة /register
 - [ ] رابط Terms في صفحة /billing
 - [ ] Footer مع روابط قانونية في جميع الصفحات
+
+## Sprint 4 — GitHub Actions CI/CD
+
+- [x] .github/workflows/deploy.yml — workflow كامل (install → test → build → SSH deploy → health check)
+- [x] deploy/deploy.sh — تحديث ليكون idempotent وآمن مع error handling
+- [x] README.md — إضافة قسم CI/CD Setup مع GitHub Secrets المطلوبة

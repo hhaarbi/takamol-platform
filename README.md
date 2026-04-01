@@ -144,25 +144,62 @@ bash deploy/deploy.sh
 
 ## GitHub Actions — Auto Deploy
 
-كل push على `main` يُشغّل deploy تلقائياً عبر SSH.
+عند كل `push` إلى `main`، يعمل GitHub Actions تلقائياً على:
+
+```
+Install → TypeScript Check → Tests → Build → SSH Deploy → Health Check
+```
 
 ### إعداد GitHub Secrets
 
-اذهب إلى: **GitHub → Settings → Secrets → Actions** وأضف:
+اذهب إلى: **GitHub → Repository → Settings → Secrets and variables → Actions** وأضف:
 
 | Secret | القيمة |
 |--------|--------|
-| `VPS_HOST` | IP السيرفر (مثال: `85.215.xxx.xxx`) |
-| `VPS_USER` | `root` |
-| `VPS_PORT` | `22` |
-| `VPS_SSH_KEY` | المفتاح الخاص (من `/root/.ssh/github_actions_deploy`) |
-| `APP_DIR` | `/var/www/takamol` |
-| `APP_URL` | `https://ACTUAL_DOMAIN` |
+| `VPS_HOST` | عنوان IP أو دومين الـ VPS (e.g. `85.215.xxx.xxx`) |
+| `VPS_USER` | مستخدم SSH (e.g. `ubuntu` أو `root`) |
+| `VPS_PORT` | منفذ SSH (افتراضي: `22`) |
+| `VPS_SSH_KEY` | محتوى ملف المفتاح الخاص كاملاً (BEGIN...END) |
+| `APP_DIR` | مسار المشروع على VPS (e.g. `/var/www/takamol`) |
+| `DATABASE_URL` | سلسلة اتصال قاعدة البيانات |
+| `JWT_SECRET` | مفتاح توقيع الجلسات |
+| `STRIPE_SECRET_KEY` | مفتاح Stripe السري |
+
+### إعداد SSH Key لـ CI/CD
 
 ```bash
-# الحصول على المفتاح الخاص من السيرفر:
-cat /root/.ssh/github_actions_deploy
-# انسخ المحتوى كاملاً (بما فيه BEGIN و END) إلى VPS_SSH_KEY
+# على جهازك المحلي — أنشئ مفتاح مخصص لـ CI/CD:
+ssh-keygen -t ed25519 -C "github-actions-takamol" -f ~/.ssh/takamol_deploy
+
+# أضف المفتاح العام إلى VPS:
+ssh-copy-id -i ~/.ssh/takamol_deploy.pub USER@YOUR_VPS_IP
+
+# انسخ محتوى المفتاح الخاص وأضفه كـ VPS_SSH_KEY في GitHub Secrets:
+cat ~/.ssh/takamol_deploy
+```
+
+### تدفق النشر
+
+```
+[GitHub Push] → [CI: Install + TypeScript + Tests + Build]
+                              ↓ (on success)
+                    [Deploy: SSH to VPS]
+                              ↓
+                   [bash deploy/deploy.sh]
+                              ↓
+       git pull → pnpm install → build → migrations → pm2 reload
+                              ↓
+                     [Health Check]
+                              ↓
+                  ✅ Deploy Successful
+```
+
+### تشغيل يدوي
+
+```bash
+# من GitHub UI: Actions → CI/CD — Deploy to VPS → Run workflow
+# أو بدفع commit جديد إلى main
+git push origin main
 ```
 
 ---

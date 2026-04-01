@@ -125,4 +125,5 @@ drizzle/meta/
 
 # Screenshots
 screenshots/
-.github/workflows/
+
+# Note: .github/workflows/ intentionally NOT ignored — CI/CD workflows must be committed
