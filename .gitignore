@@ -125,3 +125,4 @@ drizzle/meta/
 
 # Screenshots
 screenshots/
+.github/workflows/
