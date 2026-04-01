@@ -905,3 +905,31 @@
 - [ ] صفحة Checkout مع VAT 15%
 - [ ] Webhook handler لتفعيل الاشتراكات تلقائياً
 - [ ] صفحة سجل المدفوعات /billing/history
+
+## Sprint 2 — Stripe Payments Integration
+
+### تنظيف وإعداد
+- [x] إزالة كل إشارات Moyasar من المشروع
+- [x] إضافة Stripe env secrets (SECRET_KEY, PUBLISHABLE_KEY, WEBHOOK_SECRET, PRICE IDs)
+
+### Backend
+- [x] server/routers/stripe.ts — createCheckoutSession, createPortalSession, cancelSubscription, upgradeSubscription, downgradeSubscription
+- [x] server/stripe-webhook.ts — webhook handler مستقل
+- [x] تسجيل /api/webhooks/stripe في server/index.ts
+- [x] دعم 5 أحداث: checkout.session.completed, invoice.payment_succeeded, invoice.payment_failed, customer.subscription.updated, customer.subscription.deleted
+- [x] ربط Stripe بجداول: plans, subscriptions, subscription_invoices, plan_change_log
+
+### Frontend
+- [x] صفحة /billing — عرض الباقات مع أسعار شهرية/سنوية وحالة الاشتراك
+- [x] صفحة /billing/success — تأكيد الدفع الناجح
+- [x] صفحة /billing/cancel — إلغاء الدفع
+- [x] صفحة /upgrade — ترقية الباقة
+
+### Feature Gating
+- [x] useSubscription hook — قراءة حالة الاشتراك
+- [x] FeatureGate component — إخفاء/إظهار الميزات حسب الباقة
+- [x] تطبيق Feature Gating على Dashboard
+
+### Testing
+- [x] Vitest tests لـ stripe router (62 tests passing)
+- [ ] اختبار سيناريو كامل (register → plan → checkout → webhook → subscription active) — يتطلب STRIPE_SECRET_KEY في env

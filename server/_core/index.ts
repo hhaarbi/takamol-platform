@@ -14,6 +14,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import { ENV } from "./env";
+import { handleStripeWebhook } from "../stripe-webhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -84,6 +85,13 @@ async function startServer() {
       allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
       maxAge: 86400,
     })
+  );
+
+  // ─── Stripe Webhook (MUST be before express.json() to preserve raw body) ──
+  app.post(
+    "/api/webhooks/stripe",
+    express.raw({ type: "application/json" }),
+    handleStripeWebhook
   );
 
   // ─── Body Parser ─────────────────────────────────────────────────────────

@@ -15,9 +15,32 @@ import {
 import {
   Receipt, Download, CreditCard, Calendar, CheckCircle2,
   Clock, XCircle, AlertTriangle, ChevronLeft, ChevronRight,
-  FileText, RefreshCw
+  FileText, RefreshCw, Zap, Crown, Building2, Star, Loader2
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
+
+const VAT_RATE = 0.15;
+
+const PLAN_FEATURES: Record<string, string[]> = {
+  starter: ["حتى 50 وحدة عقارية", "3 مستخدمين", "تقارير أساسية", "دعم بريد إلكتروني", "تخزين 5GB"],
+  pro: ["حتى 200 وحدة عقارية", "10 مستخدمين", "تقارير متقدمة + PDF", "دعم أولوية", "تخزين 20GB", "تكامل فال API"],
+  enterprise: ["وحدات غير محدودة", "مستخدمون غير محدودون", "جميع التقارير", "دعم مخصص 24/7", "تخزين 100GB", "ZATCA e-invoicing"],
+};
+
+const PLAN_ICONS: Record<string, React.ReactNode> = {
+  starter: <Zap className="h-5 w-5" />,
+  pro: <Crown className="h-5 w-5" />,
+  enterprise: <Building2 className="h-5 w-5" />,
+};
+
+function getPlanKey(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("starter") || n.includes("مبتدئ")) return "starter";
+  if (n.includes("pro") || n.includes("احتراف")) return "pro";
+  if (n.includes("enterprise") || n.includes("مؤسسات")) return "enterprise";
+  return "starter";
+}
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   paid: { label: "مدفوعة", color: "bg-green-500/10 text-green-600 border-green-500/20", icon: CheckCircle2 },
@@ -141,6 +164,8 @@ function handlePrintInvoice(inv: any, planName: string) {
 
 export default function Billing() {
   const [page, setPage] = useState(1);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const limit = 10;
 
@@ -149,6 +174,34 @@ export default function Billing() {
     { refetchOnWindowFocus: false }
   );
   const { data: currentSub } = trpc.subscriptions.getCurrentSubscription.useQuery();
+  const { data: stripePlans, isLoading: plansLoading } = trpc.stripe.getPlans.useQuery();
+  const { data: stripeSubStatus } = trpc.stripe.getSubscriptionStatus.useQuery();
+
+  const checkoutMutation = trpc.stripe.createCheckoutSession.useMutation({
+    onSuccess: (data) => {
+      if (data.url) {
+        window.open(data.url, "_blank");
+        toast.success("جاري تحويلك إلى صفحة الدفع...");
+      }
+      setLoadingPlanId(null);
+    },
+    onError: (err) => {
+      toast.error(err.message || "حدث خطأ أثناء إنشاء جلسة الدفع");
+      setLoadingPlanId(null);
+    },
+  });
+
+  const portalMutation = trpc.stripe.createPortalSession.useMutation({
+    onSuccess: (data) => { if (data.url) window.open(data.url, "_blank"); },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const handleSubscribe = (planId: number) => {
+    setLoadingPlanId(planId);
+    checkoutMutation.mutate({ planId, billingCycle, origin: window.location.origin });
+  };
+
+  const currentPlanId = stripeSubStatus?.subscription?.planId;
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -175,6 +228,71 @@ export default function Billing() {
               إدارة الاشتراك
             </Button>
           </div>
+        </div>
+
+        {/* Stripe Plans Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">الباقات المتاحة</h2>
+            <div className="flex items-center gap-2">
+              {stripeSubStatus?.hasSubscription && (
+                <Button variant="outline" size="sm" onClick={() => portalMutation.mutate({ origin: window.location.origin })} disabled={portalMutation.isPending}>
+                  {portalMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : <CreditCard className="h-4 w-4 ml-1" />}
+                  إدارة الفوترة
+                </Button>
+              )}
+              <div className="bg-muted rounded-lg p-0.5 flex">
+                <button onClick={() => setBillingCycle("monthly")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${billingCycle === "monthly" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>شهري</button>
+                <button onClick={() => setBillingCycle("yearly")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1 ${billingCycle === "yearly" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>سنوي <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary px-1">وفر 20%</Badge></button>
+              </div>
+            </div>
+          </div>
+          {plansLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {stripePlans?.map((plan) => {
+                const planKey = getPlanKey(plan.name ?? "");
+                const isCurrentPlan = currentPlanId === plan.id;
+                const price = billingCycle === "yearly" && plan.priceYearly ? Number(plan.priceYearly) / 12 : Number(plan.priceMonthly ?? 0);
+                const priceWithVat = price * (1 + VAT_RATE);
+                const isRecommended = plan.isRecommended === 1;
+                return (
+                  <Card key={plan.id} className={`relative flex flex-col ${isRecommended ? "border-primary shadow-md" : ""} ${isCurrentPlan ? "ring-2 ring-primary" : ""}`}>
+                    {isRecommended && (
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-primary text-primary-foreground px-3 text-[11px] flex items-center gap-1"><Star className="h-3 w-3" />الأكثر شيوعاً</Badge>
+                      </div>
+                    )}
+                    <CardHeader className="pb-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${isRecommended ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{PLAN_ICONS[planKey]}</div>
+                      <CardTitle className="text-base">{plan.nameAr ?? plan.name}</CardTitle>
+                      <div className="mt-2">
+                        <span className="text-3xl font-bold">{price.toFixed(0)}</span>
+                        <span className="text-muted-foreground text-xs mr-1">ر.س / شهر</span>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">شامل VAT: {priceWithVat.toFixed(0)} ر.س</p>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col">
+                      <ul className="space-y-1.5 flex-1 mb-4">
+                        {(PLAN_FEATURES[planKey] ?? []).map((f, i) => (
+                          <li key={i} className="flex items-center gap-1.5 text-xs"><CheckCircle2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />{f}</li>
+                        ))}
+                      </ul>
+                      {isCurrentPlan ? (
+                        <Button className="w-full" variant="outline" size="sm" disabled><CheckCircle2 className="h-4 w-4 ml-1" />باقتك الحالية</Button>
+                      ) : (
+                        <Button className="w-full" size="sm" variant={isRecommended ? "default" : "outline"} onClick={() => handleSubscribe(plan.id)} disabled={loadingPlanId === plan.id}>
+                          {loadingPlanId === plan.id ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
+                          {stripeSubStatus?.hasSubscription ? "ترقية" : "اشترك الآن"}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Current Plan Summary */}

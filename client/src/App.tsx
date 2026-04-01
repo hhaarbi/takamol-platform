@@ -60,6 +60,9 @@ import Register from "./pages/Register";
 import VerifyOTP from "./pages/VerifyOTP";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import BillingSuccess from "./pages/BillingSuccess";
+import BillingCancel from "./pages/BillingCancel";
+import Upgrade from "./pages/Upgrade";
 
 function Router() {
   return (
@@ -123,6 +126,9 @@ function Router() {
       <Route path={"/verify-otp"} component={VerifyOTP} />
       <Route path={"/forgot-password"} component={ForgotPassword} />
       <Route path={"/reset-password"} component={ResetPassword} />
+      <Route path={"/billing/success"} component={BillingSuccess} />
+      <Route path={"/billing/cancel"} component={BillingCancel} />
+      <Route path={"/upgrade"}>{() => <AuthGuard><Upgrade /></AuthGuard>}</Route>
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

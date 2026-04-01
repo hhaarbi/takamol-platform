@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { vouchersRouter } from "./routers/vouchers";
+import { stripeRouter } from "./routers/stripe";
 import { standaloneAuthRouter } from "./routers/standalone-auth";
 import { billingRouter } from "./routers/billing";
 import { plansRouter, companiesRouter, subscriptionsRouter as saasSubscriptionsRouter } from "./routers/saas";
@@ -2937,6 +2938,7 @@ export const mergedRouter = router({
   subscriptions: subscriptionsRouter,
   standaloneAuth: standaloneAuthRouter,
   billing: billingRouter,
+  stripe: stripeRouter,
 });
 export type AppRouter = typeof mergedRouter;
 export type Batch10Router = typeof batch10Router;

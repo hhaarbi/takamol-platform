@@ -61,4 +61,12 @@ export const ENV = {
   // ─── Telegram ──────────────────────────────────────────────────────────────
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
   telegramOwnerChatId: process.env.TELEGRAM_OWNER_CHAT_ID ?? "",
+
+  // ─── Stripe ──────────────────────────────────────────────────────────────────
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  stripePriceIdStarter: process.env.STRIPE_PRICE_ID_STARTER ?? "price_1THKYAHf1Olb1MIWTuDzSsC9",
+  stripePriceIdPro: process.env.STRIPE_PRICE_ID_PRO ?? "price_1THKYBHf1Olb1MIWoNnejnOY",
+  stripePriceIdEnterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE ?? "price_1THKYDHf1Olb1MIWNPiwqag3",
 };
