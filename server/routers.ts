@@ -100,8 +100,12 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
+      // Clear Manus OAuth session cookie
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      // Clear standalone auth cookies
+      ctx.res.clearCookie("access_token", { path: "/" });
+      ctx.res.clearCookie("refresh_token", { path: "/" });
       return { success: true } as const;
     }),
   }),

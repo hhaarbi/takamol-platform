@@ -49,18 +49,21 @@ describe("auth.logout", () => {
     const result = await caller.auth.logout();
 
     expect(result).toEqual({ success: true });
-    expect(clearedCookies).toHaveLength(1);
-    expect(clearedCookies[0]?.name).toBe(COOKIE_NAME);
-    // In test environment (no APP_URL set, HTTPS via x-forwarded-proto),
-    // cookies use sameSite=strict (production same-origin) since APP_URL is empty
-    // and the request is treated as same-origin HTTPS.
-    expect(clearedCookies[0]?.options).toMatchObject({
+    // Logout clears 3 cookies: app_session_id (Manus OAuth) + access_token + refresh_token (standalone)
+    expect(clearedCookies).toHaveLength(3);
+    const cookieNames = clearedCookies.map(c => c.name);
+    expect(cookieNames).toContain(COOKIE_NAME);
+    expect(cookieNames).toContain("access_token");
+    expect(cookieNames).toContain("refresh_token");
+    // Manus OAuth cookie should have correct options
+    const oauthCookie = clearedCookies.find(c => c.name === COOKIE_NAME);
+    expect(oauthCookie?.options).toMatchObject({
       maxAge: -1,
       secure: true,
       httpOnly: true,
       path: "/",
     });
     // sameSite should be either 'strict' (standalone prod) or 'none' (cross-origin)
-    expect(["strict", "none", "lax"]).toContain(clearedCookies[0]?.options?.sameSite);
+    expect(["strict", "none", "lax"]).toContain(oauthCookie?.options?.sameSite);
   });
 });
