@@ -54,13 +54,19 @@ import Pricing from "./pages/Pricing";
 import SuperAdmin from "./pages/SuperAdmin";
 import Billing from "./pages/Billing";
 import PaymentSchedule from "./pages/PaymentSchedule";
+import Login from "./pages/Login";
+import AuthGuard from "./components/AuthGuard";
+import Register from "./pages/Register";
+import VerifyOTP from "./pages/VerifyOTP";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
-      <Route path={"/dashboard"} component={Dashboard} />
-      <Route path={"/dashboard/:tab"} component={Dashboard} />
+      <Route path={"/dashboard"}>{() => <AuthGuard><Dashboard /></AuthGuard>}</Route>
+      <Route path={"/dashboard/:tab"}>{() => <AuthGuard><Dashboard /></AuthGuard>}</Route>
       <Route path={"/owner"} component={OwnerPortal} />
       <Route path={"/owner/:tab"} component={OwnerPortal} />
       <Route path={"/broker"} component={BrokerPortal} />
@@ -112,6 +118,11 @@ function Router() {
       <Route path={"/super-admin"} component={SuperAdmin} />
       <Route path={"/billing"} component={Billing} />
       <Route path={"/payment-schedule"} component={PaymentSchedule} />
+      <Route path={"/login"} component={Login} />
+      <Route path={"/register"} component={Register} />
+      <Route path={"/verify-otp"} component={VerifyOTP} />
+      <Route path={"/forgot-password"} component={ForgotPassword} />
+      <Route path={"/reset-password"} component={ResetPassword} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -882,3 +882,26 @@
 - [ ] تحديث README.md (Auto-Deploy + GitHub Secrets + DNS)
 - [ ] GitHub push + Checkpoint
 - [ ] تقرير Auto-Deploy النهائي الشامل
+
+## Sprint 1 — صفحات المصادقة وهوية تكامل
+
+### Brand Identity
+- [x] رفع شعار تكامل (PNG مفرغ + JPG أبيض) إلى CDN
+- [x] تحديث Brand Tokens في index.css (ذهبي #C4855A، كحلي #1E2B5E، بيج #D9D0C7)
+- [x] تحديث AuthLayout component بهوية تكامل
+- [x] تحديث index.html (OG meta tags، favicon)
+
+### صفحات المصادقة
+- [x] صفحة /login — تسجيل الدخول بالبريد وكلمة المرور
+- [x] صفحة /register — إنشاء حساب جديد (اسم، بريد، جوال، شركة، كلمة مرور)
+- [x] صفحة /verify-otp — التحقق برمز 6 أرقام مع auto-submit وpaste
+- [x] صفحة /forgot-password — طلب رمز إعادة تعيين كلمة المرور
+- [x] صفحة /reset-password — تعيين كلمة مرور جديدة
+- [x] AuthGuard component — حماية /dashboard والصفحات الداخلية
+- [x] إضافة routes في App.tsx
+
+### بوابة الدفع
+- [ ] Stripe integration — في انتظار API keys من المستخدم
+- [ ] صفحة Checkout مع VAT 15%
+- [ ] Webhook handler لتفعيل الاشتراكات تلقائياً
+- [ ] صفحة سجل المدفوعات /billing/history
