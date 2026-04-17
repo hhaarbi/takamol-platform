@@ -1,0 +1,38 @@
+{
+  "name": "takamol-platform",
+  "version": "1.0.0",
+  "description": "نظام إدارة المواعيد والتواصل والتسعير لشركة هاشم عبد الحكيم للاستشارات الهندسية",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "migrate": "node src/config/migrate.js",
+    "seed": "node src/config/seed.js"
+  },
+  "keywords": [
+    "engineering",
+    "consulting",
+    "crm",
+    "appointments"
+  ],
+  "author": "Hashem Abdul Hakeem Engineering Consultancy",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.5",
+    "pg": "^8.20.0",
+    "sequelize": "^6.37.8",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
